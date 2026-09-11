@@ -3,6 +3,301 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rotulito · Webs sencillas para negocios de barrio</title>
+<meta name="description" content="Hacemos webs de una sola página para peluquerías, talleres, centros de estética, electricistas, fisios y pequeños comercios del Vallès. 290 € cerrados, lista en una semana, y la ves antes de decidir.">
+<link rel="canonical" href="https://www.rotulito.com/">
+<meta property="og:title" content="Rotulito · Webs sencillas para negocios de barrio">
+<meta property="og:description" content="Tu negocio en internet en una sola página. 290 € cerrados, lista en una semana, y la ves antes de decidir.">
+<meta property="og:url" content="https://www.rotulito.com/">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='14' width='52' height='36' rx='6' fill='%23e4322b'/%3E%3Crect x='12' y='20' width='40' height='24' rx='3' fill='%23fff4d6'/%3E%3Ctext x='32' y='38' font-family='Arial Black,Arial' font-size='16' font-weight='900' text-anchor='middle' fill='%23161616'%3ER%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Caveat:wght@600&family=Work+Sans:wght@400;500;600&display=swap">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"ProfessionalService","name":"Rotulito","url":"https://www.rotulito.com/","description":"Diseño de páginas web sencillas para negocios locales","areaServed":["Sabadell","Barberà del Vallès","Cerdanyola del Vallès","Terrassa","Vallès Occidental","Barcelona"],"email":"hola@rotulito.com","priceRange":"290 €","offers":{"@type":"Offer","price":"290","priceCurrency":"EUR","description":"Web de una página, dominio y alojamiento incluidos el primer año"}}
+</script>
+<style>
+:root{--bg:#fffdf9;--ink:#171512;--muted:#63605a;--line:#e6dfd3;--red:#d9382c;--yellow:#f7c73b;--cream:#fbf1dc;--paper:#fff;--r:4px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Work Sans',system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.wrap{max-width:1060px;margin:0 auto;padding-inline:20px}
+h1,h2,h3,.brand{font-family:'Archivo Black','Arial Black',sans-serif;font-weight:400;letter-spacing:-.01em}
+.hand{font-family:'Caveat',cursive;font-weight:600;color:var(--red);font-size:1.35rem;line-height:1.1}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:2px solid var(--ink)}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:12px}
+.brand{font-size:1.3rem;text-decoration:none;display:flex;align-items:center;gap:10px}
+.brand i{display:inline-block;width:26px;height:19px;background:var(--red);border-radius:3px;position:relative}
+.brand i::after{content:"";position:absolute;inset:4px;background:var(--cream);border-radius:2px}
+nav{display:flex;gap:22px;font-size:.92rem;font-weight:500}
+nav a{text-decoration:none;color:var(--muted)}nav a:hover{color:var(--ink)}
+@media(max-width:700px){nav{display:none}}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 22px;border-radius:var(--r);text-decoration:none;font-weight:600;font-size:.95rem;border:2px solid var(--ink);cursor:pointer;background:var(--paper);color:var(--ink)}
+.btn.solid{background:var(--ink);color:#fff}
+.btn.red{background:var(--red);border-color:var(--red);color:#fff}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--yellow)}
+
+/* hero */
+.hero{padding-block:56px 48px;background:var(--cream);border-bottom:2px solid var(--ink);overflow:hidden}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:36px;align-items:center}
+@media(max-width:840px){.hero .wrap{grid-template-columns:1fr}}
+h1{font-size:clamp(2.1rem,5.6vw,3.5rem);line-height:1.03;margin:0 0 16px;text-wrap:balance}
+h1 mark{background:none;color:var(--red)}
+.lead{font-size:1.12rem;max-width:50ch;color:var(--muted);margin:0 0 22px}
+.cta{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.note{display:flex;gap:8px;align-items:flex-start;margin-top:22px;max-width:46ch}
+.note .hand{white-space:nowrap}
+.note span:last-child{color:var(--muted);font-size:.92rem}
+/* phone mockup with a mini demo */
+.phone{width:290px;max-width:100%;margin:0 auto;background:#111;border-radius:34px;padding:12px;box-shadow:0 22px 40px -18px rgba(0,0,0,.45);transform:rotate(-3deg)}
+.phone .scr{background:#fff;border-radius:24px;overflow:hidden;font-size:9.5px;line-height:1.35;color:#222}
+.phone .top{height:22px;display:flex;justify-content:center;align-items:flex-end}
+.phone .top i{width:80px;height:6px;background:#111;border-radius:6px;margin-bottom:6px}
+.phone .bar{display:flex;justify-content:space-between;padding:6px 12px;border-bottom:1px solid #eee;font-weight:700;font-size:10px}
+.phone .bar small{font-weight:500;color:#999}
+.phone .h{background:#f4ece0;padding:16px 12px 14px}
+.phone .h b{display:block;font-family:'Archivo Black',sans-serif;font-size:15px;line-height:1.1;margin-bottom:5px}
+.phone .h p{margin:0 0 9px;color:#666}
+.phone .h .b{display:inline-block;background:#111;color:#fff;border-radius:3px;padding:5px 8px;font-weight:600;margin-right:4px}
+.phone .h .b.o{background:#fff;color:#111;border:1px solid #111}
+.phone .s{padding:12px}
+.phone .s b{display:block;font-family:'Archivo Black',sans-serif;font-size:11px;margin-bottom:6px}
+.phone .row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.phone .row div{border:1px solid #e5e0d6;border-radius:4px;padding:6px;color:#444}
+.phone .row div b{font-family:inherit;font-weight:700;font-size:9.5px;margin:0 0 2px}
+.phone .f{padding:0 12px 14px;color:#666}
+.phone .f b{font-family:inherit;font-weight:700;color:#222}
+.phone-note{text-align:center;margin-top:16px}
+.phone-note .hand{display:inline-block;transform:rotate(-2deg)}
+
+/* sections */
+section{padding-block:64px}
+section+section{border-top:1px solid var(--line)}
+h2{font-size:clamp(1.55rem,3.4vw,2.1rem);margin:0 0 8px;text-wrap:balance}
+.sub{color:var(--muted);margin:0 0 30px;max-width:58ch;font-size:1.05rem}
+
+/* ticket: qué incluye */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:start}
+@media(max-width:800px){.two{grid-template-columns:1fr}}
+.ticket{background:var(--paper);border:1px solid var(--line);padding:26px 26px 30px;position:relative;box-shadow:0 12px 28px -18px rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
+.ticket::before,.ticket::after{content:"";position:absolute;left:0;right:0;height:10px;background:radial-gradient(circle at 6px -4px,transparent 7px,var(--bg) 8px) repeat-x;background-size:14px 10px}
+.ticket::before{top:-1px}.ticket::after{bottom:-1px;transform:rotate(180deg)}
+.ticket h3{font-family:'Work Sans',sans-serif;font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:.78rem;color:var(--muted);text-align:center;margin:0 0 16px}
+.ticket dl{margin:0}
+.ticket .l{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:.95rem}
+.ticket .l span:last-child{color:var(--muted);white-space:nowrap}
+.ticket .tot{display:flex;justify-content:space-between;padding-top:14px;font-family:'Archivo Black',sans-serif;font-size:1.15rem}
+.ticket .tot small{display:block;font-family:'Work Sans',sans-serif;font-weight:500;font-size:.8rem;color:var(--muted)}
+.ticket .stamp{position:absolute;right:18px;top:14px;transform:rotate(8deg);border:2px solid var(--red);color:var(--red);font-family:'Archivo Black',sans-serif;font-size:.7rem;letter-spacing:.1em;padding:4px 8px;border-radius:3px;opacity:.85}
+.expl p{margin:0 0 14px;max-width:52ch}
+.expl .hand{margin-top:10px;display:block}
+
+/* pasos */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:2px solid var(--ink);border-radius:6px;overflow:hidden;background:var(--paper)}
+@media(max-width:760px){.steps{grid-template-columns:1fr}}
+.step{padding:24px 22px 26px;border-right:2px solid var(--ink)}
+.step:last-child{border-right:0}
+@media(max-width:760px){.step{border-right:0;border-bottom:2px solid var(--ink)}.step:last-child{border-bottom:0}}
+.step .d{font-family:'Archivo Black',sans-serif;font-size:2rem;color:var(--red);line-height:1;margin-bottom:8px}
+.step .t{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:8px}
+.step h3{font-size:1.05rem;margin:0 0 6px}
+.step p{margin:0;color:var(--muted);font-size:.95rem}
+
+/* precio cartel */
+.cartel{display:grid;grid-template-columns:1fr auto;gap:30px;align-items:center;background:var(--ink);color:#fff;padding:32px 34px;border-radius:8px;position:relative}
+@media(max-width:700px){.cartel{grid-template-columns:1fr}}
+.cartel h2{color:#fff;margin:0 0 8px}
+.cartel p{margin:0 0 6px;color:#d6d1c7;max-width:54ch}
+.cartel .big{font-family:'Archivo Black',sans-serif;font-size:3.4rem;line-height:1;color:var(--yellow);text-align:right;transform:rotate(-3deg)}
+.cartel .big small{display:block;font-family:'Work Sans',sans-serif;font-size:.85rem;color:#d6d1c7;font-weight:500;margin-top:6px;transform:none}
+.cartel .hand{color:var(--yellow);font-size:1.2rem}
+
+/* sectores */
+.sectors{display:flex;flex-wrap:wrap;gap:8px 10px;max-width:760px}
+.sectors span{padding:7px 13px;border:1.5px solid var(--ink);border-radius:999px;font-size:.92rem;background:var(--paper)}
+.sectors span:nth-child(3n){transform:rotate(-1.5deg)}.sectors span:nth-child(4n){transform:rotate(1.2deg)}
+
+/* dudas */
+.qa{display:grid;grid-template-columns:1fr 1fr;gap:26px 44px}
+@media(max-width:760px){.qa{grid-template-columns:1fr}}
+.qa h3{font-size:1rem;margin:0 0 4px}
+.qa p{margin:0;color:var(--muted);font-size:.95rem;max-width:48ch}
+
+/* contacto */
+.contact{background:var(--cream);border-top:2px solid var(--ink)}
+.contact .box{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
+@media(max-width:760px){.contact .box{grid-template-columns:1fr}}
+.contact .who{margin-top:22px;padding-top:18px;border-top:1px solid #e3d6bd;color:var(--muted);font-size:.95rem;max-width:46ch}
+form{display:grid;gap:12px;background:var(--paper);border:2px solid var(--ink);border-radius:6px;padding:22px}
+label{display:grid;gap:5px;font-size:.88rem;font-weight:600}
+input,textarea{font:inherit;padding:11px 12px;border:1.5px solid var(--ink);border-radius:4px;background:#fff;color:var(--ink);width:100%}
+textarea{min-height:90px;resize:vertical}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:.82rem;font-weight:400;color:var(--muted)}
+.check input{width:auto;margin-top:3px}
+footer{padding-block:26px;font-size:.84rem;color:var(--muted);border-top:2px solid var(--ink)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:8px 22px;justify-content:space-between}
+footer a{color:var(--muted)}
+:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.btn{transition:none}}
+#ck{position:fixed;left:16px;right:16px;bottom:16px;z-index:50;max-width:560px;margin:0 auto;background:#fff;color:#161616;border:2px solid #161616;border-radius:8px;padding:18px 20px;box-shadow:6px 6px 0 #ffc533;font-size:.92rem}
+#ck p{margin:0 0 12px;max-width:none}#ck .row{display:flex;flex-wrap:wrap;gap:10px}#ck button{cursor:pointer}
+#ck .btn{padding:10px 16px;font-size:.9rem}#ck a{color:#161616}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<a class="brand" href="#top"><i></i>Rotulito</a>
+<nav><a href="#incluye">Qué incluye</a><a href="#como">Cómo va</a><a href="#precio">Precio</a><a href="#dudas">Dudas</a><a href="#contacto">Pide tu demo</a></nav>
+</div></header>
+
+<main id="top">
+<div class="hero"><div class="wrap">
+<div>
+<h1>Tu negocio en internet, <mark>en una sola página</mark></h1>
+<p class="lead">Para la peluquería, el taller, el centro de estética o la tienda de toda la vida. Lo que hace falta para que te encuentren y te llamen, sin líos ni cuotas raras.</p>
+<div class="cta"><a class="btn red" href="#contacto">Quiero ver cómo quedaría la mía</a></div>
+<div class="note"><span class="hand">Ojo →</span><span>Antes de cobrarte nada te enseñamos tu web ya montada con tus datos. Si no te gusta, no pasa nada.</span></div>
+</div>
+<div>
+<div class="phone" aria-label="Ejemplo de web de una página vista en un móvil"><div class="scr">
+<div class="top"><i></i></div>
+<div class="bar">Peluquería Mari Carmen <small>Sabadell</small></div>
+<div class="h"><b>Corte, color y peinado a dos pasos de casa</b><p>Sin cita para cortes. Color y recogidos, mejor llamando.</p><span class="b">Llamar</span><span class="b o">WhatsApp</span></div>
+<div class="s"><b>Lo que hacemos</b><div class="row"><div><b>Corte</b>Mujer, hombre y niños</div><div><b>Color y mechas</b>Te asesoramos</div><div><b>Recogidos</b>Bodas y eventos</div><div><b>Tratamientos</b>Keratina, hidratación</div></div></div>
+<div class="f"><b>Horario</b> · Mar–Sáb 9:30–19:00 · <b>Dónde</b> · C/ de Gràcia, 118 · Cómo llegar</div>
+</div></div>
+<p class="phone-note"><span class="hand">Así se ve en el móvil, que es donde te van a buscar</span></p>
+</div>
+</div></div>
+
+<section id="incluye"><div class="wrap two">
+<div class="expl">
+<h2>Qué incluye</h2>
+<p>Una página que lo cuenta todo: quién eres, qué haces, dónde estás, a qué hora abres y cómo contactarte. Los textos los escribimos nosotros con lo que nos cuentes, y ponemos tus fotos (si no tienes, te decimos cuáles hacer con el móvil y quedan bien).</p>
+<p>Botones de llamar y de WhatsApp que se ven siempre, un enlace a "Cómo llegar", la web preparada para que Google la entienda cuando busquen tu tipo de negocio en tu zona, y el aviso legal y la privacidad redactados para tu caso.</p>
+<p>El dominio (tunegocio.com) se registra a tu nombre y el alojamiento del primer año va incluido. Si un día te vas, te lo llevas todo.</p>
+<span class="hand">Nada de lo que no necesitas. Ni blog, ni tienda, ni cuotas de "mantenimiento premium".</span>
+</div>
+<div class="ticket">
+<span class="stamp">Incluido</span>
+<h3>Rotulito · web de una página</h3>
+<dl>
+<div class="l"><span>Diseño y montaje</span><span>1 página</span></div>
+<div class="l"><span>Textos redactados por nosotros</span><span>sí</span></div>
+<div class="l"><span>Tus fotos colocadas</span><span>hasta 12</span></div>
+<div class="l"><span>Botones llamar y WhatsApp</span><span>sí</span></div>
+<div class="l"><span>Mapa y "Cómo llegar"</span><span>sí</span></div>
+<div class="l"><span>Preparada para Google</span><span>sí</span></div>
+<div class="l"><span>Aviso legal y privacidad</span><span>sí</span></div>
+<div class="l"><span>Dominio a tu nombre</span><span>1er año</span></div>
+<div class="l"><span>Alojamiento</span><span>1er año</span></div>
+<div class="l"><span>Rondas de cambios antes de publicar</span><span>2</span></div>
+<div class="l"><span>Entrega</span><span>~7 días</span></div>
+</dl>
+<div class="tot"><span>Total<small>pago único, sin permanencia</small></span><span>290 € <small>+ IVA</small></span></div>
+</div>
+</div></section>
+
+<section id="como"><div class="wrap">
+<h2>Cómo va</h2>
+<p class="sub">Tres pasos y ninguna reunión larga.</p>
+<div class="steps">
+<div class="step"><div class="d">1</div><div class="t">Hoy</div><h3>Nos cuentas tu negocio</h3><p>Con el formulario de abajo o por correo: nombre, a qué te dedicas y dónde estás. Dos minutos.</p></div>
+<div class="step"><div class="d">2</div><div class="t">En uno o dos días</div><h3>Te enseñamos tu web</h3><p>Montamos una primera versión con tus datos y te mandamos el enlace. Gratis. La miras con calma.</p></div>
+<div class="step"><div class="d">3</div><div class="t">En una semana</div><h3>La ajustamos y la publicamos</h3><p>Nos pasas las fotos, cambiamos lo que quieras y la dejamos en internet con tu dominio.</p></div>
+</div>
+</div></section>
+
+<section id="precio"><div class="wrap">
+<div class="cartel">
+<div>
+<h2>Un precio, y ya está</h2>
+<p>290 € + IVA por la web publicada, con dominio y alojamiento el primer año. Se paga la mitad al decir que sí y la otra mitad antes de publicar.</p>
+<p>A partir del segundo año, 12 € al mes: dominio, alojamiento y los cambios pequeños (un horario, un teléfono, una foto). Sin permanencia.</p>
+<span class="hand">Si tu sobrino te la hace, nos alegramos de verdad.</span>
+</div>
+<div class="big">290 €<small>+ IVA · pago único</small></div>
+</div>
+</div></section>
+
+<section id="para"><div class="wrap">
+<h2>Para quién es</h2>
+<p class="sub">Negocios que viven de que la gente de su zona los encuentre y los llame. Trabajamos sobre todo en Sabadell, Barberà, Cerdanyola, Ripollet, Badia y Terrassa, pero una web viaja bien.</p>
+<div class="sectors"><span>Peluquerías y barberías</span><span>Centros de estética y uñas</span><span>Fisioterapia</span><span>Electricistas y fontaneros</span><span>Carpintería de aluminio</span><span>Reformas</span><span>Cerrajeros</span><span>Limpieza</span><span>Tiendas de barrio</span><span>Clínicas y consultas</span><span>Academias</span><span>Bares y restaurantes</span></div>
+</div></section>
+
+<section id="dudas"><div class="wrap">
+<h2>Dudas que nos preguntan</h2>
+<p class="sub">Las de siempre, contestadas sin rodeos.</p>
+<div class="qa">
+<div><h3>¿Solo una página? ¿No necesito más?</h3><p>Para la mayoría de negocios pequeños, no. La gente quiere saber qué haces, dónde estás y cómo contactarte. Si un día necesitas más, se amplía.</p></div>
+<div><h3>Ya tengo Instagram y Google Maps.</h3><p>Bien: la web no los sustituye, es donde llevan. Ahí está todo ordenado, con el botón de llamar, y es tuya aunque una app cambie las reglas.</p></div>
+<div><h3>¿El dominio es mío?</h3><p>Sí. Se registra a tu nombre el primer día. Si decides irte, te lo llevas.</p></div>
+<div><h3>¿Tengo que saber de informática?</h3><p>No. Nos ocupamos del dominio, del alojamiento y de publicarla. Tú nos cuentas tu negocio y nos pasas las fotos.</p></div>
+<div><h3>¿Y si después quiero cambiar algo?</h3><p>El primer año, los cambios pequeños van sin coste. Después entran en los 12 € al mes.</p></div>
+<div><h3>¿Hacéis tiendas online?</h3><p>Sí, pero es otro proyecto y otro precio. Cuéntanos qué vendes y te decimos.</p></div>
+</div>
+</div></section>
+
+<section id="contacto" class="contact"><div class="wrap">
+<div class="box">
+<div>
+<h2>Cuéntanos tu negocio y te enseñamos cómo quedaría</h2>
+<p class="sub" style="margin-bottom:14px">Sin compromiso. Preparamos una primera versión con tus datos y te la mandamos. Si te gusta, seguimos; si no, no pasa nada.</p>
+<p style="color:var(--muted);margin:0">O escríbenos a <a href="mailto:hola@rotulito.com">hola@rotulito.com</a>.</p>
+<p class="who">Somos un estudio pequeño de Sabadell. No hay comerciales: la persona con la que hablas es la que hace la web.</p>
+</div>
+<form id="f" action="https://formsubmit.co/hola@rotulito.com" method="POST">
+<input type="hidden" name="_subject" value="Nueva solicitud de demo · Rotulito">
+<input type="hidden" name="_captcha" value="false">
+<input type="hidden" name="_template" value="table">
+<input type="hidden" name="_next" value="https://www.rotulito.com/gracias.html">
+<input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
+<label>Nombre del negocio<input id="negocio" name="negocio" required></label>
+<label>A qué te dedicas<input id="sector" name="sector" placeholder="Peluquería, taller, estética…" required></label>
+<label>Población<input id="poblacion" name="poblacion" required></label>
+<label>Tu nombre y un teléfono o email<input id="contacto_dato" name="contacto" required></label>
+<label>Algo más que quieras contarnos<textarea id="mensaje" name="mensaje"></textarea></label>
+<label class="check"><input type="checkbox" id="priv" name="privacidad" required> He leído la <a href="/privacidad.html" target="_blank" rel="noopener">política de privacidad</a> y acepto que Rotulito use estos datos solo para responder a mi solicitud.</label>
+<button class="btn solid" type="submit">Enviar y ver mi demo</button>
+</form>
+</div>
+</div></section>
+</main>
+
+<footer><div class="wrap"><span>© 2026 Rotulito · Sabadell y Vallès</span><span><a href="/aviso-legal.html">Aviso legal</a> · <a href="/privacidad.html">Privacidad</a> · <a href="/cookies.html" id="ck-open">Cookies</a> · <a href="mailto:hola@rotulito.com">hola@rotulito.com</a></span></div></footer>
+<div id="ck" hidden role="dialog" aria-live="polite" aria-label="Aviso de cookies">
+<p><strong>Cookies.</strong> Usamos cookies propias necesarias y, solo si nos lo permites, cookies de Google y Meta para medir las visitas y saber si nuestros anuncios funcionan. Puedes aceptarlas, rechazarlas o cambiar de opinión cuando quieras. <a href="/cookies.html">Más información</a>.</p>
+<div class="row"><button class="btn solid" id="ck-yes" type="button">Aceptar</button><button class="btn" id="ck-no" type="button">Rechazar</button></div>
+</div>
+<script>
+(function(){
+  var KEY='rt_consent', GA_ID='', META_ID='';
+  function get(){try{var m=document.cookie.match(/(?:^|; )rt_consent=([^;]*)/);return m?m[1]:null}catch(e){return null}}
+  function set(v){var d=new Date();d.setMonth(d.getMonth()+12);document.cookie=KEY+'='+v+'; expires='+d.toUTCString()+'; path=/; SameSite=Lax; Secure'}
+  function loadTrackers(){
+    if(GA_ID){var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+GA_ID;document.head.appendChild(s);
+      window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('config',GA_ID,{anonymize_ip:true});}
+    if(META_ID){!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init',META_ID);fbq('track','PageView');}
+  }
+  var box=document.getElementById('ck');
+  function show(){box.hidden=false}
+  function hide(){box.hidden=true}
+  var c=get();
+  if(c==='yes'){loadTrackers()}else if(c!=='no'){show()}
+  document.getElementById('ck-yes').onclick=function(){set('yes');hide();loadTrackers()};
+  document.getElementById('ck-no').onclick=function(){set('no');hide()};
+  var op=document.getElementById('ck-open');if(op){op.addEventListener('click',function(e){e.preventDefault();show()})}
+  var f=document.getElementById('f');if(f){f.addEventListener('submit',function(){if(window.gtag)gtag('event','form_submit');if(window.fbq)fbq('track','Lead')})}
+})();
+</script>
+</body>
+</html>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rotulito · Tu negocio en internet, en una sola página</title>
 <meta name="description" content="Webs sencillas y bien hechas para negocios de barrio: peluquerías, talleres, centros de estética, electricistas, fisios y pequeños comercios. Una página, precio cerrado de 290 €, lista en 7 días.">
 <link rel="canonical" href="https://www.rotulito.com/">
