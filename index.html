@@ -252,7 +252,9 @@ footer a{color:var(--muted)}
 <label>Nombre del negocio<input id="negocio" name="negocio" required></label>
 <label>A qué te dedicas<input id="sector" name="sector" placeholder="Peluquería, taller, estética…" required></label>
 <label>Población<input id="poblacion" name="poblacion" required></label>
-<label>Tu nombre y un teléfono o email<input id="contacto_dato" name="contacto" required></label>
+<label>Tu nombre<input id="nombre" name="nombre" autocomplete="name" required></label>
+<label>Teléfono<input id="telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel" pattern="[0-9 +()-]{9,}" title="Escribe un teléfono de al menos 9 dígitos" required></label>
+<label>Email<input id="email" name="email" type="email" autocomplete="email" required></label>
 <label>Algo más que quieras contarnos<textarea id="mensaje" name="mensaje"></textarea></label>
 <label class="check"><input type="checkbox" id="priv" name="privacidad" required> He leído la <a href="/privacidad.html" target="_blank" rel="noopener">política de privacidad</a> y acepto que Rotulito use estos datos solo para responder a mi solicitud.</label>
 <button class="btn solid" type="submit">Enviar y ver mi demo</button>
