@@ -142,12 +142,25 @@ footer a{color:var(--muted)}
 #ck{position:fixed;left:16px;right:16px;bottom:16px;z-index:50;max-width:560px;margin:0 auto;background:#fff;color:#161616;border:2px solid #161616;border-radius:8px;padding:18px 20px;box-shadow:6px 6px 0 #ffc533;font-size:.92rem}
 #ck p{margin:0 0 12px;max-width:none}#ck .row{display:flex;flex-wrap:wrap;gap:10px}#ck button{cursor:pointer}
 #ck .btn{padding:10px 16px;font-size:.9rem}#ck a{color:#161616}
+
+/* trabajos */
+#trabajos{scroll-margin-top:80px}
+.work-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.work-card{display:flex;flex-direction:column;align-items:flex-start;padding:30px;background:var(--paper);border:2px solid var(--ink);border-radius:6px;box-shadow:5px 5px 0 var(--cream)}
+.work-tag{display:inline-block;padding:5px 10px;background:var(--yellow);font-size:.875rem;font-weight:600;border-radius:3px}
+.work-card h3{font-size:clamp(1.35rem,3vw,1.7rem);margin:22px 0 10px}
+.work-card p{color:var(--muted);margin:0 0 24px;font-size:1rem}
+.work-card .btn{margin-top:auto}
+.work-note{margin:28px 0 0;padding-left:18px;border-left:3px solid var(--red);color:var(--muted);max-width:80ch;font-size:1rem}
+.work-note strong{color:var(--ink)}
+@media(max-width:760px){.work-grid{grid-template-columns:1fr}.work-card{padding:24px}}
+@media(min-width:701px) and (max-width:900px){nav{gap:12px;font-size:.875rem}}
 </style>
 </head>
 <body>
 <header><div class="wrap">
 <a class="brand" href="#top"><i></i>Rotulito</a>
-<nav><a href="#incluye">Qué incluye</a><a href="#como">Cómo va</a><a href="#precio">Precio</a><a href="#dudas">Dudas</a><a href="#contacto">Pide tu demo</a></nav>
+<nav><a href="#incluye">Qué incluye</a><a href="#como">Cómo va</a><a href="#trabajos">Trabajos</a><a href="#precio">Precio</a><a href="#dudas">Dudas</a><a href="#contacto">Pide tu demo</a></nav>
 </div></header>
 
 <main id="top">
@@ -206,6 +219,26 @@ footer a{color:var(--muted)}
 <div class="step"><div class="d">2</div><div class="t">En uno o dos días</div><h3>Te enseñamos tu web</h3><p>Montamos una primera versión con tus datos y te mandamos el enlace. Gratis. La miras con calma.</p></div>
 <div class="step"><div class="d">3</div><div class="t">En una semana</div><h3>La ajustamos y la publicamos</h3><p>Nos pasas las fotos, cambiamos lo que quieras y la dejamos en internet con tu dominio.</p></div>
 </div>
+</div></section>
+
+<section id="trabajos" aria-labelledby="trabajos-title"><div class="wrap">
+<h2 id="trabajos-title">Webs que hemos hecho</h2>
+<p class="sub">Dos negocios distintos, cada uno con su web a medida.</p>
+<div class="work-grid">
+<article class="work-card">
+<span class="work-tag">Proyecto a medida</span>
+<h3>Plata Marine</h3>
+<p>Una web para un servicio de intermediación náutica: presentar sus servicios y facilitar el contacto con compradores y vendedores de embarcaciones.</p>
+<a class="btn" href="https://www.platamarine.com/" target="_blank" rel="noopener noreferrer" aria-label="Ver web de Plata Marine (abre en otra pestaña)">Ver web <span aria-hidden="true">↗</span></a>
+</article>
+<article class="work-card">
+<span class="work-tag">Proyecto a medida</span>
+<h3>Bryan La Tinta</h3>
+<p>Una web para mostrar sus trabajos de personalización de motos y bicicletas, con espacio para que las piezas hablen por sí solas.</p>
+<a class="btn" href="https://www.bryanlatinta.com/" target="_blank" rel="noopener noreferrer" aria-label="Ver web de Bryan La Tinta (abre en otra pestaña)">Ver web <span aria-hidden="true">↗</span></a>
+</article>
+</div>
+<p class="work-note"><strong>Estos proyectos tienen un alcance y un presupuesto superiores al plan de 490 € + IVA.</strong> Son ejemplos de lo que podemos crear si tu negocio necesita algo más.</p>
 </div></section>
 
 <section id="precio"><div class="wrap">
