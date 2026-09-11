@@ -247,11 +247,7 @@ footer a{color:var(--muted)}
 <p style="color:var(--muted);margin:0">O escríbenos a <a href="mailto:hola@rotulito.com">hola@rotulito.com</a>.</p>
 <p class="who">Somos un estudio pequeño. No hay comerciales: la persona con la que hablas es la que hace la web.</p>
 </div>
-<form id="f" action="https://formsubmit.co/hola@rotulito.com" method="POST">
-<input type="hidden" name="_subject" value="Nueva solicitud de demo · Rotulito">
-<input type="hidden" name="_captcha" value="false">
-<input type="hidden" name="_template" value="table">
-<input type="hidden" name="_next" value="https://www.rotulito.com/gracias.html">
+<form id="f" action="https://script.google.com/macros/s/AKfycbx1VflBH6vMDRXIeud43Oy8treLHU15FKXUWFxy6VbRvmN3l1Wvv7TYQbijXzle4GoI/exec" method="POST">
 <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
 <label>Nombre del negocio<input id="negocio" name="negocio" required></label>
 <label>A qué te dedicas<input id="sector" name="sector" placeholder="Peluquería, taller, estética…" required></label>
@@ -288,7 +284,7 @@ footer a{color:var(--muted)}
   document.getElementById('ck-yes').onclick=function(){set('yes');hide();loadTrackers()};
   document.getElementById('ck-no').onclick=function(){set('no');hide()};
   var op=document.getElementById('ck-open');if(op){op.addEventListener('click',function(e){e.preventDefault();show()})}
-  var f=document.getElementById('f');if(f){f.addEventListener('submit',function(){if(window.gtag)gtag('event','form_submit');if(window.fbq)fbq('track','Lead')})}
+  var f=document.getElementById('f');if(f){f.addEventListener('submit',function(ev){ev.preventDefault();var b=f.querySelector('button[type=submit]');var t0=b.textContent;b.disabled=true;b.textContent='Enviando…';if(window.gtag)gtag('event','form_submit');if(window.fbq)fbq('track','Lead');fetch(f.action,{method:'POST',body:new URLSearchParams(new FormData(f))}).then(function(){location.href='/gracias.html'}).catch(function(){b.disabled=false;b.textContent=t0;var m=document.getElementById('ferr');if(!m){m=document.createElement('p');m.id='ferr';m.style.color='#b00';f.appendChild(m)}m.textContent='No se ha podido enviar. Escríbenos a hola@rotulito.com.'})})}
 })();
 </script>
 </body>
