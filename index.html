@@ -155,12 +155,26 @@ footer a{color:var(--muted)}
 .work-note strong{color:var(--ink)}
 @media(max-width:760px){.work-grid{grid-template-columns:1fr}.work-card{padding:24px}}
 @media(min-width:701px) and (max-width:900px){nav{gap:12px;font-size:.875rem}}
+
+/* test: presencia digital */
+#test{scroll-margin-top:80px}
+.quiz{background:var(--paper);border:2px solid var(--ink);border-radius:6px;overflow:hidden}
+.q{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 22px;border-bottom:1px dashed var(--line)}
+.q:last-child{border-bottom:0}
+.q p{margin:0;font-size:.98rem;max-width:52ch}
+.yn{display:flex;gap:8px;flex-shrink:0}
+.yn button{font:inherit;font-weight:600;font-size:.88rem;padding:8px 16px;border:1.5px solid var(--ink);border-radius:999px;background:var(--paper);cursor:pointer;color:var(--ink)}
+.yn button.on{background:var(--ink);color:#fff}
+@media(max-width:600px){.q{flex-direction:column;align-items:flex-start}}
+.quiz-result{margin-top:26px;background:var(--cream);border:2px solid var(--ink);border-radius:8px;padding:26px 28px}
+.quiz-result .bar{height:14px;background:var(--paper);border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;margin-bottom:16px}
+.quiz-result .bar span{display:block;height:100%;background:var(--red);border-radius:999px;transition:width .6s ease;width:0}
 </style>
 </head>
 <body>
 <header><div class="wrap">
 <a class="brand" href="#top"><i></i>Rotulito</a>
-<nav><a href="#incluye">Qué incluye</a><a href="#como">Cómo va</a><a href="#trabajos">Trabajos</a><a href="#precio">Precio</a><a href="#dudas">Dudas</a><a href="#contacto">Pide tu demo</a></nav>
+<nav><a href="#incluye">Qué incluye</a><a href="#como">Cómo va</a><a href="#test">¿Cómo vas?</a><a href="#trabajos">Trabajos</a><a href="#precio">Precio</a><a href="#dudas">Dudas</a><a href="#contacto">Pide tu demo</a></nav>
 </div></header>
 
 <main id="top">
@@ -220,6 +234,54 @@ footer a{color:var(--muted)}
 <div class="step"><div class="d">3</div><div class="t">En una semana</div><h3>La ajustamos y la publicamos</h3><p>Nos pasas las fotos, cambiamos lo que quieras y la dejamos en internet con tu dominio.</p></div>
 </div>
 </div></section>
+
+<section id="test"><div class="wrap">
+<h2>¿Cómo anda tu negocio en internet?</h2>
+<p class="sub">Seis preguntas, sí o no. Un minuto, y sin dar ningún dato.</p>
+<div class="quiz" id="quiz">
+<div class="q"><p>¿Tienes una web propia, y no solo un perfil en redes sociales?</p><div class="yn"><button type="button" data-v="1">Sí</button><button type="button" data-v="0">No</button></div></div>
+<div class="q"><p>¿Tu ficha de Google tiene fotos subidas en los últimos meses?</p><div class="yn"><button type="button" data-v="1">Sí</button><button type="button" data-v="0">No</button></div></div>
+<div class="q"><p>¿Contestas las reseñas que te dejan, buenas y malas?</p><div class="yn"><button type="button" data-v="1">Sí</button><button type="button" data-v="0">No</button></div></div>
+<div class="q"><p>Si alguien busca tu negocio y tu ciudad en Google, ¿sales tú?</p><div class="yn"><button type="button" data-v="1">Sí</button><button type="button" data-v="0">No</button></div></div>
+<div class="q"><p>¿Pueden escribirte sin tener que llamarte por teléfono?</p><div class="yn"><button type="button" data-v="1">Sí</button><button type="button" data-v="0">No</button></div></div>
+<div class="q"><p>¿Sabes cuánta gente ve tu ficha de Google cada mes?</p><div class="yn"><button type="button" data-v="1">Sí</button><button type="button" data-v="0">No</button></div></div>
+</div>
+<div class="quiz-result" id="quizResult" hidden>
+<div class="bar"><span id="quizBar"></span></div>
+<div class="note"><span class="hand">Resultado →</span><span id="quizMsg"></span></div>
+<div class="cta" style="margin-top:18px"><a class="btn red" href="#contacto">Cuéntanos tu negocio</a></div>
+</div>
+</div></section>
+
+<script>
+(function(){
+  var qs=document.querySelectorAll('#quiz .q');
+  var answered={};
+  qs.forEach(function(q,i){
+    q.querySelectorAll('button').forEach(function(b){
+      b.addEventListener('click',function(){
+        q.querySelectorAll('button').forEach(function(x){x.classList.remove('on')});
+        b.classList.add('on');
+        answered[i]=parseInt(b.dataset.v,10);
+        if(Object.keys(answered).length===qs.length){showResult()}
+      });
+    });
+  });
+  function showResult(){
+    var score=Object.values(answered).reduce(function(a,b){return a+b},0);
+    var pct=Math.round(score/qs.length*100);
+    var msg;
+    if(score>=5) msg='Vas bien. Con algún detalle más lo dejas redondo.';
+    else if(score>=3) msg='Vas defendiéndote, pero hay clientes que no te están encontrando.';
+    else msg='Aquí hay bastante que ganar: cada semana se te escapan clientes sin que lo notes.';
+    document.getElementById('quizBar').style.width=pct+'%';
+    document.getElementById('quizMsg').textContent=msg;
+    var r=document.getElementById('quizResult');
+    r.hidden=false;
+    r.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+})();
+</script>
 
 <section id="trabajos" aria-labelledby="trabajos-title"><div class="wrap">
 <h2 id="trabajos-title">Webs que hemos hecho</h2>
