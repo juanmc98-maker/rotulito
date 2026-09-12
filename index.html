@@ -158,17 +158,26 @@ footer a{color:var(--muted)}
 
 /* test: presencia digital */
 #test{scroll-margin-top:80px}
-.quiz{background:var(--paper);border:2px solid var(--ink);border-radius:6px;overflow:hidden}
-.q{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 22px;border-bottom:1px dashed var(--line)}
-.q:last-child{border-bottom:0}
-.q p{margin:0;font-size:.98rem;max-width:52ch}
-.yn{display:flex;gap:8px;flex-shrink:0}
-.yn button{font:inherit;font-weight:600;font-size:.88rem;padding:8px 16px;border:1.5px solid var(--ink);border-radius:999px;background:var(--paper);cursor:pointer;color:var(--ink)}
-.yn button.on{background:var(--ink);color:#fff}
-@media(max-width:600px){.q{flex-direction:column;align-items:flex-start}}
-.quiz-result{margin-top:26px;background:var(--cream);border:2px solid var(--ink);border-radius:8px;padding:26px 28px}
-.quiz-result .bar{height:14px;background:var(--paper);border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;margin-bottom:16px}
-.quiz-result .bar span{display:block;height:100%;background:var(--red);border-radius:999px;transition:width .6s ease;width:0}
+.quizcard{display:grid;grid-template-columns:auto 1fr;gap:36px;align-items:center;background:var(--ink);color:#fff;padding:34px 36px;border-radius:10px}
+@media(max-width:680px){.quizcard{grid-template-columns:1fr;text-align:center;justify-items:center;padding:28px 22px}}
+.gauge{position:relative;width:128px;height:128px;flex-shrink:0}
+.gauge svg{transform:rotate(-90deg)}
+.gauge .track{fill:none;stroke:rgba(255,255,255,.15);stroke-width:12}
+.gauge .arc{fill:none;stroke:var(--yellow);stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset .5s ease}
+.gauge-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gauge-num b{font-family:'Archivo Black',sans-serif;font-weight:400;font-size:2.1rem;line-height:1;color:var(--yellow)}
+.gauge-num span{font-size:.72rem;color:#cfc9ba;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.quizcard .quiz{display:grid}
+.quizcard .q{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.14)}
+.quizcard .q:last-child{border-bottom:0}
+.quizcard .q p{margin:0;font-size:.95rem;max-width:46ch;color:#f3efe4;text-align:left}
+.quizcard .yn{display:flex;gap:8px;flex-shrink:0}
+.quizcard .yn button{font:inherit;font-weight:700;font-size:.84rem;padding:7px 16px;border:1.5px solid rgba(255,255,255,.4);border-radius:999px;background:transparent;cursor:pointer;color:#fff}
+.quizcard .yn button.on{background:var(--yellow);border-color:var(--yellow);color:var(--ink)}
+@media(max-width:680px){.quizcard .q{flex-direction:column;gap:8px}.quizcard .q p{text-align:center;max-width:none}}
+.quiz-result{margin-top:16px;padding-top:16px;border-top:1px dashed rgba(255,255,255,.3)}
+.quiz-result p{margin:0 0 14px;color:#f3efe4;max-width:52ch}
+.quiz-result .hand{color:var(--yellow)}
 </style>
 </head>
 <body>
@@ -237,7 +246,16 @@ footer a{color:var(--muted)}
 
 <section id="test"><div class="wrap">
 <h2>¿Cómo anda tu negocio en internet?</h2>
-<p class="sub">Seis preguntas, sí o no. Un minuto, y sin dar ningún dato.</p>
+<p class="sub">Sí o no a estas seis. El marcador te dice cómo vas, sin pedirte ningún dato.</p>
+<div class="quizcard">
+<div class="gauge">
+<svg viewBox="0 0 120 120" width="128" height="128" aria-hidden="true">
+<circle class="track" cx="60" cy="60" r="52"></circle>
+<circle class="arc" id="gaugeArc" cx="60" cy="60" r="52"></circle>
+</svg>
+<div class="gauge-num"><b id="gaugeNum">0</b><span>de 6</span></div>
+</div>
+<div>
 <div class="quiz" id="quiz">
 <div class="q"><p>¿Tienes una web propia, y no solo un perfil en redes sociales?</p><div class="yn"><button type="button" data-v="1">Sí</button><button type="button" data-v="0">No</button></div></div>
 <div class="q"><p>¿Tu ficha de Google tiene fotos subidas en los últimos meses?</p><div class="yn"><button type="button" data-v="1">Sí</button><button type="button" data-v="0">No</button></div></div>
@@ -247,9 +265,10 @@ footer a{color:var(--muted)}
 <div class="q"><p>¿Sabes cuánta gente ve tu ficha de Google cada mes?</p><div class="yn"><button type="button" data-v="1">Sí</button><button type="button" data-v="0">No</button></div></div>
 </div>
 <div class="quiz-result" id="quizResult" hidden>
-<div class="bar"><span id="quizBar"></span></div>
-<div class="note"><span class="hand">Resultado →</span><span id="quizMsg"></span></div>
-<div class="cta" style="margin-top:18px"><a class="btn red" href="#contacto">Cuéntanos tu negocio</a></div>
+<p><span class="hand">Resultado →</span> <span id="quizMsg"></span></p>
+<a class="btn red" href="#contacto">Cuéntanos tu negocio</a>
+</div>
+</div>
 </div>
 </div></section>
 
@@ -257,24 +276,32 @@ footer a{color:var(--muted)}
 (function(){
   var qs=document.querySelectorAll('#quiz .q');
   var answered={};
+  var circumference=2*Math.PI*52;
+  var arc=document.getElementById('gaugeArc');
+  arc.style.strokeDasharray=circumference;
+  arc.style.strokeDashoffset=circumference;
+  function updateGauge(){
+    var n=Object.keys(answered).length;
+    document.getElementById('gaugeNum').textContent=n;
+    arc.style.strokeDashoffset=circumference*(1-n/qs.length);
+  }
   qs.forEach(function(q,i){
     q.querySelectorAll('button').forEach(function(b){
       b.addEventListener('click',function(){
         q.querySelectorAll('button').forEach(function(x){x.classList.remove('on')});
         b.classList.add('on');
         answered[i]=parseInt(b.dataset.v,10);
+        updateGauge();
         if(Object.keys(answered).length===qs.length){showResult()}
       });
     });
   });
   function showResult(){
     var score=Object.values(answered).reduce(function(a,b){return a+b},0);
-    var pct=Math.round(score/qs.length*100);
     var msg;
     if(score>=5) msg='Vas bien. Con algún detalle más lo dejas redondo.';
     else if(score>=3) msg='Vas defendiéndote, pero hay clientes que no te están encontrando.';
     else msg='Aquí hay bastante que ganar: cada semana se te escapan clientes sin que lo notes.';
-    document.getElementById('quizBar').style.width=pct+'%';
     document.getElementById('quizMsg').textContent=msg;
     var r=document.getElementById('quizResult');
     r.hidden=false;
