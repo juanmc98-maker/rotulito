@@ -310,12 +310,22 @@ footer a{color:var(--muted)}
       });
     });
   });
+  var problems=[
+    'no tienes web propia, solo redes',
+    'tu ficha de Google no tiene fotos recientes',
+    'no contestas las reseñas',
+    'no sales cuando buscan tu negocio en tu ciudad',
+    'solo pueden contactarte llamando',
+    'no sabes cuánta gente ve tu ficha de Google'
+  ];
   function showResult(){
     var score=Object.values(answered).reduce(function(a,b){return a+b},0);
+    var missing=[];
+    qs.forEach(function(q,i){ if(answered[i]===0) missing.push(problems[i]); });
     var msg;
-    if(score>=5) msg='Vas bien. Con algún detalle más lo dejas redondo.';
-    else if(score>=3) msg='Vas defendiéndote, pero hay clientes que no te están encontrando.';
-    else msg='Aquí hay bastante que ganar: cada semana se te escapan clientes sin que lo notes.';
+    if(score>=5) msg=missing.length? 'Vas bien. Solo te falta esto: '+missing[0]+'.' : 'Vas bien. Con algún detalle más lo dejas redondo.';
+    else if(score>=3) msg='Vas defendiéndote, pero '+missing.slice(0,2).join(' y ')+'. Ahí se te escapan clientes.';
+    else msg='Aquí hay bastante que ganar: '+missing.slice(0,2).join(' y ')+', entre otras cosas. Cada semana se te escapan clientes sin que lo notes.';
     document.getElementById('quizMsg').textContent=msg;
     var r=document.getElementById('quizResult');
     r.hidden=false;
@@ -351,6 +361,7 @@ footer a{color:var(--muted)}
 <div>
 <h2>Un precio, y ya está</h2>
 <p>490 € + IVA (592,90 € IVA incluido) por la web publicada, con dominio y alojamiento el primer año. Se paga la mitad al decir que sí y la otra mitad antes de publicar.</p>
+<p><strong>La ves montada con tus datos antes de que pagues nada.</strong> Si no te convence, no debes nada.</p>
 <p>A partir del segundo año, <strong>20 € + IVA al mes (24,20 € IVA incluido)</strong>: renovación de un dominio .com o .es, alojamiento y hasta <strong>30 minutos al mes de pequeños cambios, no acumulables</strong>. Por ejemplo: actualizar horarios, teléfonos, precios o textos breves, o sustituir fotos que nos facilites, dentro del diseño existente.</p>
 <p>Este mismo servicio está incluido durante el primer año. Las páginas o secciones nuevas, los rediseños, las tiendas online, las funciones adicionales y el trabajo que supere los 30 minutos mensuales se presupuestan aparte. Te indicamos el coste y esperamos tu aceptación antes de empezar cualquier extra.</p>
 <p>Sin permanencia. Desde el segundo año, la cuota se cobra mensualmente y puedes solicitar la baja en <a href="mailto:hola@rotulito.com">hola@rotulito.com</a> antes del siguiente cobro. Otra extensión de dominio se presupuesta aparte. Estas condiciones corresponden al plan de una página; el mantenimiento de proyectos a medida se detalla en su presupuesto.</p>
@@ -391,15 +402,30 @@ footer a{color:var(--muted)}
 <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
 <label>Nombre del negocio<input id="negocio" name="negocio" required></label>
 <label>A qué te dedicas<input id="sector" name="sector" placeholder="Peluquería, taller, estética…" required></label>
-<label>Población<input id="poblacion" name="poblacion" required></label>
+<label>Población (opcional)<input id="poblacion" name="poblacion"></label>
 <label>Tu nombre<input id="nombre" name="nombre" autocomplete="name" required></label>
-<label>Teléfono<input id="telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel" pattern="[0-9 +()-]{9,}" title="Escribe un teléfono de al menos 9 dígitos" required></label>
-<label>Email<input id="email" name="email" type="email" autocomplete="email" required></label>
+<label>Teléfono (o email)<input id="telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel" pattern="[0-9 +()-]{9,}" title="Escribe un teléfono de al menos 9 dígitos"></label>
+<label>Email (o teléfono)<input id="email" name="email" type="email" autocomplete="email"></label>
 <label>Algo más que quieras contarnos<textarea id="mensaje" name="mensaje"></textarea></label>
 <label class="check"><input type="checkbox" id="priv" name="privacidad" required> He leído la <a href="/privacidad.html" target="_blank" rel="noopener">política de privacidad</a> sobre el uso de mis datos para responder a mi solicitud.</label>
 <p style="font-size:.82rem;color:var(--muted)">Responsable: Juan Morante Cruz (Rotulito). Usamos tus datos para preparar tu propuesta y atender tu solicitud, como medidas precontractuales. No te suscribes a publicidad. Derechos de acceso, rectificación, supresión y demás derechos en hola@rotulito.com. <a href="/privacidad.html">Más información</a>.</p>
+<p id="formErr" role="alert" hidden style="color:var(--red);font-size:.88rem;font-weight:600;margin:0">Déjanos un teléfono o un email para poder contestarte.</p>
 <button class="btn solid" type="submit">Enviar y ver mi demo</button>
 </form>
+<script>
+document.getElementById('f').addEventListener('submit',function(e){
+  var tel=document.getElementById('telefono').value.trim();
+  var email=document.getElementById('email').value.trim();
+  var err=document.getElementById('formErr');
+  if(!tel && !email){
+    e.preventDefault();
+    err.hidden=false;
+    document.getElementById('telefono').focus();
+  } else {
+    err.hidden=true;
+  }
+});
+</script>
 </div>
 </div></section>
 </main>
