@@ -411,31 +411,20 @@ footer a{color:var(--muted)}
 </div>
 <form id="f" action="https://script.google.com/macros/s/AKfycbx1VflBH6vMDRXIeud43Oy8treLHU15FKXUWFxy6VbRvmN3l1Wvv7TYQbijXzle4GoI/exec" method="POST">
 <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
+<div class="frow">
 <label>Nombre del negocio<input id="negocio" name="negocio" required></label>
-<label>A qué te dedicas<input id="sector" name="sector" placeholder="Peluquería, taller, estética…" required></label>
-<label>Población (opcional)<input id="poblacion" name="poblacion"></label>
+<label>A qué te dedicas<input id="sector" name="sector" placeholder="Peluquería, taller..." required></label>
+</div>
+<div class="frow">
 <label>Tu nombre<input id="nombre" name="nombre" autocomplete="name" required></label>
-<label>Teléfono (o email)<input id="telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel" pattern="[0-9 +()-]{9,}" title="Escribe un teléfono de al menos 9 dígitos"></label>
-<label>Email (o teléfono)<input id="email" name="email" type="email" autocomplete="email"></label>
+<label>Teléfono<input id="telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel" pattern="[0-9 +()-]{9,}" title="Escribe un teléfono de al menos 9 dígitos" required></label>
+</div>
+<label>Email<input id="email" name="email" type="email" autocomplete="email" required></label>
 <label>Algo más que quieras contarnos<textarea id="mensaje" name="mensaje"></textarea></label>
-<label class="check"><input type="checkbox" id="priv" name="privacidad" required> He leído la <a href="/privacidad.html" target="_blank" rel="noopener">política de privacidad</a> sobre el uso de mis datos para responder a mi solicitud.</label>
+<label class="check"><input type="checkbox" id="priv" name="privacidad" required> <span>He leído la <a href="/privacidad.html" target="_blank" rel="noopener">política de privacidad</a> sobre el uso de mis datos para responder a mi solicitud.</span></label>
 <p style="font-size:.82rem;color:var(--muted)">Responsable: Juan Morante Cruz (Rotulito). Usamos tus datos para preparar tu propuesta y atender tu solicitud, como medidas precontractuales. No te suscribes a publicidad. Derechos de acceso, rectificación, supresión y demás derechos en hola@rotulito.com. <a href="/privacidad.html">Más información</a>.</p>
-<p id="formErr" role="alert" hidden style="color:var(--red);font-size:.88rem;font-weight:600;margin:0">Déjanos un teléfono o un email para poder contestarte.</p>
 <button class="btn solid" type="submit">Enviar y ver mi demo</button>
 </form>
-<script>
-document.getElementById('f').addEventListener('submit',function(e){
-  var tel=document.getElementById('telefono').value.trim();
-  var email=document.getElementById('email').value.trim();
-  var err=document.getElementById('formErr');
-  if(!tel && !email){
-    e.preventDefault();
-    err.hidden=false;
-    document.getElementById('telefono').focus();
-  } else {
-    err.hidden=true;
-  }
-});
 </script>
 </div>
 </div></section>
@@ -467,6 +456,9 @@ document.getElementById('f').addEventListener('submit',function(e){
 .speed-bars .row.on>span{color:var(--ink);font-weight:600}
 .speed-bars .row em{font-style:normal;flex:none;width:30px;text-align:right}
 @media(max-width:520px){.speed{gap:12px;padding:14px}.speed-num b{font-size:2.1rem}.speed-bars .row>span{width:96px}}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.frow{grid-template-columns:1fr}}
+.check>span{flex:1}
 </style>
 <a class="wa-float" href="https://wa.me/34613272053?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20una%20web%20para%20mi%20negocio." target="_blank" rel="noopener" aria-label="Escribir por WhatsApp al 613 272 053">WhatsApp</a>
 </body>
