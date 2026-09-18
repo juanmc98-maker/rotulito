@@ -233,7 +233,15 @@ footer a{color:var(--muted)}
 <p>El dominio (tunegocio.com) se registra a tu nombre y el alojamiento del primer año va incluido. Si un día te vas, te lo llevas todo.</p>
 <span class="hand">Nada de lo que no necesitas. Ni blog, ni tienda, ni cuotas de "mantenimiento premium".</span>
 <div class="speed">
+<div class="speed-gauge">
+<svg viewBox="0 0 120 74" width="150" height="93" aria-hidden="true">
+<path class="zone zone-bad" d="M12 66 A48 48 0 0 1 58.5 18"></path>
+<path class="zone zone-mid" d="M58.5 18 A48 48 0 0 1 105.2 49.7"></path>
+<path class="zone zone-good" d="M105.2 49.7 A48 48 0 0 1 108 66"></path>
+<g class="needle" style="transform:rotate(88.2deg)"><line x1="60" y1="66" x2="60" y2="24"></line><circle cx="60" cy="66" r="6"></circle></g>
+</svg>
 <div class="speed-num"><b>99</b><span>/100</span></div>
+</div>
 <div class="speed-txt">
 <strong>Velocidad medida por Google</strong>
 <p>PageSpeed Insights, en ordenador, sobre esta misma página. Las hacemos con HTML ligero, sin WordPress ni plugins: por eso vuelan.</p>
@@ -448,7 +456,8 @@ footer a{color:var(--muted)}
 </style>
 <style>
 .speed{display:flex;gap:16px;align-items:flex-start;margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper)}
-.speed-num{flex:none;text-align:center;line-height:1}
+.speed-gauge{flex:none;display:flex;flex-direction:column;align-items:center}
+.speed-num{text-align:center;line-height:1;margin-top:-6px}
 .speed-num b{display:block;font-size:2.6rem;font-weight:800;color:#1a7f37}
 .speed-num span{font-size:.72rem;color:var(--muted)}
 .speed-txt{min-width:0}
@@ -461,7 +470,7 @@ footer a{color:var(--muted)}
 .speed-bars .row.on .bar i{background:#1a7f37}
 .speed-bars .row.on>span{color:var(--ink);font-weight:600}
 .speed-bars .row em{font-style:normal;flex:none;width:30px;text-align:right}
-@media(max-width:520px){.speed{gap:12px;padding:14px}.speed-num b{font-size:2.1rem}.speed-bars .row>span{width:96px}}
+@media(max-width:520px){.speed{flex-direction:column;align-items:center;text-align:center;gap:12px;padding:14px}.speed-num b{font-size:2.1rem}.speed-bars .row>span{width:96px}}
 .work-thumb{height:auto}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:560px){.frow{grid-template-columns:1fr}}
