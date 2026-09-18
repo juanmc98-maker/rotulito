@@ -227,6 +227,17 @@ footer a{color:var(--muted)}
 <p>Botones de llamar y de WhatsApp que se ven siempre, un enlace a "Cómo llegar", la web preparada para que Google la entienda cuando busquen tu tipo de negocio en tu zona, y el aviso legal y la privacidad redactados para tu caso.</p>
 <p>El dominio (tunegocio.com) se registra a tu nombre y el alojamiento del primer año va incluido. Si un día te vas, te lo llevas todo.</p>
 <span class="hand">Nada de lo que no necesitas. Ni blog, ni tienda, ni cuotas de "mantenimiento premium".</span>
+<div class="speed">
+<div class="speed-num"><b>99</b><span>/100</span></div>
+<div class="speed-txt">
+<strong>Velocidad medida por Google</strong>
+<p>PageSpeed Insights, en ordenador, sobre esta misma página. Las hacemos con HTML ligero, sin WordPress ni plugins: por eso vuelan.</p>
+<div class="speed-bars">
+<div class="row"><span>Web lenta corriente</span><div class="bar"><i style="width:40%"></i></div><em>~40</em></div>
+<div class="row on"><span>Esta misma página</span><div class="bar"><i style="width:99%"></i></div><em>99</em></div>
+</div>
+</div>
+</div>
 </div>
 <div class="ticket">
 <span class="stamp">Incluido</span>
@@ -439,6 +450,23 @@ document.getElementById('f').addEventListener('submit',function(e){
 .wa-float{position:fixed;right:16px;bottom:16px;z-index:60;display:inline-flex;align-items:center;justify-content:center;width:58px;height:58px;border-radius:50%;background:#25D366;box-shadow:0 8px 24px rgba(0,0,0,.28);font-size:0;text-decoration:none;transition:transform .15s ease,background-color .15s ease}
 .wa-float::before{content:"";width:30px;height:30px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 12 12 0 0 0 4.6 4c.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.2z'/%3E%3C/svg%3E") center/contain no-repeat}
 .wa-float:hover{background:#1fb457;transform:translateY(-1px)}
+</style>
+<style>
+.speed{display:flex;gap:16px;align-items:flex-start;margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper)}
+.speed-num{flex:none;text-align:center;line-height:1}
+.speed-num b{display:block;font-size:2.6rem;font-weight:800;color:#1a7f37}
+.speed-num span{font-size:.72rem;color:var(--muted)}
+.speed-txt{min-width:0}
+.speed-txt strong{display:block;font-size:.98rem}
+.speed-txt p{margin:.35rem 0 .7rem;font-size:.85rem;color:var(--muted)}
+.speed-bars .row{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted);margin-top:5px}
+.speed-bars .row>span{flex:none;width:120px}
+.speed-bars .bar{flex:1;height:7px;background:#e9e3d7;border-radius:99px;overflow:hidden}
+.speed-bars .bar i{display:block;height:100%;background:#c9c4bb;border-radius:99px}
+.speed-bars .row.on .bar i{background:#1a7f37}
+.speed-bars .row.on>span{color:var(--ink);font-weight:600}
+.speed-bars .row em{font-style:normal;flex:none;width:30px;text-align:right}
+@media(max-width:520px){.speed{gap:12px;padding:14px}.speed-num b{font-size:2.1rem}.speed-bars .row>span{width:96px}}
 </style>
 <a class="wa-float" href="https://wa.me/34613272053?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20una%20web%20para%20mi%20negocio." target="_blank" rel="noopener" aria-label="Escribir por WhatsApp al 613 272 053">WhatsApp</a>
 </body>
