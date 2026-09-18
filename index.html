@@ -164,11 +164,16 @@ footer a{color:var(--muted)}
 #test{scroll-margin-top:80px}
 .quizcard{display:grid;grid-template-columns:auto 1fr;gap:36px;align-items:center;background:var(--ink);color:#fff;padding:34px 36px;border-radius:10px}
 @media(max-width:680px){.quizcard{grid-template-columns:1fr;text-align:center;justify-items:center;padding:28px 22px}}
-.gauge{position:relative;width:128px;height:128px;flex-shrink:0}
-.gauge svg{transform:rotate(-90deg)}
-.gauge .track{fill:none;stroke:rgba(255,255,255,.15);stroke-width:12}
-.gauge .arc{fill:none;stroke:var(--yellow);stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset .5s ease}
-.gauge-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gauge{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.gauge svg{display:block;overflow:visible}
+.zone{fill:none;stroke-width:10;stroke-linecap:round}
+.zone-bad{stroke:var(--red)}
+.zone-mid{stroke:var(--yellow)}
+.zone-good{stroke:#1a7f37}
+.needle{transform-origin:60px 66px;transform:rotate(-90deg);transition:transform .7s cubic-bezier(.34,1.56,.64,1)}
+.needle line{stroke:#fff;stroke-width:4;stroke-linecap:round}
+.needle circle{fill:#fff}
+.gauge-num{display:flex;flex-direction:column;align-items:center;margin-top:-8px}
 .gauge-num b{font-family:'Archivo Black',sans-serif;font-weight:400;font-size:2.1rem;line-height:1;color:var(--yellow)}
 .gauge-num span{font-size:.72rem;color:#cfc9ba;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
 .quizcard .quiz{display:grid}
@@ -271,12 +276,14 @@ footer a{color:var(--muted)}
 
 <section id="test"><div class="wrap">
 <h2>¿Cómo anda tu negocio en internet?</h2>
-<p class="sub">Sí o no a estas seis. El marcador te dice cómo vas, sin pedirte ningún dato.</p>
+<p class="sub">Sí o no a estas seis. La aguja se mueve en directo según cómo vas, sin pedirte ningún dato.</p>
 <div class="quizcard">
 <div class="gauge">
-<svg viewBox="0 0 120 120" width="128" height="128" aria-hidden="true">
-<circle class="track" cx="60" cy="60" r="52"></circle>
-<circle class="arc" id="gaugeArc" cx="60" cy="60" r="52"></circle>
+<svg viewBox="0 0 120 74" width="168" height="104" aria-hidden="true">
+<path class="zone zone-bad" d="M12 66 A48 48 0 0 1 36 24.4"></path>
+<path class="zone zone-mid" d="M36 24.4 A48 48 0 0 1 84 24.4"></path>
+<path class="zone zone-good" d="M84 24.4 A48 48 0 0 1 108 66"></path>
+<g class="needle" id="needle"><line x1="60" y1="66" x2="60" y2="24"></line><circle cx="60" cy="66" r="6"></circle></g>
 </svg>
 <div class="gauge-num"><b id="gaugeNum">0</b><span>de 6</span></div>
 </div>
@@ -301,14 +308,13 @@ footer a{color:var(--muted)}
 (function(){
   var qs=document.querySelectorAll('#quiz .q');
   var answered={};
-  var circumference=2*Math.PI*52;
-  var arc=document.getElementById('gaugeArc');
-  arc.style.strokeDasharray=circumference;
-  arc.style.strokeDashoffset=circumference;
+  var needle=document.getElementById('needle');
   function updateGauge(){
-    var n=Object.keys(answered).length;
-    document.getElementById('gaugeNum').textContent=n;
-    arc.style.strokeDashoffset=circumference*(1-n/qs.length);
+    var score=0;
+    Object.keys(answered).forEach(function(k){score+=answered[k]});
+    document.getElementById('gaugeNum').textContent=score;
+    var angle=-90+(score/qs.length)*180;
+    needle.style.transform='rotate('+angle+'deg)';
   }
   qs.forEach(function(q,i){
     q.querySelectorAll('button').forEach(function(b){
