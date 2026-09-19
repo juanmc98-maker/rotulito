@@ -225,6 +225,17 @@ footer a{color:var(--muted)}
 .speed-txt{min-width:0}
 .speed-txt strong{display:block;font-size:.98rem}
 .speed-txt p{margin:.35rem 0 0;font-size:.85rem;color:var(--muted)}
+.speed-gauge{flex-shrink:0}
+.speed-gauge .needle line{stroke:var(--ink)}
+.speed-gauge .needle circle{fill:var(--ink)}
+.speed-gauge-num{margin-top:-4px}
+.speed-gauge-num b{color:#1a7f37;font-size:1.5rem}
+.speed-gauge-num span{font-size:.62rem}
+.ph-photo{height:58px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:9px;font-weight:700;color:#5b564c;text-align:center;padding:0 12px;border-bottom:1px dashed rgba(0,0,0,.15)}
+.examples-grid .example:nth-child(1) .ph-photo{background:#e9f1ec}
+.examples-grid .example:nth-child(2) .ph-photo{background:#eaf0f7}
+.examples-grid .example:nth-child(3) .ph-photo{background:#f7ecec}
+.examples-grid .example:nth-child(4) .ph-photo{background:#f6f1de}
 @media(max-width:520px){.speed{flex-direction:column;align-items:center;text-align:center;gap:10px;padding:14px}.speed-num b{font-size:2.1rem}}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:560px){.frow{grid-template-columns:1fr}}
@@ -264,6 +275,7 @@ footer a{color:var(--muted)}
 <div class="examples-grid">
 <div class="example"><span class="work-tag">Ejemplo de diseño</span><div class="phone"><div class="scr">
 <div class="top"><i></i></div>
+<div class="ph-photo">📷 Aquí tu foto real</div>
 <div class="bar">Peluquería Mari Carmen <small>Sabadell</small></div>
 <div class="h"><b>Corte, color y peinado a dos pasos de casa</b><p>Sin cita para cortes. Color y recogidos, mejor llamando.</p><span class="b">Llamar</span><span class="b o">WhatsApp</span></div>
 <div class="s"><b>Lo que hacemos</b><div class="row"><div><b>Corte</b>Mujer, hombre y niños</div><div><b>Color y mechas</b>Te asesoramos</div><div><b>Recogidos</b>Bodas y eventos</div><div><b>Tratamientos</b>Keratina, hidratación</div></div></div>
@@ -271,6 +283,7 @@ footer a{color:var(--muted)}
 </div></div></div>
 <div class="example"><span class="work-tag">Ejemplo de diseño</span><div class="phone"><div class="scr">
 <div class="top"><i></i></div>
+<div class="ph-photo">📷 Aquí tu foto real</div>
 <div class="bar">Taller Mecánico Hnos. Ruiz <small>Terrassa</small></div>
 <div class="h"><b>Revisión y reparación, mientras esperas</b><p>Diagnóstico sin coste. Presupuesto antes de tocar nada.</p><span class="b">Llamar</span><span class="b o">WhatsApp</span></div>
 <div class="s"><b>Lo que hacemos</b><div class="row"><div><b>Neumáticos</b>Montaje y equilibrado</div><div><b>Frenos</b>Pastillas y discos</div><div><b>ITV</b>Preparación previa</div><div><b>Climatización</b>Carga y revisión</div></div></div>
@@ -278,6 +291,7 @@ footer a{color:var(--muted)}
 </div></div></div>
 <div class="example"><span class="work-tag">Ejemplo de diseño</span><div class="phone"><div class="scr">
 <div class="top"><i></i></div>
+<div class="ph-photo">📷 Aquí tu foto real</div>
 <div class="bar">Fisioterapia Ana Puig <small>Mataró</small></div>
 <div class="h"><b>Recupera movilidad sin esperas largas</b><p>Primera valoración incluida. Bonos por sesiones.</p><span class="b">Llamar</span><span class="b o">WhatsApp</span></div>
 <div class="s"><b>Lo que hacemos</b><div class="row"><div><b>Traumatología</b>Lesiones y rehabilitación</div><div><b>Deportiva</b>Vuelta a la actividad</div><div><b>Suelo pélvico</b>Atención específica</div><div><b>Punción seca</b>Dolor muscular</div></div></div>
@@ -285,6 +299,7 @@ footer a{color:var(--muted)}
 </div></div></div>
 <div class="example"><span class="work-tag">Ejemplo de diseño</span><div class="phone"><div class="scr">
 <div class="top"><i></i></div>
+<div class="ph-photo">📷 Aquí tu foto real</div>
 <div class="bar">Frutas y Verduras El Rincón <small>Rubí</small></div>
 <div class="h"><b>Producto fresco de proximidad, cada día</b><p>Encargos por WhatsApp, recogida en tienda.</p><span class="b">Llamar</span><span class="b o">WhatsApp</span></div>
 <div class="s"><b>Lo que hacemos</b><div class="row"><div><b>Fruta y verdura</b>Selección diaria</div><div><b>Encargos</b>Para recoger o recibir</div><div><b>Cestas</b>Para regalo</div><div><b>Reparto</b>De barrio</div></div></div>
@@ -301,7 +316,7 @@ footer a{color:var(--muted)}
 <p>El dominio (tunegocio.com) se registra a tu nombre y el alojamiento del primer año va incluido. Si un día te vas, te lo llevas todo.</p>
 <span class="hand">Nada de lo que no necesitas. Ni blog, ni tienda, ni cuotas de "mantenimiento premium".</span>
 <div class="speed">
-<div class="speed-num"><b>94</b><span>/100 móvil</span></div>
+<div class="gauge speed-gauge"><svg viewBox="0 0 120 74" width="88" height="55" aria-hidden="true"><path class="zone zone-bad" d="M12 66 A48 48 0 0 1 36 24.4"></path><path class="zone zone-mid" d="M36 24.4 A48 48 0 0 1 84 24.4"></path><path class="zone zone-good" d="M84 24.4 A48 48 0 0 1 108 66"></path><g class="needle" style="transform:rotate(79deg)"><line x1="60" y1="66" x2="60" y2="24"></line><circle cx="60" cy="66" r="6"></circle></g></svg><div class="gauge-num speed-gauge-num"><b>94</b><span>/100</span></div></div>
 <div class="speed-txt">
 <strong>Velocidad medida por Google</strong>
 <p>PageSpeed Insights sobre esta misma página, medido el 19 sept 2026. HTML ligero, sin WordPress ni plugins.</p>
