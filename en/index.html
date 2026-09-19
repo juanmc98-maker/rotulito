@@ -173,6 +173,17 @@ footer a{color:var(--muted)}
 .speed-num span{font-size:.72rem;color:var(--muted)}
 .speed-txt strong{display:block;font-size:.98rem}
 .speed-txt p{margin:.35rem 0 0;font-size:.85rem;color:var(--muted)}
+.speed-gauge{flex-shrink:0}
+.speed-gauge .needle line{stroke:var(--ink)}
+.speed-gauge .needle circle{fill:var(--ink)}
+.speed-gauge-num{margin-top:-4px}
+.speed-gauge-num b{color:#1a7f37;font-size:1.5rem}
+.speed-gauge-num span{font-size:.62rem}
+.ph-photo{height:58px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:9px;font-weight:700;color:#5b564c;text-align:center;padding:0 12px;border-bottom:1px dashed rgba(0,0,0,.15)}
+.examples-grid .example:nth-child(1) .ph-photo{background:#e9f1ec}
+.examples-grid .example:nth-child(2) .ph-photo{background:#eaf0f7}
+.examples-grid .example:nth-child(3) .ph-photo{background:#f7ecec}
+.examples-grid .example:nth-child(4) .ph-photo{background:#f6f1de}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:560px){.frow{grid-template-columns:1fr}}
 .check>span{flex:1}
@@ -208,25 +219,33 @@ footer a{color:var(--muted)}
 <p class="sub">Design examples from the 490 € plan, across different trades. Not real clients: this is the same format your website would have, with your details.</p>
 <div class="examples-grid">
 <div class="example"><span class="work-tag">Design example</span><div class="phone"><div class="scr">
-<div class="bar">Mari Carmen Hair Salon <small>Sabadell</small></div>
+
+<div class="top"><i></i></div>
+<div class="ph-photo">📷 Your real photo here</div><div class="bar">Mari Carmen Hair Salon <small>Sabadell</small></div>
 <div class="h"><b>Cuts, colour and styling close to home</b><p>Walk-ins for cuts. Colour and updos, better to call ahead.</p><span class="b">Call</span><span class="b o">WhatsApp</span></div>
 <div class="s"><b>What we do</b><div class="row"><div><b>Cuts</b>Women, men and kids</div><div><b>Colour and highlights</b>We advise you</div><div><b>Updos</b>Weddings and events</div><div><b>Treatments</b>Keratin, hydration</div></div></div>
 <div class="f"><b>Hours</b> · Tue–Sat 9:30–19:00 · <b>Where</b> · 118 Gràcia St. · Get directions</div>
 </div></div></div>
 <div class="example"><span class="work-tag">Design example</span><div class="phone"><div class="scr">
-<div class="bar">Ruiz Bros. Garage <small>Terrassa</small></div>
+
+<div class="top"><i></i></div>
+<div class="ph-photo">📷 Your real photo here</div><div class="bar">Ruiz Bros. Garage <small>Terrassa</small></div>
 <div class="h"><b>Servicing and repairs while you wait</b><p>Free diagnostics. A quote before we touch anything.</p><span class="b">Call</span><span class="b o">WhatsApp</span></div>
 <div class="s"><b>What we do</b><div class="row"><div><b>Tyres</b>Fitting and balancing</div><div><b>Brakes</b>Pads and discs</div><div><b>MOT prep</b>Pre-check before test</div><div><b>Air-con</b>Recharge and check</div></div></div>
 <div class="f"><b>Hours</b> · Mon–Fri 8:00–19:00 · <b>Where</b> · Can Petit Industrial Est. · Get directions</div>
 </div></div></div>
 <div class="example"><span class="work-tag">Design example</span><div class="phone"><div class="scr">
-<div class="bar">Ana Puig Physiotherapy <small>Mataró</small></div>
+
+<div class="top"><i></i></div>
+<div class="ph-photo">📷 Your real photo here</div><div class="bar">Ana Puig Physiotherapy <small>Mataró</small></div>
 <div class="h"><b>Get moving again, without the long wait</b><p>First assessment included. Session bundles available.</p><span class="b">Call</span><span class="b o">WhatsApp</span></div>
 <div class="s"><b>What we do</b><div class="row"><div><b>Sports injuries</b>Injury and rehab</div><div><b>Sports physio</b>Back to activity</div><div><b>Pelvic floor</b>Specific care</div><div><b>Dry needling</b>Muscle pain</div></div></div>
 <div class="f"><b>Hours</b> · Mon–Fri 9:00–20:00 · <b>Where</b> · 22 Nou St. · Get directions</div>
 </div></div></div>
 <div class="example"><span class="work-tag">Design example</span><div class="phone"><div class="scr">
-<div class="bar">El Rincón Greengrocer <small>Rubí</small></div>
+
+<div class="top"><i></i></div>
+<div class="ph-photo">📷 Your real photo here</div><div class="bar">El Rincón Greengrocer <small>Rubí</small></div>
 <div class="h"><b>Fresh, local produce, every day</b><p>Orders by WhatsApp, pick up in store.</p><span class="b">Call</span><span class="b o">WhatsApp</span></div>
 <div class="s"><b>What we do</b><div class="row"><div><b>Fruit and veg</b>Daily selection</div><div><b>Orders</b>Pick up or delivery</div><div><b>Gift baskets</b>Made to order</div><div><b>Local delivery</b>Around the neighbourhood</div></div></div>
 <div class="f"><b>Hours</b> · Mon–Sat 8:30–14:00 &amp; 17:00–20:00 · <b>Where</b> · 9 Major St. · Get directions</div>
@@ -241,7 +260,7 @@ footer a{color:var(--muted)}
 <p>The domain (yourbusiness.com) is registered in your name and hosting is included the first year. If you ever leave, you take it all with you.</p>
 <span class="hand">Nothing you don't need. No blog, no shop, no "premium maintenance" fees.</span>
 <div class="speed">
-<div class="speed-num"><b>94</b><span>/100 mobile</span></div>
+<div class="gauge speed-gauge"><svg viewBox="0 0 120 74" width="88" height="55" aria-hidden="true"><path class="zone zone-bad" d="M12 66 A48 48 0 0 1 36 24.4"></path><path class="zone zone-mid" d="M36 24.4 A48 48 0 0 1 84 24.4"></path><path class="zone zone-good" d="M84 24.4 A48 48 0 0 1 108 66"></path><g class="needle" style="transform:rotate(79deg)"><line x1="60" y1="66" x2="60" y2="24"></line><circle cx="60" cy="66" r="6"></circle></g></svg><div class="gauge-num speed-gauge-num"><b>94</b><span>/100</span></div></div>
 <div class="speed-txt">
 <strong>Speed, measured by Google</strong>
 <p>PageSpeed Insights on this same page, measured 19 Sep 2026. Lightweight HTML, no WordPress or plugins.</p>
@@ -443,4 +462,4 @@ r.scrollIntoView({behavior:'smooth',block:'center'});
 .wa-float:hover{background:#1fb457;transform:translateY(-1px)}
 </style>
 </body>
-                                                                                                                                       </html>
+</html>
