@@ -175,6 +175,17 @@ footer a{color:var(--muted)}
 .speed-num span{font-size:.72rem;color:var(--muted)}
 .speed-txt strong{display:block;font-size:.98rem}
 .speed-txt p{margin:.35rem 0 0;font-size:.85rem;color:var(--muted)}
+.speed-gauge{flex-shrink:0}
+.speed-gauge .needle line{stroke:var(--ink)}
+.speed-gauge .needle circle{fill:var(--ink)}
+.speed-gauge-num{margin-top:-4px}
+.speed-gauge-num b{color:#1a7f37;font-size:1.5rem}
+.speed-gauge-num span{font-size:.62rem}
+.ph-photo{height:58px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:9px;font-weight:700;color:#5b564c;text-align:center;padding:0 12px;border-bottom:1px dashed rgba(0,0,0,.15)}
+.examples-grid .example:nth-child(1) .ph-photo{background:#e9f1ec}
+.examples-grid .example:nth-child(2) .ph-photo{background:#eaf0f7}
+.examples-grid .example:nth-child(3) .ph-photo{background:#f7ecec}
+.examples-grid .example:nth-child(4) .ph-photo{background:#f6f1de}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:560px){.frow{grid-template-columns:1fr}}
 .check>span{flex:1}
@@ -210,25 +221,33 @@ footer a{color:var(--muted)}
 <p class="sub">Exemples de disseny del pla de 490 €, en diferents sectors. No són clients reals: és el mateix format que tindria la teva web, amb les teves dades.</p>
 <div class="examples-grid">
 <div class="example"><span class="work-tag">Exemple de disseny</span><div class="phone"><div class="scr">
-<div class="bar">Perruqueria Mari Carmen <small>Sabadell</small></div>
+
+<div class="top"><i></i></div>
+<div class="ph-photo">📷 Aquí la teva foto real</div><div class="bar">Perruqueria Mari Carmen <small>Sabadell</small></div>
 <div class="h"><b>Tall, color i pentinat a dos passos de casa</b><p>Sense cita per als talls. Color i pentinats, millor trucant.</p><span class="b">Trucar</span><span class="b o">WhatsApp</span></div>
 <div class="s"><b>El que fem</b><div class="row"><div><b>Tall</b>Dona, home i nens</div><div><b>Color i reflexos</b>T'assessorem</div><div><b>Pentinats</b>Casaments i esdeveniments</div><div><b>Tractaments</b>Queratina, hidratació</div></div></div>
 <div class="f"><b>Horari</b> · Dt–Ds 9:30–19:00 · <b>On</b> · C/ de Gràcia, 118 · Com arribar-hi</div>
 </div></div></div>
 <div class="example"><span class="work-tag">Exemple de disseny</span><div class="phone"><div class="scr">
-<div class="bar">Taller Mecànic Hnos. Ruiz <small>Terrassa</small></div>
+
+<div class="top"><i></i></div>
+<div class="ph-photo">📷 Aquí la teva foto real</div><div class="bar">Taller Mecànic Hnos. Ruiz <small>Terrassa</small></div>
 <div class="h"><b>Revisió i reparació, mentre esperes</b><p>Diagnòstic sense cost. Pressupost abans de tocar res.</p><span class="b">Trucar</span><span class="b o">WhatsApp</span></div>
 <div class="s"><b>El que fem</b><div class="row"><div><b>Pneumàtics</b>Muntatge i equilibrat</div><div><b>Frens</b>Pastilles i discos</div><div><b>ITV</b>Preparació prèvia</div><div><b>Climatització</b>Càrrega i revisió</div></div></div>
 <div class="f"><b>Horari</b> · Dl–Dv 8:00–19:00 · <b>On</b> · Pol. Ind. Can Petit · Com arribar-hi</div>
 </div></div></div>
 <div class="example"><span class="work-tag">Exemple de disseny</span><div class="phone"><div class="scr">
-<div class="bar">Fisioteràpia Ana Puig <small>Mataró</small></div>
+
+<div class="top"><i></i></div>
+<div class="ph-photo">📷 Aquí la teva foto real</div><div class="bar">Fisioteràpia Ana Puig <small>Mataró</small></div>
 <div class="h"><b>Recupera mobilitat sense esperes llargues</b><p>Primera valoració inclosa. Bons per sessions.</p><span class="b">Trucar</span><span class="b o">WhatsApp</span></div>
 <div class="s"><b>El que fem</b><div class="row"><div><b>Traumatologia</b>Lesions i rehabilitació</div><div><b>Esportiva</b>Tornada a l'activitat</div><div><b>Sòl pelvià</b>Atenció específica</div><div><b>Punció seca</b>Dolor muscular</div></div></div>
 <div class="f"><b>Horari</b> · Dl–Dv 9:00–20:00 · <b>On</b> · C/ Nou, 22 · Com arribar-hi</div>
 </div></div></div>
 <div class="example"><span class="work-tag">Exemple de disseny</span><div class="phone"><div class="scr">
-<div class="bar">Fruites i Verdures El Racó <small>Rubí</small></div>
+
+<div class="top"><i></i></div>
+<div class="ph-photo">📷 Aquí la teva foto real</div><div class="bar">Fruites i Verdures El Racó <small>Rubí</small></div>
 <div class="h"><b>Producte fresc de proximitat, cada dia</b><p>Encàrrecs per WhatsApp, recollida a la botiga.</p><span class="b">Trucar</span><span class="b o">WhatsApp</span></div>
 <div class="s"><b>El que fem</b><div class="row"><div><b>Fruita i verdura</b>Selecció diària</div><div><b>Encàrrecs</b>Per recollir o rebre</div><div><b>Cistelles</b>Per regal</div><div><b>Repartiment</b>De barri</div></div></div>
 <div class="f"><b>Horari</b> · Dl–Ds 8:30–14:00 i 17:00–20:00 · <b>On</b> · C/ Major, 9 · Com arribar-hi</div>
@@ -243,7 +262,7 @@ footer a{color:var(--muted)}
 <p>El domini (elteunegoci.com) es registra al teu nom i l'allotjament del primer any va inclòs. Si algun dia te'n vas, t'ho emportes tot.</p>
 <span class="hand">Res del que no necessites. Ni blog, ni botiga, ni quotes de "manteniment premium".</span>
 <div class="speed">
-<div class="speed-num"><b>94</b><span>/100 mòbil</span></div>
+<div class="gauge speed-gauge"><svg viewBox="0 0 120 74" width="88" height="55" aria-hidden="true"><path class="zone zone-bad" d="M12 66 A48 48 0 0 1 36 24.4"></path><path class="zone zone-mid" d="M36 24.4 A48 48 0 0 1 84 24.4"></path><path class="zone zone-good" d="M84 24.4 A48 48 0 0 1 108 66"></path><g class="needle" style="transform:rotate(79deg)"><line x1="60" y1="66" x2="60" y2="24"></line><circle cx="60" cy="66" r="6"></circle></g></svg><div class="gauge-num speed-gauge-num"><b>94</b><span>/100</span></div></div>
 <div class="speed-txt">
 <strong>Velocitat mesurada per Google</strong>
 <p>PageSpeed Insights sobre aquesta mateixa pàgina, mesurat el 19 set. 2026. HTML lleuger, sense WordPress ni plugins.</p>
