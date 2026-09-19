@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rotulito.com · Webs senzilles per a negocis de barri</title>
-<meta name="description" content="Fem webs d'una sola pàgina per a perruqueries, tallers, centres d'estètica, electricistes, fisios i petits comerços de tot Espanya. 490 € + IVA, llesta en una setmana, i la veus abans de decidir.">
+<meta name="description" content="Fem webs d'una sola pàgina per a perruqueries, tallers, centres d'estètica, electricistes, fisios i petits comerços de tot Espanya. 490 € + IVA, proposta visual gratuïta i sense compromís.">
 <link rel="canonical" href="https://www.rotulito.com/ca/">
 <link rel="alternate" hreflang="es" href="https://www.rotulito.com/">
 <link rel="alternate" hreflang="ca" href="https://www.rotulito.com/ca/">
 <link rel="alternate" hreflang="en" href="https://www.rotulito.com/en/">
 <link rel="alternate" hreflang="x-default" href="https://www.rotulito.com/">
 <meta property="og:title" content="Rotulito.com · Webs senzilles per a negocis de barri">
-<meta property="og:description" content="El teu negoci a internet en una sola pàgina. 490 € + IVA, llesta en una setmana, i la veus abans de decidir.">
+<meta property="og:description" content="La web del teu negoci, llesta per rebre clients. 490 € + IVA, proposta visual gratuïta i sense compromís.">
 <meta property="og:url" content="https://www.rotulito.com/ca/">
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='14' width='52' height='36' rx='6' fill='%23e4322b'/%3E%3Crect x='12' y='20' width='40' height='24' rx='3' fill='%23fff4d6'/%3E%3Ctext x='32' y='38' font-family='Arial Black,Arial' font-size='16' font-weight='900' text-anchor='middle' fill='%23161616'%3ER%3C/text%3E%3C/svg%3E">
@@ -31,27 +31,25 @@ h1,h2,h3,.brand{font-family:'Archivo Black','Arial Black',sans-serif;font-weight
 header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:2px solid var(--ink)}
 header .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:12px}
 .brand{font-size:1.3rem;text-decoration:none;display:flex;align-items:center;gap:10px}
-.brand i{display:inline-block;width:26px;height:19px;background:var(--red);border-radius:3px;position:relative}
-.brand i::after{content:"";position:absolute;inset:4px;background:var(--cream);border-radius:2px}
 nav{display:flex;gap:22px;font-size:.92rem;font-weight:500}
 nav a{text-decoration:none;color:var(--muted)}nav a:hover{color:var(--ink)}
-@media(max-width:700px){nav{display:none}}
+@media(max-width:1000px){nav{display:none}}
 .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 22px;border-radius:var(--r);text-decoration:none;font-weight:600;font-size:.95rem;border:2px solid var(--ink);cursor:pointer;background:var(--paper);color:var(--ink)}
 .btn.solid{background:var(--ink);color:#fff}
 .btn.red{background:var(--red);border-color:var(--red);color:#fff}
 .btn:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--yellow)}
-
+.iva{color:var(--red);font-weight:700}
 .hero{padding-block:56px 48px;background:var(--cream);border-bottom:2px solid var(--ink);overflow:hidden}
 .hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:36px;align-items:center}
 @media(max-width:840px){.hero .wrap{grid-template-columns:1fr}}
 h1{font-size:clamp(2.1rem,5.6vw,3.5rem);line-height:1.03;margin:0 0 16px;text-wrap:balance}
 h1 mark{background:none;color:var(--red)}
-.lead{font-size:1.12rem;max-width:50ch;color:var(--muted);margin:0 0 22px}
-.cta{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
-.note{display:flex;gap:8px;align-items:flex-start;margin-top:22px;max-width:46ch}
+.lead{font-size:1.12rem;max-width:50ch;color:var(--muted);margin:0 0 18px}
+.cta{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:18px}
+.note{display:flex;gap:8px;align-items:flex-start;margin-top:18px;max-width:46ch}
 .note .hand{white-space:nowrap}
 .note span:last-child{color:var(--muted);font-size:.92rem}
-.phone{width:290px;max-width:100%;margin:0 auto;background:#111;border-radius:34px;padding:12px;box-shadow:0 22px 40px -18px rgba(0,0,0,.45);transform:rotate(-3deg)}
+.phone{width:290px;max-width:100%;margin:0 auto;background:#111;border-radius:34px;padding:12px;box-shadow:0 22px 40px -18px rgba(0,0,0,.45)}
 .phone .scr{background:#fff;border-radius:24px;overflow:hidden;font-size:9.5px;line-height:1.35;color:#222}
 .phone .top{height:22px;display:flex;justify-content:center;align-items:flex-end}
 .phone .top i{width:80px;height:6px;background:#111;border-radius:6px;margin-bottom:6px}
@@ -69,14 +67,10 @@ h1 mark{background:none;color:var(--red)}
 .phone .row div b{font-family:inherit;font-weight:700;font-size:9.5px;margin:0 0 2px}
 .phone .f{padding:0 12px 14px;color:#666}
 .phone .f b{font-family:inherit;font-weight:700;color:#222}
-.phone-note{text-align:center;margin-top:16px}
-.phone-note .hand{display:inline-block;transform:rotate(-2deg)}
-
 section{padding-block:64px}
 section+section{border-top:1px solid var(--line)}
 h2{font-size:clamp(1.55rem,3.4vw,2.1rem);margin:0 0 8px;text-wrap:balance}
 .sub{color:var(--muted);margin:0 0 30px;max-width:58ch;font-size:1.05rem}
-
 .two{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:start}
 @media(max-width:800px){.two{grid-template-columns:1fr}}
 .ticket{background:var(--paper);border:1px solid var(--line);padding:26px 26px 30px;position:relative;box-shadow:0 12px 28px -18px rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
@@ -91,40 +85,37 @@ h2{font-size:clamp(1.55rem,3.4vw,2.1rem);margin:0 0 8px;text-wrap:balance}
 .ticket .stamp{position:absolute;right:18px;top:14px;transform:rotate(8deg);border:2px solid var(--red);color:var(--red);font-family:'Archivo Black',sans-serif;font-size:.7rem;letter-spacing:.1em;padding:4px 8px;border-radius:3px;opacity:.85}
 .expl p{margin:0 0 14px;max-width:52ch}
 .expl .hand{margin-top:10px;display:block}
-
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:2px solid var(--ink);border-radius:6px;overflow:hidden;background:var(--paper)}
-@media(max-width:760px){.steps{grid-template-columns:1fr}}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:2px solid var(--ink);border-radius:6px;overflow:hidden;background:var(--paper)}
+@media(max-width:900px){.steps{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.steps{grid-template-columns:1fr}}
 .step{padding:24px 22px 26px;border-right:2px solid var(--ink)}
 .step:last-child{border-right:0}
-@media(max-width:760px){.step{border-right:0;border-bottom:2px solid var(--ink)}.step:last-child{border-bottom:0}}
+@media(max-width:900px){.step{border-bottom:2px solid var(--ink)}.step:nth-child(2n){border-right:0}.step:nth-last-child(-n+2){border-bottom:0}}
+@media(max-width:560px){.step{border-right:0!important;border-bottom:2px solid var(--ink)}.step:last-child{border-bottom:0}}
 .step .d{font-family:'Archivo Black',sans-serif;font-size:2rem;color:var(--red);line-height:1;margin-bottom:8px}
 .step .t{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:8px}
 .step h3{font-size:1.05rem;margin:0 0 6px}
 .step p{margin:0;color:var(--muted);font-size:.95rem}
-
 .cartel{display:grid;grid-template-columns:1fr auto;gap:30px;align-items:center;background:var(--ink);color:#fff;padding:32px 34px;border-radius:8px;position:relative}
 @media(max-width:700px){.cartel{grid-template-columns:1fr}}
 .cartel h2{color:#fff;margin:0 0 8px}
 .cartel p{margin:0 0 6px;color:#d6d1c7;max-width:54ch}
-.cartel .big{font-family:'Archivo Black',sans-serif;font-size:3.4rem;line-height:1;color:var(--yellow);text-align:right;transform:rotate(-3deg)}
-.cartel .big small{display:block;font-family:'Work Sans',sans-serif;font-size:.85rem;color:#d6d1c7;font-weight:500;margin-top:6px;transform:none}
-.cartel .hand{color:var(--yellow);font-size:1.2rem}
-
+.cartel .big{font-family:'Archivo Black',sans-serif;font-size:3.4rem;line-height:1;color:var(--yellow);text-align:right}
+.cartel .big .iva{color:var(--yellow);text-decoration:underline}
+.cartel .big small{display:block;font-family:'Work Sans',sans-serif;font-size:.85rem;color:#d6d1c7;font-weight:500;margin-top:6px}
 .sectors{display:flex;flex-wrap:wrap;gap:8px 10px;max-width:760px}
 .sectors span{padding:7px 13px;border:1.5px solid var(--ink);border-radius:999px;font-size:.92rem;background:var(--paper)}
-.sectors span:nth-child(3n){transform:rotate(-1.5deg)}.sectors span:nth-child(4n){transform:rotate(1.2deg)}
-
 .qa{display:grid;grid-template-columns:1fr 1fr;gap:26px 44px}
 @media(max-width:760px){.qa{grid-template-columns:1fr}}
 .qa h3{font-size:1rem;margin:0 0 4px}
 .qa p{margin:0;color:var(--muted);font-size:.95rem;max-width:48ch}
-
 .contact{background:var(--cream);border-top:2px solid var(--ink)}
 .contact .box{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
 @media(max-width:760px){.contact .box{grid-template-columns:1fr}}
 .contact .who{margin-top:22px;padding-top:18px;border-top:1px solid #e3d6bd;color:var(--muted);font-size:.95rem;max-width:46ch}
 form{display:grid;gap:12px;background:var(--paper);border:2px solid var(--ink);border-radius:6px;padding:22px}
 label{display:grid;gap:5px;font-size:.88rem;font-weight:600}
+label small{font-weight:400;color:var(--muted)}
 input,textarea{font:inherit;padding:11px 12px;border:1.5px solid var(--ink);border-radius:4px;background:#fff;color:var(--ink);width:100%}
 textarea{min-height:90px;resize:vertical}
 .check{display:flex;gap:10px;align-items:flex-start;font-size:.82rem;font-weight:400;color:var(--muted)}
@@ -132,12 +123,6 @@ textarea{min-height:90px;resize:vertical}
 footer{padding-block:26px;font-size:.84rem;color:var(--muted);border-top:2px solid var(--ink)}
 footer .wrap{display:flex;flex-wrap:wrap;gap:8px 22px;justify-content:space-between}
 footer a{color:var(--muted)}
-:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
-@media(prefers-reduced-motion:reduce){.btn{transition:none}}
-#ck{position:fixed;left:16px;right:16px;bottom:16px;z-index:50;max-width:560px;margin:0 auto;background:#fff;color:#161616;border:2px solid #161616;border-radius:8px;padding:18px 20px;box-shadow:6px 6px 0 #ffc533;font-size:.92rem}
-#ck p{margin:0 0 12px;max-width:none}#ck .row{display:flex;flex-wrap:wrap;gap:10px}#ck button{cursor:pointer}
-#ck .btn{padding:10px 16px;font-size:.9rem}#ck a{color:#161616}
-
 #trabajos{scroll-margin-top:80px}
 .work-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
 .work-card{display:flex;flex-direction:column;align-items:flex-start;padding:30px;background:var(--paper);border:2px solid var(--ink);border-radius:6px;box-shadow:5px 5px 0 var(--cream)}
@@ -148,8 +133,11 @@ footer a{color:var(--muted)}
 .work-note{margin:28px 0 0;padding-left:18px;border-left:3px solid var(--red);color:var(--muted);max-width:80ch;font-size:1rem}
 .work-note strong{color:var(--ink)}
 @media(max-width:760px){.work-grid{grid-template-columns:1fr}.work-card{padding:24px}}
-@media(min-width:701px) and (max-width:900px){nav{gap:12px;font-size:.875rem}}
-
+#ejemplos{scroll-margin-top:80px}
+.examples-grid{display:flex;flex-wrap:wrap;gap:32px 28px;justify-content:center;margin-top:8px}
+.examples-grid .example{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:290px}
+.examples-grid .phone{transform:rotate(-2.5deg)}
+.examples-grid .example:nth-child(2n) .phone{transform:rotate(2deg)}
 #test{scroll-margin-top:80px}
 .quizcard{display:grid;grid-template-columns:auto 1fr;gap:36px;align-items:center;background:var(--ink);color:#fff;padding:34px 36px;border-radius:10px}
 @media(max-width:680px){.quizcard{grid-template-columns:1fr;text-align:center;justify-items:center;padding:28px 22px}}
@@ -176,30 +164,17 @@ footer a{color:var(--muted)}
 .quiz-result{margin-top:16px;padding-top:16px;border-top:1px dashed rgba(255,255,255,.3)}
 .quiz-result p{margin:0 0 14px;color:#f3efe4;max-width:52ch}
 .quiz-result .hand{color:var(--yellow)}
-.brand{display:inline-flex;align-items:center;flex-shrink:0;line-height:1;text-decoration:none}
 .brand-logo{display:block;width:220px;height:auto;overflow:hidden}
 @media(max-width:600px){.brand-logo{width:180px}}
-@media(max-width:1000px){nav{display:none}}
 .langsw{display:flex;gap:6px;align-items:center;font-size:.78rem;font-weight:600;margin-left:10px}
 .langsw a{padding:3px 7px;border-radius:4px;text-decoration:none;color:var(--muted)}
 .langsw a[aria-current="page"]{color:var(--ink);text-decoration:underline}
-@media(max-width:1000px){.langsw{margin-left:0}}
-.speed{display:flex;gap:16px;align-items:flex-start;margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper)}
-.speed-gauge{flex:none;display:flex;flex-direction:column;align-items:center}
-.speed-num{text-align:center;line-height:1;margin-top:-6px}
+.speed{display:flex;gap:16px;align-items:center;margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper)}
+.speed-num{text-align:center;line-height:1}
 .speed-num b{display:block;font-size:2.6rem;font-weight:800;color:#1a7f37}
 .speed-num span{font-size:.72rem;color:var(--muted)}
-.speed-txt{min-width:0}
 .speed-txt strong{display:block;font-size:.98rem}
-.speed-txt p{margin:.35rem 0 .7rem;font-size:.85rem;color:var(--muted)}
-.speed-bars .row{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted);margin-top:5px}
-.speed-bars .row>span{flex:none;width:120px}
-.speed-bars .bar{flex:1;height:7px;background:#e9e3d7;border-radius:99px;overflow:hidden}
-.speed-bars .bar i{display:block;height:100%;background:#c9c4bb;border-radius:99px}
-.speed-bars .row.on .bar i{background:#1a7f37}
-.speed-bars .row.on>span{color:var(--ink);font-weight:600}
-.speed-bars .row em{font-style:normal;flex:none;width:30px;text-align:right}
-@media(max-width:520px){.speed{flex-direction:column;align-items:center;text-align:center;gap:12px;padding:14px}.speed-num b{font-size:2.1rem}.speed-bars .row>span{width:96px}}
+.speed-txt p{margin:.35rem 0 0;font-size:.85rem;color:var(--muted)}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:560px){.frow{grid-template-columns:1fr}}
 .check>span{flex:1}
@@ -208,30 +183,58 @@ footer a{color:var(--muted)}
 <body>
 <header><div class="wrap">
 <a class="brand" href="#top" aria-label="Rotulito.com — Inici"><svg class="brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="110 190 1570 510" width="220" height="72" role="img" aria-label="Rotulito.com" focusable="false"><image href="/assets/rotulito-logo-handwritten.png" width="1774" height="887"/></svg></a>
-<nav><a href="#incluye">Què inclou</a><a href="#como">Com funciona</a><a href="#test">Com ho portes?</a><a href="#trabajos">Feines</a><a href="#precio">Preu</a><a href="#dudas">Dubtes</a><a href="#contacto">Demana la teva demo</a></nav>
+<nav><a href="#ejemplos">Exemples</a><a href="#incluye">Què inclou</a><a href="#trabajos">Feines</a><a href="#precio">Preu</a><a href="#dudas">Dubtes</a><a href="#contacto">Contacte</a></nav>
 <div class="langsw" aria-label="Idioma"><a href="https://www.rotulito.com/">ES</a><a href="https://www.rotulito.com/ca/" aria-current="page">CA</a><a href="https://www.rotulito.com/en/">EN</a></div>
 </div></header>
-
 <main id="top">
 <div class="hero"><div class="wrap">
 <div>
-<h1>El teu negoci a internet, <mark>en una sola pàgina</mark></h1>
-<p class="lead">Per a la perruqueria, el taller, el centre d'estètica o la botiga de tota la vida. El que cal perquè et trobin i et truquin, sense embolics ni quotes rares.</p>
-<div class="cta"><a class="btn red" href="#contacto">Vull veure com quedaria la meva</a></div>
-<div class="note"><span class="hand">Compte →</span><span>Abans de cobrar-te res et mostrem la teva web ja muntada amb les teves dades. Si no t'agrada, no passa res.</span></div>
+<h1>La web del teu negoci, <mark>llesta per rebre clients</mark></h1>
+<p class="lead">Creem la teva web professional: serveis, fotos, horaris, ubicació i botons de contacte, adaptada al mòbil. Per a la perruqueria, el taller, el centre d'estètica o la botiga de tota la vida.</p>
+<div class="cta"><a class="btn red" href="#contacto">Demana la teva proposta gratis</a><a class="btn" href="https://wa.me/34613272053?text=Hola%2C%20voldria%20informaci%C3%B3%20sobre%20una%20web%20per%20al%20meu%20negoci." target="_blank" rel="noopener">Parlar per WhatsApp</a></div>
+<div class="note"><span class="hand">Compte →</span><span>La proposta visual és gratuïta i sense compromís. Si vols continuar, pagues la meitat per començar i la resta abans de publicar.</span></div>
 </div>
-<div>
-<div class="phone" aria-label="Exemple d'una web d'una pàgina vista en un mòbil"><div class="scr">
-<div class="top"><i></i></div>
+<div class="ticket hero-ticket">
+<span class="stamp">Resum</span>
+<h3>Rotulito · web d'una pàgina</h3>
+<dl>
+<div class="l"><span>Creació</span><span>490 € <span class="iva">+ IVA</span></span></div>
+<div class="l"><span>Domini, allotjament i canvis</span><span>inclosos 1r any</span></div>
+<div class="l"><span>A partir del 2n any</span><span>20 € <span class="iva">+ IVA</span>/mes</span></div>
+</dl>
+<div class="tot"><span>Sense permanència</span></div>
+</div>
+</div></div>
+<section id="ejemplos"><div class="wrap">
+<h2>Així quedaria la teva web</h2>
+<p class="sub">Exemples de disseny del pla de 490 €, en diferents sectors. No són clients reals: és el mateix format que tindria la teva web, amb les teves dades.</p>
+<div class="examples-grid">
+<div class="example"><span class="work-tag">Exemple de disseny</span><div class="phone"><div class="scr">
 <div class="bar">Perruqueria Mari Carmen <small>Sabadell</small></div>
 <div class="h"><b>Tall, color i pentinat a dos passos de casa</b><p>Sense cita per als talls. Color i pentinats, millor trucant.</p><span class="b">Trucar</span><span class="b o">WhatsApp</span></div>
 <div class="s"><b>El que fem</b><div class="row"><div><b>Tall</b>Dona, home i nens</div><div><b>Color i reflexos</b>T'assessorem</div><div><b>Pentinats</b>Casaments i esdeveniments</div><div><b>Tractaments</b>Queratina, hidratació</div></div></div>
 <div class="f"><b>Horari</b> · Dt–Ds 9:30–19:00 · <b>On</b> · C/ de Gràcia, 118 · Com arribar-hi</div>
-</div></div>
-<p class="phone-note"><span class="hand">Així es veu al mòbil, que és on et buscaran</span></p>
+</div></div></div>
+<div class="example"><span class="work-tag">Exemple de disseny</span><div class="phone"><div class="scr">
+<div class="bar">Taller Mecànic Hnos. Ruiz <small>Terrassa</small></div>
+<div class="h"><b>Revisió i reparació, mentre esperes</b><p>Diagnòstic sense cost. Pressupost abans de tocar res.</p><span class="b">Trucar</span><span class="b o">WhatsApp</span></div>
+<div class="s"><b>El que fem</b><div class="row"><div><b>Pneumàtics</b>Muntatge i equilibrat</div><div><b>Frens</b>Pastilles i discos</div><div><b>ITV</b>Preparació prèvia</div><div><b>Climatització</b>Càrrega i revisió</div></div></div>
+<div class="f"><b>Horari</b> · Dl–Dv 8:00–19:00 · <b>On</b> · Pol. Ind. Can Petit · Com arribar-hi</div>
+</div></div></div>
+<div class="example"><span class="work-tag">Exemple de disseny</span><div class="phone"><div class="scr">
+<div class="bar">Fisioteràpia Ana Puig <small>Mataró</small></div>
+<div class="h"><b>Recupera mobilitat sense esperes llargues</b><p>Primera valoració inclosa. Bons per sessions.</p><span class="b">Trucar</span><span class="b o">WhatsApp</span></div>
+<div class="s"><b>El que fem</b><div class="row"><div><b>Traumatologia</b>Lesions i rehabilitació</div><div><b>Esportiva</b>Tornada a l'activitat</div><div><b>Sòl pelvià</b>Atenció específica</div><div><b>Punció seca</b>Dolor muscular</div></div></div>
+<div class="f"><b>Horari</b> · Dl–Dv 9:00–20:00 · <b>On</b> · C/ Nou, 22 · Com arribar-hi</div>
+</div></div></div>
+<div class="example"><span class="work-tag">Exemple de disseny</span><div class="phone"><div class="scr">
+<div class="bar">Fruites i Verdures El Racó <small>Rubí</small></div>
+<div class="h"><b>Producte fresc de proximitat, cada dia</b><p>Encàrrecs per WhatsApp, recollida a la botiga.</p><span class="b">Trucar</span><span class="b o">WhatsApp</span></div>
+<div class="s"><b>El que fem</b><div class="row"><div><b>Fruita i verdura</b>Selecció diària</div><div><b>Encàrrecs</b>Per recollir o rebre</div><div><b>Cistelles</b>Per regal</div><div><b>Repartiment</b>De barri</div></div></div>
+<div class="f"><b>Horari</b> · Dl–Ds 8:30–14:00 i 17:00–20:00 · <b>On</b> · C/ Major, 9 · Com arribar-hi</div>
+</div></div></div>
 </div>
-</div></div>
-
+</div></section>
 <section id="incluye"><div class="wrap two">
 <div class="expl">
 <h2>Què inclou</h2>
@@ -240,22 +243,10 @@ footer a{color:var(--muted)}
 <p>El domini (elteunegoci.com) es registra al teu nom i l'allotjament del primer any va inclòs. Si algun dia te'n vas, t'ho emportes tot.</p>
 <span class="hand">Res del que no necessites. Ni blog, ni botiga, ni quotes de "manteniment premium".</span>
 <div class="speed">
-<div class="speed-gauge">
-<svg viewBox="0 0 120 74" width="150" height="93" aria-hidden="true">
-<path class="zone zone-bad" d="M12 66 A48 48 0 0 1 58.5 18"></path>
-<path class="zone zone-mid" d="M58.5 18 A48 48 0 0 1 105.2 49.7"></path>
-<path class="zone zone-good" d="M105.2 49.7 A48 48 0 0 1 108 66"></path>
-<g class="needle" style="transform:rotate(88.2deg)"><line x1="60" y1="66" x2="60" y2="24"></line><circle cx="60" cy="66" r="6"></circle></g>
-</svg>
-<div class="speed-num"><b>99</b><span>/100</span></div>
-</div>
+<div class="speed-num"><b>94</b><span>/100 mòbil</span></div>
 <div class="speed-txt">
 <strong>Velocitat mesurada per Google</strong>
-<p>PageSpeed Insights, en ordinador, sobre aquesta mateixa pàgina. Les fem amb HTML lleuger, sense WordPress ni plugins: per això volen.</p>
-<div class="speed-bars">
-<div class="row"><span>Web lenta corrent</span><div class="bar"><i style="width:40%"></i></div><em>~40</em></div>
-<div class="row on"><span>Aquesta mateixa pàgina</span><div class="bar"><i style="width:99%"></i></div><em>99</em></div>
-</div>
+<p>PageSpeed Insights sobre aquesta mateixa pàgina, mesurat el 19 set. 2026. HTML lleuger, sense WordPress ni plugins.</p>
 </div>
 </div>
 </div>
@@ -272,23 +263,33 @@ footer a{color:var(--muted)}
 <div class="l"><span>Avís legal i privacitat</span><span>sí</span></div>
 <div class="l"><span>Domini al teu nom</span><span>1r any</span></div>
 <div class="l"><span>Allotjament</span><span>1r any</span></div>
-<div class="l"><span>Rondes de canvis abans de publicar</span><span>2</span></div>
-<div class="l"><span>Entrega</span><span>~7 dies</span></div>
+<div class="l"><span>Rondes de canvis</span><span>2</span></div>
+<div class="l"><span>Entrega orientativa</span><span>~7 dies</span></div>
 </dl>
-<div class="tot"><span>Total<small>pagament únic, sense permanència</small></span><span>490 € <small>+ IVA</small></span></div>
+<div class="tot"><span>Creació<small>proposta visual gratuïta</small></span><span>490 € <span class="iva">+ IVA</span></span></div>
 </div>
 </div></section>
-
-<section id="como"><div class="wrap">
-<h2>Com funciona</h2>
-<p class="sub">Tres passos i cap reunió llarga.</p>
-<div class="steps">
-<div class="step"><div class="d">1</div><div class="t">Avui</div><h3>Ens expliques el teu negoci</h3><p>Amb el formulari de baix o per correu: nom, a què et dediques i on ets. Dos minuts.</p></div>
-<div class="step"><div class="d">2</div><div class="t">En un o dos dies</div><h3>Et mostrem la teva web</h3><p>Muntem una primera versió amb les teves dades i t'enviem l'enllaç. Gratis. La mires amb calma.</p></div>
-<div class="step"><div class="d">3</div><div class="t">En una setmana</div><h3>L'ajustem i la publiquem</h3><p>Ens passes les fotos, canviem el que vulguis i la deixem a internet amb el teu domini.</p></div>
+<section id="trabajos" aria-labelledby="trabajos-title"><div class="wrap">
+<h2 id="trabajos-title">Feines reals a mida</h2>
+<p class="sub">Dos negocis diferents, cadascun amb la seva web a mida. Van més enllà del pla de 490 €.</p>
+<div class="work-grid">
+<article class="work-card">
+<span class="work-tag">Projecte a mida</span>
+<img class="work-logo" src="/img/plata-marine-logo.png" width="1200" height="400" alt="Plata Marine" loading="lazy">
+<img class="work-thumb" src="/img/plata-marine-screenshot.jpg" width="900" height="437" alt="Captura de la web de Plata Marine" loading="lazy">
+<p>Web de mediació nàutica amb fitxa pròpia per a cada vaixell en venda, un test de 9 preguntes per trobar el vaixell ideal, guies de navegació i fiscalitat, i alertes per correu de noves embarcacions.</p>
+<a class="btn" href="https://www.platamarine.com/" target="_blank" rel="noopener noreferrer" aria-label="Veure la web de Plata Marine (s'obre en una altra pestanya)">Veure web <span aria-hidden="true">↗</span></a>
+</article>
+<article class="work-card">
+<span class="work-tag">Projecte a mida</span>
+<img class="work-logo" src="/img/bryan-latinta-logo.png" width="1142" height="258" alt="Bryan La Tinta" loading="lazy">
+<img class="work-thumb" src="/img/bryan-latinta-screenshot.jpg" width="900" height="437" alt="Captura de la web de Bryan La Tinta" loading="lazy">
+<p>Web d'un taller de pintura i personalització de motos i bicis: galeria de treballs, models disponibles amb preu i fitxa, i un formulari per pujar fotos d'una peça i rebre un pressupost de viabilitat.</p>
+<a class="btn" href="https://www.bryanlatinta.com/" target="_blank" rel="noopener noreferrer" aria-label="Veure la web de Bryan La Tinta (s'obre en una altra pestanya)">Veure web <span aria-hidden="true">↗</span></a>
+</article>
 </div>
+<p class="work-note"><strong>Aquests projectes tenen un abast i un pressupost superiors al pla de 490 € + IVA, i no hi estan inclosos.</strong> Són exemples del que podem crear si el teu negoci necessita alguna cosa més.</p>
 </div></section>
-
 <section id="test"><div class="wrap">
 <h2>Com va el teu negoci a internet?</h2>
 <p class="sub">Sí o no a aquestes sis. El marcador et diu com ho portes, sense demanar-te cap dada.</p>
@@ -318,7 +319,6 @@ footer a{color:var(--muted)}
 </div>
 </div>
 </div></section>
-
 <script>
 (function(){
 var qs=document.querySelectorAll('#quiz .q');
@@ -365,50 +365,34 @@ r.scrollIntoView({behavior:'smooth',block:'center'});
 }
 })();
 </script>
-
-<section id="trabajos" aria-labelledby="trabajos-title"><div class="wrap">
-<h2 id="trabajos-title">Webs que hem fet</h2>
-<p class="sub">Dos negocis diferents, cadascun amb la seva web a mida.</p>
-<div class="work-grid">
-<article class="work-card">
-<span class="work-tag">Projecte a mida</span>
-<img class="work-logo" src="/img/plata-marine-logo.png" width="1200" height="400" alt="Plata Marine" loading="lazy">
-<img class="work-thumb" src="/img/plata-marine-screenshot.jpg" width="900" height="437" alt="Captura de la web de Plata Marine" loading="lazy">
-<p>Web de mediació nàutica amb fitxa pròpia per a cada vaixell en venda, un test de 9 preguntes per trobar el vaixell ideal, guies de navegació i fiscalitat, i alertes per correu de noves embarcacions.</p>
-<a class="btn" href="https://www.platamarine.com/" target="_blank" rel="noopener noreferrer" aria-label="Veure la web de Plata Marine (s'obre en una altra pestanya)">Veure web <span aria-hidden="true">↗</span></a>
-</article>
-<article class="work-card">
-<span class="work-tag">Projecte a mida</span>
-<img class="work-logo" src="/img/bryan-latinta-logo.png" width="1142" height="258" alt="Bryan La Tinta" loading="lazy">
-<img class="work-thumb" src="/img/bryan-latinta-screenshot.jpg" width="900" height="437" alt="Captura de la web de Bryan La Tinta" loading="lazy">
-<p>Web d'un taller de pintura i personalització de motos i bicis: galeria de treballs, models disponibles amb preu i fitxa, i un formulari per pujar fotos d'una peça i rebre un pressupost de viabilitat.</p>
-<a class="btn" href="https://www.bryanlatinta.com/" target="_blank" rel="noopener noreferrer" aria-label="Veure la web de Bryan La Tinta (s'obre en una altra pestanya)">Veure web <span aria-hidden="true">↗</span></a>
-</article>
+<section id="como"><div class="wrap">
+<h2>Com funciona</h2>
+<p class="sub">El termini orientatiu de ~7 dies depèn que ens passis a temps la informació i les fotos.</p>
+<div class="steps">
+<div class="step"><div class="d">1</div><div class="t">Avui</div><h3>Ens expliques el teu negoci</h3><p>Amb el formulari de baix o per WhatsApp: nom del negoci, activitat i telèfon. Dos minuts.</p></div>
+<div class="step"><div class="d">2</div><div class="t">En un o dos dies</div><h3>Reps la teva proposta visual</h3><p>Una primera proposta personalitzada amb les teves dades, gratuïta i sense compromís, perquè valoris l'estil i l'estructura.</p></div>
+<div class="step"><div class="d">3</div><div class="t">Si et convenç</div><h3>Pagues el 50% i la desenvolupem</h3><p>Amb les teves fotos i textos definitius fem la versió real, amb fins a dues rondes de canvis.</p></div>
+<div class="step"><div class="d">4</div><div class="t">Abans de publicar</div><h3>L'acceptes i pagues la resta</h3><p>Quan dones per bona la versió final, pagues l'altre 50% i la publiquem amb el teu domini.</p></div>
 </div>
-<p class="work-note"><strong>Aquests projectes tenen un abast i un pressupost superiors al pla de 490 € + IVA.</strong> Són exemples del que podem crear si el teu negoci necessita alguna cosa més.</p>
 </div></section>
-
 <section id="precio"><div class="wrap">
 <div class="cartel">
 <div>
 <h2>Un preu, i ja està</h2>
-<p>490 € + IVA (592,90 € IVA inclòs) per la web publicada, amb domini i allotjament el primer any. Es paga la meitat en dir que sí i l'altra meitat abans de publicar.</p>
-<p><strong>La veus muntada amb les teves dades abans de pagar res.</strong> Si no et convenç, no deus res.</p>
-<p>A partir del segon any, <strong>20 € + IVA al mes (24,20 € IVA inclòs)</strong>: renovació d'un domini .com o .es, allotjament i fins a <strong>30 minuts al mes de petits canvis, no acumulables</strong>. Per exemple: actualitzar horaris, telèfons, preus o textos breus, o substituir fotos que ens facilitis, dins del disseny existent.</p>
+<p>490 € + IVA (592,90 € IVA inclòs) per la creació de la web, amb domini i allotjament inclosos el primer any.</p>
+<p><strong>La proposta visual és gratuïta i sense compromís.</strong> Si vols continuar, pagues el 50% per començar el desenvolupament amb les teves fotos i textos; l'altre 50% es paga quan acceptes la versió final, abans de publicar-la.</p>
+<p>A partir del segon any, <strong>20 € <span class="iva">+ IVA</span> al mes (24,20 € IVA inclòs)</strong>: renovació d'un domini .com o .es, allotjament i fins a <strong>30 minuts al mes de petits canvis, no acumulables</strong>. Per exemple: actualitzar horaris, telèfons, preus o textos breus, o substituir fotos que ens facilitis, dins del disseny existent.</p>
 <p>Aquest mateix servei està inclòs durant el primer any. Les pàgines o seccions noves, els redissenys, les botigues en línia, les funcions addicionals i la feina que superi els 30 minuts mensuals es pressuposten a part. T'indiquem el cost i esperem la teva acceptació abans de començar qualsevol extra.</p>
 <p>Sense permanència. A partir del segon any, la quota es cobra mensualment i pots demanar la baixa a <a href="mailto:hola@rotulito.com">hola@rotulito.com</a> abans del cobrament següent. Una altra extensió de domini es pressuposta a part. Aquestes condicions corresponen al pla d'una pàgina; el manteniment de projectes a mida es detalla en el seu pressupost.</p>
-<span class="hand">Si el teu nebot te la fa, ens alegrem de debò.</span>
 </div>
-<div class="big">490 €<small>+ IVA · pagament únic</small></div>
+<div class="big">490 €<span class="iva" style="display:block;font-size:1.6rem">+ IVA</span><small>creació</small></div>
 </div>
 </div></section>
-
 <section id="para"><div class="wrap">
 <h2>Per a qui és</h2>
 <p class="sub">Negocis que viuen que la gent de la seva zona els trobi i els truqui. Tant se val on sigui el teu negoci: treballem amb clients de tot Espanya, tot es fa per WhatsApp i correu.</p>
 <div class="sectors"><span>Perruqueries i barberies</span><span>Centres d'estètica i ungles</span><span>Fisioteràpia</span><span>Electricistes i lampistes</span><span>Fusteria d'alumini</span><span>Reformes</span><span>Manyans</span><span>Neteja</span><span>Botigues de barri</span><span>Clíniques i consultes</span><span>Acadèmies</span><span>Bars i restaurants</span></div>
 </div></section>
-
 <section id="dudas"><div class="wrap">
 <h2>Dubtes que ens pregunten</h2>
 <p class="sub">Les de sempre, contestades sense embuts.</p>
@@ -417,16 +401,16 @@ r.scrollIntoView({behavior:'smooth',block:'center'});
 <div><h3>Ja tinc Instagram i Google Maps.</h3><p>Bé: la web no els substitueix, és on porten. Allà està tot ordenat, amb el botó de trucar, i és teva encara que una app canviï les regles.</p></div>
 <div><h3>El domini és meu?</h3><p>Sí. Es registra al teu nom el primer dia. Si decideixes marxar, te l'emportes.</p></div>
 <div><h3>He de saber d'informàtica?</h3><p>No. Nosaltres ens ocupem del domini, de l'allotjament i de publicar-la. Tu ens expliques el teu negoci i ens passes les fotos.</p></div>
+<div><h3>Què rebo gratis exactament?</h3><p>Una proposta visual personalitzada amb les dades del teu negoci, perquè vegis l'estil i l'estructura abans de pagar res. No és la web acabada: la versió final arriba després, ja amb les teves fotos i textos definitius.</p></div>
 <div><h3>I si més endavant vull canviar alguna cosa?</h3><p>El pla d'una pàgina inclou fins a 30 minuts al mes, no acumulables, per actualitzar horaris, telèfons, preus, textos breus o fotos que ens facilitis, sense canviar el disseny. El primer any està inclòs; a partir del segon, forma part de la quota de 20 € + IVA al mes (24,20 € IVA inclòs). Les ampliacions, els redissenys, les funcions noves i el temps addicional es pressuposten a part, sempre amb la teva acceptació prèvia.</p></div>
 <div><h3>Feu botigues en línia?</h3><p>Sí, però és un altre projecte i un altre preu. Explica'ns què vens i t'ho diem.</p></div>
 </div>
 </div></section>
-
 <section id="contacto" class="contact"><div class="wrap">
 <div class="box">
 <div>
 <h2>Explica'ns el teu negoci i et mostrem com quedaria</h2>
-<p class="sub" style="margin-bottom:14px">Sense compromís. Preparem una primera versió amb les teves dades i te la enviem. Si t'agrada, continuem; si no, no passa res.</p>
+<p class="sub" style="margin-bottom:14px">Sense compromís. Preparem una proposta visual amb les teves dades i te la enviem. Si t'agrada, continuem; si no, no passa res.</p>
 <p style="color:var(--muted);margin:0">O escriu-nos a <a href="mailto:hola@rotulito.com">hola@rotulito.com</a>, truca'ns al <a href="tel:+34613272053">613 272 053</a> o envia'ns un <a href="https://wa.me/34613272053?text=Hola%2C%20voldria%20informaci%C3%B3%20sobre%20una%20web%20per%20al%20meu%20negoci." target="_blank" rel="noopener">WhatsApp</a>.</p>
 <p class="who">Som un estudi petit. No hi ha comercials: la persona amb qui parles és la que fa la web.</p>
 </div>
@@ -437,29 +421,28 @@ r.scrollIntoView({behavior:'smooth',block:'center'});
 <label>A què et dediques<input id="sector" name="sector" placeholder="Perruqueria, taller..." required></label>
 </div>
 <div class="frow">
-<label>El teu nom<input id="nombre" name="nombre" autocomplete="name" required></label>
 <label>Telèfon<input id="telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel" pattern="[0-9 +()-]{9,}" title="Escriu un telèfon d'almenys 9 dígits" required></label>
+<label>El teu nom <small>(opcional)</small><input id="nombre" name="nombre" autocomplete="name"></label>
 </div>
-<label>Email<input id="email" name="email" type="email" autocomplete="email" required></label>
-<label>Alguna cosa més que ens vulguis explicar<textarea id="mensaje" name="mensaje"></textarea></label>
+<label>Email <small>(opcional)</small><input id="email" name="email" type="email" autocomplete="email"></label>
+<label>Alguna cosa més que ens vulguis explicar <small>(opcional)</small><textarea id="mensaje" name="mensaje"></textarea></label>
 <label class="check"><input type="checkbox" id="priv" name="privacidad" required> <span>He llegit la <a href="/privacidad.html" target="_blank" rel="noopener">política de privacitat</a> sobre l'ús de les meves dades per respondre la meva sol·licitud.</span></label>
 <p style="font-size:.82rem;color:var(--muted)">Responsable: Juan Morante Cruz (Rotulito). Utilitzem les teves dades per preparar la teva proposta i atendre la teva sol·licitud, com a mesures precontractuals. No et subscrius a publicitat. Drets d'accés, rectificació, supressió i altres drets a hola@rotulito.com. <a href="/privacidad.html">Més informació</a>.</p>
-<button class="btn solid" type="submit">Enviar i veure la meva demo</button>
+<button class="btn solid" type="submit">Sol·licita proposta gratis</button>
 </form>
 </div>
 </div></section>
 </main>
-
 <footer><div class="wrap"><span>© 2026 Rotulito</span><span><a href="/ca/aviso-legal.html">Avís legal</a> · <a href="/ca/privacidad.html">Privacitat</a> · <a href="/ca/cookies.html">Cookies</a> · <a href="tel:+34613272053">613 272 053</a> · <a href="mailto:hola@rotulito.com">hola@rotulito.com</a></span></div></footer>
-
 <script src="/consent.js" defer></script>
 <script src="/submit-confirmed.js" defer></script>
 <script src="/contact.js" defer></script>
-<p style="text-align:center"><button type="button" data-cookie-settings>Configurar cookies</button></p><style>
+<p style="text-align:center"><button type="button" data-cookie-settings>Configurar cookies</button></p>
+<a class="wa-float" href="https://wa.me/34613272053?text=Hola%2C%20voldria%20informaci%C3%B3%20sobre%20una%20web%20per%20al%20meu%20negoci." target="_blank" rel="noopener" aria-label="Escriure per WhatsApp al 613 272 053">WhatsApp</a>
+<style>
 .wa-float{position:fixed;right:16px;bottom:16px;z-index:60;display:inline-flex;align-items:center;justify-content:center;width:58px;height:58px;border-radius:50%;background:#25D366;box-shadow:0 8px 24px rgba(0,0,0,.28);font-size:0;text-decoration:none;transition:transform .15s ease,background-color .15s ease}
 .wa-float::before{content:"";width:30px;height:30px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 12 12 0 0 0 4.6 4c.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.2z'/%3E%3C/svg%3E") center/contain no-repeat}
 .wa-float:hover{background:#1fb457;transform:translateY(-1px)}
 </style>
-<a class="wa-float" href="https://wa.me/34613272053?text=Hola%2C%20voldria%20informaci%C3%B3%20sobre%20una%20web%20per%20al%20meu%20negoci." target="_blank" rel="noopener" aria-label="Escriure per WhatsApp al 613 272 053">WhatsApp</a>
 </body>
-</html>
+                  </html>
