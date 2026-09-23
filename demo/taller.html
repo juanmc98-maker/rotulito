@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Talleres Riera · Demo de Rotulito</title>
+<meta name="robots" content="noindex,follow">
+<meta name="description" content="Web de ejemplo de un negocio ficticio, hecha por Rotulito para enseñar cómo puede quedar una web de 490 € + IVA.">
+<link rel="canonical" href="https://www.rotulito.com/demo/taller">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='14' width='52' height='36' rx='6' fill='%23e4322b'/%3E%3Crect x='12' y='20' width='40' height='24' rx='3' fill='%23fff4d6'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap">
+<style>
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0}img{max-width:100%}
+
+.rt-demo{position:sticky;top:0;z-index:100;background:#171512;color:#fff;font:500 13px/1.35 'Inter',system-ui,sans-serif;border-bottom:3px solid #d9382c}
+.rt-demo .in{max-width:1180px;margin:0 auto;padding:8px 14px;display:flex;align-items:center;gap:10px;justify-content:space-between}
+.rt-demo a{color:#fff}
+.rt-demo .back{text-decoration:none;opacity:.8;white-space:nowrap}
+.rt-demo .txt{flex:1;min-width:0}
+.rt-demo .txt b{color:#f7c73b;font-weight:700}
+.rt-demo .go{background:#25D366;color:#0b2e17;font-weight:700;text-decoration:none;padding:9px 13px;border-radius:4px;white-space:nowrap}
+@media(max-width:640px){.rt-demo .txt small{display:none}.rt-demo .in{padding:7px 10px}.rt-demo .go{padding:8px 10px}}
+.rt-toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#171512;color:#fff;padding:11px 16px;border-radius:6px;font:500 14px/1.4 system-ui,sans-serif;z-index:200;max-width:88vw;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+
+
+:root{--bg:#f2f2ef;--ink:#16181b;--mut:#5d6168;--y:#ffcc00;--dark:#1f2226;--line:#d9d9d3;--map-bg:#e6e6e0;--map-st:#fff;--map-st2:#f4f4ef;--map-pin:#16181b}
+body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;line-height:1.55}
+.w{max-width:1140px;margin:0 auto;padding:0 20px}
+h1,h2,h3{font-weight:800;letter-spacing:-.02em;margin:0;line-height:1.05}
+.top{background:var(--dark);color:#fff}
+.top .w{display:flex;justify-content:space-between;align-items:center;padding:14px 20px}
+.logo{font-weight:800;font-size:1.15rem;letter-spacing:.02em;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.logo i{width:28px;height:28px;background:var(--y);display:grid;place-items:center;color:var(--ink);font-style:normal;font-size:.9rem;border-radius:3px}
+.top .tel{color:#fff;text-decoration:none;font-weight:700;display:flex;gap:8px;align-items:center}
+@media(max-width:640px){.top .tel span{display:none}}
+.b{display:inline-flex;align-items:center;gap:8px;padding:14px 20px;border-radius:4px;font-weight:700;text-decoration:none;font-size:.95rem;background:#fff;color:var(--ink);border:2px solid var(--ink)}
+.b.y{background:var(--y);border-color:var(--y)}
+.b.gr{background:#25D366;border-color:#25D366;color:#0b2e17}
+.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:0;background:var(--dark);color:#fff}
+@media(max-width:820px){.hero{grid-template-columns:1fr}}
+.hero .t{padding:56px 40px 56px max(20px,calc((100vw - 1140px)/2 + 20px))}
+@media(max-width:820px){.hero .t{padding:36px 20px 34px}}
+.tag{display:inline-block;background:var(--y);color:var(--ink);font-weight:800;font-size:.75rem;padding:5px 9px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:18px}
+.hero h1{font-size:clamp(2.2rem,5.2vw,3.6rem)}
+.hero h1 span{color:var(--y)}
+.hero p{color:#c3c6cc;max-width:42ch;margin:16px 0 26px;font-size:1.05rem}
+.hero .cta{display:flex;gap:10px;flex-wrap:wrap}
+.chk{display:flex;gap:18px;flex-wrap:wrap;margin-top:26px;color:#c3c6cc;font-size:.88rem}
+.chk span::before{content:"✓ ";color:var(--y);font-weight:800}
+.ph{position:relative;display:grid;place-items:center;color:#8a8f97;min-height:220px;background:
+linear-gradient(#0000 23px,#2d3136 24px) 0 0/24px 24px,linear-gradient(90deg,#0000 23px,#2d3136 24px) 0 0/24px 24px,#262a2f}
+.ph em{position:absolute;bottom:12px;left:14px;font-style:normal;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:#9aa0a8;background:#1f2226;padding:4px 8px}
+.hero .ph{min-height:380px}
+@media(max-width:820px){.hero .ph{min-height:200px}}
+section{padding:64px 0}
+h2{font-size:clamp(1.8rem,4vw,2.5rem);margin-bottom:8px}
+.sub{color:var(--mut);margin:0 0 30px;max-width:56ch}
+.svc{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:820px){.svc{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.svc{grid-template-columns:1fr}}
+.s{background:#fff;border:1px solid var(--line);border-top:4px solid var(--y);padding:22px 20px;border-radius:3px}
+.s h3{font-size:1.08rem;margin-bottom:6px}.s p{margin:0;color:var(--mut);font-size:.93rem}
+.s b{display:block;margin-top:12px;font-size:.88rem}
+.band{background:var(--y);padding:34px 0}
+.band .w{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.band h2{margin:0;font-size:clamp(1.4rem,3vw,1.9rem)}
+.band .b{background:var(--ink);color:#fff;border-color:var(--ink)}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:30px}
+@media(max-width:820px){.info{grid-template-columns:1fr}}
+.card{background:#fff;border:1px solid var(--line);padding:26px;border-radius:3px}
+.hours div{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.hours span{color:var(--mut)}
+.map{min-height:260px;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+footer{background:var(--dark);color:#9aa0a8;padding:24px 0 96px;font-size:.82rem}
+footer .w{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}footer a{color:inherit}
+.bar{position:fixed;left:0;right:0;bottom:0;display:none;grid-template-columns:1fr 1fr;z-index:50}
+.bar a{display:flex;justify-content:center;align-items:center;gap:8px;padding:15px;font-weight:800;text-decoration:none;color:var(--ink);background:var(--y)}
+.bar a+a{background:#25D366;color:#0b2e17}
+@media(max-width:760px){.bar{display:grid}}
+
+</style>
+</head>
+<body>
+<div class="rt-demo" role="note"><div class="in">
+<a class="back" href="/web-490#ejemplos" data-back>← Volver</a>
+<span class="txt"><b>DEMO</b> · Negocio ficticio. <small>Así puede quedar tu web por 490 € + IVA.</small></span>
+<a class="go" href="https://wa.me/34613272053?text=Hola%2C%20he%20visto%20Rotulito%20y%20quiero%20informaci%C3%B3n%20para%20hacer%20la%20web%20de%20mi%20negocio.%20He%20visto%20la%20demo%20de%20taller%20mec%C3%A1nico." target="_blank" rel="noopener" data-wa="demo-taller">Quiero una así</a>
+</div></div>
+
+<header class="top"><div class="w"><div class="logo"><i>R</i>Talleres Riera</div><a class="tel" href="#" data-fake="En tu web, este botón llama directamente a tu teléfono."><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg> <span>600 000 000</span></a></div></header>
+<main>
+<div class="hero">
+<div class="t">
+<span class="tag">Mecánica general · Todas las marcas</span>
+<h1>Tu coche, revisado <span>y con presupuesto antes de tocar nada.</span></h1>
+<p>Mantenimiento, frenos, neumáticos y pre-ITV. Te llamamos antes de cualquier reparación que no esté en el presupuesto.</p>
+<div class="cta"><a class="b y" href="#" data-fake="En tu web, este botón llama directamente a tu teléfono."><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg> Llamar al taller</a><a class="b gr" href="#" data-fake="En tu web, este botón abre un WhatsApp contigo."><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 12 12 0 0 0 4.6 4c1.7.7 2.4.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.2z"/></svg> Pedir cita</a></div>
+<div class="chk"><span>Presupuesto por escrito</span><span>Todas las marcas</span><span>Coche de cortesía bajo petición</span></div>
+</div>
+<div class="ph"><svg viewBox="0 0 64 64" width="56" height="56" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><path d="M40 6a14 14 0 0 0-12 20L8 46a5 5 0 0 0 7 7l20-20A14 14 0 0 0 55 21l-8 8-9-3-3-9 8-8a14 14 0 0 0-3-3z"/></svg><em>Aquí va la foto de tu taller</em></div>
+</div>
+<section><div class="w">
+<h2>Qué hacemos</h2>
+<p class="sub">Lo de siempre, bien hecho. Si no está en la lista, pregúntanos.</p>
+<div class="svc">
+<div class="s"><h3>Mantenimiento</h3><p>Aceite, filtros y revisión según el libro del fabricante.</p><b>Desde 89 €</b></div>
+<div class="s"><h3>Frenos</h3><p>Pastillas, discos y líquido. Revisión gratuita en el momento.</p><b>Desde 75 €</b></div>
+<div class="s"><h3>Neumáticos</h3><p>Montaje, equilibrado y alineado de dirección.</p><b>Consulta medidas</b></div>
+<div class="s"><h3>Pre-ITV</h3><p>Lo revisamos antes para que no te tiren para atrás.</p><b>35 €</b></div>
+<div class="s"><h3>Aire acondicionado</h3><p>Carga de gas y detección de fugas.</p><b>Desde 60 €</b></div>
+<div class="s"><h3>Diagnosis</h3><p>Lectura de averías con equipo multimarca.</p><b>30 €</b></div>
+</div>
+</div></section>
+<div class="band"><div class="w"><h2>¿Te toca la ITV este mes?</h2><a class="b" href="#" data-fake="En tu web, este botón abre un WhatsApp contigo."><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 12 12 0 0 0 4.6 4c1.7.7 2.4.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.2z"/></svg> Reserva tu pre-ITV</a></div></div>
+<section><div class="w info">
+<div class="card">
+<h2>Horario</h2>
+<div class="hours"><div><b>Lunes a viernes</b><span>8:00 – 13:30 · 15:00 – 19:00</span></div><div><b>Sábado</b><span>9:00 – 13:00</span></div><div><b>Domingo</b><span>Cerrado</span></div></div>
+<p style="display:flex;gap:8px;align-items:center;margin:20px 0"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg> Pol. Industrial Sur, nave 4 · Tu ciudad</p>
+<a class="b" href="#" data-fake="En tu web, este botón abre Google Maps con tu dirección."><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg> Cómo llegar</a>
+</div>
+<div class="map" aria-hidden="true"><svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice" width="100%" height="100%">
+<rect width="400" height="240" fill="var(--map-bg)"/>
+<g stroke="var(--map-st)" stroke-width="14" fill="none" stroke-linecap="round"><path d="M-10 70 H420"/><path d="M-10 170 C120 160 260 190 420 150"/><path d="M110 -10 V250"/><path d="M290 -10 C280 90 300 160 270 250"/></g>
+<g stroke="var(--map-st2)" stroke-width="5" fill="none"><path d="M-10 120 H420"/><path d="M200 -10 V250"/><path d="M40 -10 L150 250"/></g>
+<g transform="translate(200 104)"><path d="M0 0c-14-16-22-26-22-36a22 22 0 0 1 44 0c0 10-8 20-22 36z" fill="var(--map-pin)"/><circle cx="0" cy="-36" r="8" fill="#fff"/></g>
+</svg></div>
+</div></section>
+</main>
+<footer><div class="w"><span>© Talleres Riera (negocio ficticio)</span><span><a href="#" data-fake="En tu web, aquí va tu aviso legal.">Aviso legal</a> · <a href="#" data-fake="En tu web, aquí va tu política de privacidad.">Privacidad</a> · Web por rotulito.com</span></div></footer>
+<div class="bar"><a href="#" data-fake="En tu web, este botón llama directamente a tu teléfono."><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg> Llamar</a><a href="#" data-fake="En tu web, este botón abre un WhatsApp contigo."><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 12 12 0 0 0 4.6 4c1.7.7 2.4.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.2z"/></svg> WhatsApp</a></div>
+
+<script>
+(function(){
+var b=document.querySelector('[data-back]');
+try{var r=document.referrer;if(r&&new URL(r).origin===location.origin){b.href=r.split('#')[0]+'#ejemplos';}}catch(_){}
+var t;document.addEventListener('click',function(e){var el=e.target.closest('[data-fake]');if(!el)return;e.preventDefault();
+var d=document.querySelector('.rt-toast');if(!d){d=document.createElement('div');d.className='rt-toast';d.setAttribute('role','status');document.body.appendChild(d);}
+d.textContent=el.getAttribute('data-fake');d.hidden=false;clearTimeout(t);t=setTimeout(function(){d.hidden=true},2600);});
+})();
+</script>
+<script src="/consent.js" defer></script>
+<script src="/track.js" defer></script>
+<script>window.addEventListener('load',function(){window.rtTrack&&window.rtTrack('view_demo',{content_name:'demo-taller'});});</script>
+</body>
+</html>
