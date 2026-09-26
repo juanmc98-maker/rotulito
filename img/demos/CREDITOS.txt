@@ -1,0 +1,16 @@
+Fotos de las demos del plan de 490 € — licencia Pexels (https://www.pexels.com/license/):
+uso gratuito, también comercial, sin atribución obligatoria. Comprobado el 26/09/2026.
+No se usan para dar a entender que las personas o marcas que aparecen respaldan Rotulito.
+
+taller-hero / -hero-m / -card  https://www.pexels.com/es-es/foto/hombre-coche-vehiculo-arreglar-8986148/  (Artem Podrez)
+taller-1   https://www.pexels.com/es-es/foto/hombre-metal-coche-vehiculo-3855223/  (Andrea Piacquadio)
+taller-2   https://www.pexels.com/es-es/foto/hombre-coche-vehiculo-trabajo-8986132/  (Artem Podrez)
+taller-3   https://www.pexels.com/es-es/foto/interior-de-taller-de-reparacion-y-mantenimiento-de-coches-33814734/  (Renee Razumov)
+carpinteria-hero / -hero-m / -card  https://www.pexels.com/es-es/foto/arena-mesa-suelo-molido-16542778/  (Pew Nguyen)
+carpinteria-1  https://www.pexels.com/es-es/foto/madera-trabajando-carpintero-herramientas-8447858/  (Los Muertos Crew)
+carpinteria-2  https://www.pexels.com/es-es/foto/herramientas-carpinteria-equipo-naturaleza-muerta-8821537/  (Ron Lach)
+carpinteria-3  https://www.pexels.com/es-es/foto/plantas-de-madera-de-cerca-carrito-de-servicio-8389907/  (Amar Preciado)
+peluqueria-hero / -hero-m / -card  https://www.pexels.com/es-es/foto/sillas-de-salon-negras-853427/  (Delbeautybox)
+peluqueria-1  https://www.pexels.com/es-es/foto/herramientas-profesionales-de-peluqueria-en-la-mesa-36361320/  (Th2city Santana)
+peluqueria-2  https://www.pexels.com/es-es/foto/manos-mujer-peinado-cabellos-7755226/  (RDNE Stock project)
+peluqueria-3  https://www.pexels.com/es-es/foto/barbero-cortando-cabello-con-maquinilla-y-peine-33461079/  (Alexander Mass)
