@@ -1,4 +1,4 @@
-/* Consentimiento de cookies (analítica y publicidad). Versión 2026-09-16. */
+/* Consentimiento de cookies (analítica y publicidad). Versión 2026-09-16 · revisado 2026-09-26 (revocación del píxel y atribución de campañas). */
 (function () {
 'use strict';
 var ID = 'G-CF5DB927SM', PIXEL_ID = '1099906935714974', KEY = 'rt_privacy_v2', OLD = 'rt_consent';
@@ -21,7 +21,8 @@ if (v && v.version === VERSION && typeof v.analytics === 'boolean' && typeof v.a
 } catch (_) {}
 return null;
 }
-function clearCookies() {
+function clearCookies(re) {
+re = re || /^(_ga(?:_|$)|_gid$|_gat|_gcl_|_fbp$|_fbc$|rt_consent$)/;
 var host = location.hostname, domains = ['', host, '.' + host];
 var parts = host.split('.');
 while (parts.length > 2) { parts.shift(); domains.push('.' + parts.join('.')); }
@@ -29,11 +30,23 @@ var paths = ['/'], segments = location.pathname.split('/');
 for (var i = 1; i < segments.length; i++) paths.push(segments.slice(0, i + 1).join('/'));
 document.cookie.split(';').forEach(function (item) {
 var name = item.split('=')[0].trim();
-if (!/^(_ga(?:_|$)|_gid$|_gat|_gcl_|_fbp$|_fbc$|rt_consent$)/.test(name)) return;
+if (!re.test(name)) return;
 domains.forEach(function (domain) { paths.forEach(function (path) {
 document.cookie = name + '=; Max-Age=0; path=' + path + (domain ? '; domain=' + domain : '') + '; SameSite=Lax; Secure';
 }); });
 });
+}
+var CAMPAIGN = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','utm_id'], AD_IDS = ['gclid','gbraid','wbraid'];
+function pageLocation() {
+var out = new URLSearchParams(), q;
+try { q = new URLSearchParams(location.search); } catch (_) { return location.origin + location.pathname; }
+CAMPAIGN.concat(adsAllowed ? AD_IDS : []).forEach(function (k) { var v = q.get(k); if (v && v.length <= 150 && !/@/.test(v)) out.set(k, v); });
+var s = out.toString();
+return location.origin + location.pathname + (s ? '?' + s : '');
+}
+function externalReferrer() {
+try { var r = document.referrer && new URL(document.referrer); if (r && r.origin !== location.origin && /^https?:$/.test(r.protocol)) return r.origin + '/'; } catch (_) {}
+return '';
 }
 function loadPixel() {
 if (pixelLoaded) return;
@@ -62,9 +75,15 @@ if (!analyticsAllowed || loaded) return;
 loaded = true; window.__pmga = true;
 var s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + ID; document.head.appendChild(s);
 window.gtag('js', new Date());
-// No query strings, fragment identifiers, form data or external link text in analytics.
-window.gtag('config', ID, {send_page_view:false, allow_google_signals:false, allow_ad_personalization_signals:adsAllowed, cookie_expires:31536000, cookie_update:false, page_location:location.origin + location.pathname, page_referrer:'', ignore_referrer:true});
-window.gtag('event', 'page_view', {page_location:location.origin + location.pathname, page_referrer:'', page_title:document.title});
+// Solo parámetros de campaña (sin datos personales): utm_* siempre; gclid/gbraid/wbraid solo con consentimiento de publicidad.
+// Sin fragmentos, datos de formularios ni el resto de la URL. Del referente externo solo se envía el origen (https://www.google.com/).
+var loc = pageLocation(), ref = externalReferrer();
+var cfg = {send_page_view:false, allow_google_signals:false, allow_ad_personalization_signals:adsAllowed, cookie_expires:31536000, cookie_update:false, page_location:loc};
+if (ref) cfg.page_referrer = ref;
+window.gtag('config', ID, cfg);
+var pv = {page_location:loc, page_title:document.title};
+if (ref) pv.page_referrer = ref;
+window.gtag('event', 'page_view', pv);
 }
 function disableAll() {
 analyticsAllowed = false; adsAllowed = false; window.__pmAnalyticsAllowed = false; window.__pmAdsAllowed = false;
@@ -74,8 +93,15 @@ if (pixelLoaded && window.fbq) window.fbq('consent', 'revoke');
 clearCookies();
 }
 function hide() { if (box) box.hidden = true; if (opener && opener.isConnected) opener.focus(); }
+function revokeAds() {
+adsAllowed = false; window.__pmAdsAllowed = false;
+window.gtag('consent', 'update', {ad_storage:'denied', ad_user_data:'denied', ad_personalization:'denied'});
+if (pixelLoaded && window.fbq) window.fbq('consent', 'revoke');
+clearCookies(/^(_gcl_|_fbp$|_fbc$)/);
+}
+function announce() { try { document.dispatchEvent(new CustomEvent('rt:consent', {detail:{analytics:analyticsAllowed, ads:adsAllowed}})); } catch (_) {} }
 function save(choice) {
-var hadTracker = loaded;
+var hadTracker = loaded, hadPixel = pixelLoaded;
 var analytics = choice !== 'reject';
 var ads = choice === 'all';
 try { localStorage.setItem(KEY, JSON.stringify({version:VERSION, analytics:analytics, ads:ads, at:Date.now()})); localStorage.removeItem(OLD); } catch (_) {}
@@ -83,13 +109,15 @@ if (!analytics) {
 disableAll();
 } else {
 analyticsAllowed = true; window.__pmAnalyticsAllowed = true;
+if (!ads) revokeAds();
 adsAllowed = ads; window.__pmAdsAllowed = ads;
 if (pixelLoaded && window.fbq && ads) window.fbq('consent', 'grant');
 applyConsent();
 }
 hide();
-// Unload the already running SDK after withdrawal; only the preference is retained.
-if (!analytics && hadTracker) location.reload();
+// Tras retirar un consentimiento se recarga para descargar el SDK que ya estaba en marcha; solo se guarda la preferencia.
+if ((!analytics && hadTracker) || (!ads && hadPixel)) { location.reload(); return; }
+announce();
 }
 function show() {
 opener = document.activeElement;
@@ -116,9 +144,9 @@ window.addEventListener('storage', function (e) {
 if (e.key !== KEY) return;
 var v = read();
 if (!v || !v.analytics) { var wasLoaded=loaded; disableAll(); if (wasLoaded) location.reload(); }
-else { analyticsAllowed = true; window.__pmAnalyticsAllowed = true; adsAllowed = !!v.ads; window.__pmAdsAllowed = adsAllowed; applyConsent(); }
+else { var hadPixel = pixelLoaded; analyticsAllowed = true; window.__pmAnalyticsAllowed = true; if (!v.ads) revokeAds(); adsAllowed = !!v.ads; window.__pmAdsAllowed = adsAllowed; applyConsent(); if (!v.ads && hadPixel) location.reload(); }
 });
-window.addEventListener('pageshow', function () { var v=read(); if ((!v || !v.analytics) && analyticsAllowed) { disableAll(); location.reload(); } });
+window.addEventListener('pageshow', function () { var v=read(); if ((!v || !v.analytics) && analyticsAllowed) { disableAll(); location.reload(); } else if (v && !v.ads && pixelLoaded && adsAllowed) { revokeAds(); location.reload(); } });
 var initial = read();
 if (initial && initial.analytics) { analyticsAllowed = true; window.__pmAnalyticsAllowed = true; adsAllowed = !!initial.ads; window.__pmAdsAllowed = adsAllowed; applyConsent(); } else { disableAll(); }
 function init() { if (!initial) show(); }

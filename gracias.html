@@ -1,7 +1,18 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recibido · Rotulito.com</title><meta name="robots" content="noindex"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Work+Sans:wght@400;600&display=swap"><style>body{margin:0;font-family:'Work Sans',system-ui,sans-serif;background:#fff4d6;color:#161616;display:grid;place-items:center;min-height:100vh;padding:20px}main{max-width:520px;background:#fff;border:2px solid #161616;border-radius:8px;padding:34px;box-shadow:6px 6px 0 #ffc533}h1{font-family:'Archivo Black',sans-serif;font-weight:400;margin:0 0 12px}p{color:#5d5a55;margin:0 0 12px}a{color:#e4322b;font-weight:600}
-/* Rotulito.com: logotipo manuscrito */
-.brand{display:inline-flex;align-items:center;flex-shrink:0;line-height:1;text-decoration:none}
-.brand-logo{display:block;width:220px;height:auto;overflow:hidden}
-@media(max-width:600px){.brand-logo{width:180px}}
-main>.brand{margin-bottom:24px}
-</style></head><body><main><a class="brand" href="/" aria-label="Rotulito.com — Inicio"><svg class="brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="110 190 1570 510" width="220" height="72" role="img" aria-label="Rotulito.com" focusable="false"><image href="/assets/rotulito-logo-handwritten.png" width="1774" height="887"/></svg></a><h1>Gracias por contactar</h1><p>Cuando recibamos tu solicitud, revisaremos los datos para preparar la propuesta. Si el formulario no confirmó la recepción, escríbenos antes de repetir el envío.</p><p>Si mientras tanto te acuerdas de algo, escríbenos a <a href="mailto:hola@rotulito.com">hola@rotulito.com</a>.</p><p><a href="/">Volver a Rotulito</a></p></main><script src="/consent.js" defer></script><p style="text-align:center"><button type="button" data-cookie-settings>Configurar cookies</button></p></body></html>
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gracias · Rotulito.com</title><meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Work+Sans:wght@400;600&display=swap">
+<style>*{box-sizing:border-box}body{margin:0;font-family:'Work Sans',system-ui,sans-serif;background:#fbf1dc;color:#171512;display:grid;place-items:center;min-height:100vh;padding:16px}main{width:100%;max-width:540px;background:#fff;border:2px solid #171512;border-radius:8px;padding:28px 24px;box-shadow:6px 6px 0 #f7c73b}h1{font-family:'Archivo Black',sans-serif;font-weight:400;font-size:1.6rem;line-height:1.15;margin:0 0 12px}p{color:#5f5b55;margin:0 0 14px;line-height:1.55}.logo{display:block;width:170px;height:auto;margin-bottom:22px}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:10px 18px;border-radius:4px;font-weight:600;text-decoration:none;border:2px solid #171512;color:#171512;margin:4px 8px 4px 0}.btn.wa{background:#1f9d55;border-color:#1f9d55;color:#fff}.ck{background:none;border:0;padding:0;margin-top:14px;font:inherit;font-size:.85rem;color:#5f5b55;text-decoration:underline;cursor:pointer}[hidden]{display:none!important}</style></head>
+<body><main>
+<a href="/"><img class="logo" src="/assets/rotulito-logo.svg" width="170" height="55" alt="Rotulito.com"></a>
+<div id="ok" hidden><h1>Hemos recibido tu consulta</h1><p>Te responderemos por WhatsApp al teléfono que nos has dejado, en días laborables. Si nos has dejado un email y prefieres que te escribamos ahí, también podemos.</p></div>
+<div id="neutral"><h1>Formulario de contacto</h1><p>Esta página confirma los envíos del formulario de contacto. Si quieres hacernos una consulta, escríbenos por WhatsApp o usa el formulario de la web.</p></div>
+<p><a class="btn wa" href="https://wa.me/34613272053?text=Hola%2C%20me%20interesa%20la%20web%20de%20490%20%E2%82%AC%20%2B%20IVA.%20Mi%20negocio%20es%E2%80%A6" target="_blank" rel="noopener" data-wa="gracias">Escribir por WhatsApp</a><a class="btn" href="/">Volver a Rotulito</a></p>
+<button type="button" class="ck" data-cookie-settings>Configurar cookies</button>
+</main>
+<script>
+(function(){var ok=false;try{var v=Number(sessionStorage.getItem('rt_submission_confirmed'));ok=v>0&&Date.now()-v<30*60*1000;sessionStorage.removeItem('rt_submission_confirmed');}catch(_){}
+if(ok){document.getElementById('ok').hidden=false;document.getElementById('neutral').hidden=true;}})();
+</script>
+<script src="/consent.js" defer></script>
+<script src="/track.js" defer></script>
+</body></html>
