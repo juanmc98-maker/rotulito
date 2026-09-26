@@ -68,7 +68,7 @@ f.addEventListener('submit', async function (ev) {
     await window.submitConfirmed(f.action, body);
     if (window.rtTrack) window.rtTrack('lead', {form_id: 'contacto', lang: LANG});
     try { sessionStorage.setItem('rt_submission_confirmed', String(Date.now())); } catch (_) {}
-    setTimeout(function () { location.assign(T.thanks); }, 350);
+    location.assign(T.thanks);
   } catch (_) {
     ferr.textContent = T.err; ferr.hidden = false;
     f.dataset.sending = 'false'; b.disabled = false; b.textContent = label;
