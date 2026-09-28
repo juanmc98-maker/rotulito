@@ -1,4 +1,4 @@
-/* Consentimiento de cookies (analítica y publicidad). Versión 2026-09-16 · revisado 2026-09-26 (revocación del píxel y atribución de campañas). */
+/* Consentimiento de cookies (analítica y publicidad). Versión 2026-09-16 · revisado 2026-09-28 (Configurar por finalidad; política de cookies en su idioma). */
 (function () {
 'use strict';
 var ID = 'G-CF5DB927SM', PIXEL_ID = '1099906935714974', KEY = 'rt_privacy_v2', OLD = 'rt_consent';
@@ -6,9 +6,9 @@ var VERSION = '2026-09-16', MAX_AGE = 365 * 86400000;
 var analyticsAllowed = false, adsAllowed = false, loaded = false, pixelLoaded = false, box, opener;
 var LANG = location.pathname.indexOf('/ca/') === 0 ? 'ca' : (location.pathname.indexOf('/en/') === 0 ? 'en' : 'es');
 var T = {
-es: { aria: 'Preferencias de cookies', html: '<p><strong>Tú decides sobre las cookies.</strong> Con tu permiso, medimos las visitas con Google Analytics y, si lo aceptas, usamos cookies de publicidad para medir la eficacia de nuestros anuncios (Google Ads y Meta/Facebook). Puedes usar la web y los formularios aunque lo rechaces todo. Guardamos tu elección durante 12 meses. <a href="/cookies.html">Política de cookies</a>.</p><div class="choices"><button type="button" data-choice="reject">Rechazar todo</button><button type="button" data-choice="analytics">Solo analítica</button><button type="button" data-choice="all">Aceptar todo</button></div>' },
-ca: { aria: 'Preferències de galetes', html: '<p><strong>Tu decideixes sobre les galetes.</strong> Amb el teu permís, mesurem les visites amb Google Analytics i, si ho acceptes, fem servir galetes de publicitat per mesurar l\'eficàcia dels nostres anuncis (Google Ads i Meta/Facebook). Pots utilitzar la web i els formularis encara que ho rebutgis tot. Guardem la teva elecció durant 12 mesos. <a href="/cookies.html">Política de galetes</a>.</p><div class="choices"><button type="button" data-choice="reject">Rebutjar-ho tot</button><button type="button" data-choice="analytics">Només analítica</button><button type="button" data-choice="all">Acceptar-ho tot</button></div>' },
-en: { aria: 'Cookie preferences', html: '<p><strong>You decide about cookies.</strong> With your permission, we measure visits with Google Analytics and, if you accept, we use advertising cookies to measure the effectiveness of our ads (Google Ads and Meta/Facebook). You can use the website and forms even if you reject everything. We store your choice for 12 months. <a href="/cookies.html">Cookie policy</a>.</p><div class="choices"><button type="button" data-choice="reject">Reject all</button><button type="button" data-choice="analytics">Analytics only</button><button type="button" data-choice="all">Accept all</button></div>' }
+es: { aria: 'Preferencias de cookies', cfg: '<p><strong>Configurar cookies</strong></p><label class="opt"><input type="checkbox" data-opt="analytics"> <span><b>Analítica</b> (Google Analytics): cuántas visitas tiene la web y qué se lee.</span></label><label class="opt"><input type="checkbox" data-opt="ads"> <span><b>Publicidad</b> (Google Ads y Meta): medir si nuestros anuncios funcionan.</span></label><div class="choices"><button type="button" data-choice="back">Volver</button><button type="button" data-choice="save">Guardar mi elección</button></div>', html: '<p><strong>Tú decides sobre las cookies.</strong> Con tu permiso, medimos las visitas con Google Analytics y, si lo aceptas, usamos cookies de publicidad para medir la eficacia de nuestros anuncios (Google Ads y Meta/Facebook). Puedes usar la web y los formularios aunque lo rechaces todo. Guardamos tu elección durante 12 meses. <a href="/cookies.html">Política de cookies</a>.</p><div class="choices"><button type="button" data-choice="reject">Rechazar todo</button><button type="button" data-choice="config">Configurar</button><button type="button" data-choice="all">Aceptar todo</button></div>' },
+ca: { aria: 'Preferències de galetes', cfg: '<p><strong>Configurar galetes</strong></p><label class="opt"><input type="checkbox" data-opt="analytics"> <span><b>Analítica</b> (Google Analytics): quantes visites té la web i què es llegeix.</span></label><label class="opt"><input type="checkbox" data-opt="ads"> <span><b>Publicitat</b> (Google Ads i Meta): mesurar si els nostres anuncis funcionen.</span></label><div class="choices"><button type="button" data-choice="back">Tornar</button><button type="button" data-choice="save">Desar la meva elecció</button></div>', html: '<p><strong>Tu decideixes sobre les galetes.</strong> Amb el teu permís, mesurem les visites amb Google Analytics i, si ho acceptes, fem servir galetes de publicitat per mesurar l\'eficàcia dels nostres anuncis (Google Ads i Meta/Facebook). Pots utilitzar la web i els formularis encara que ho rebutgis tot. Guardem la teva elecció durant 12 mesos. <a href="/ca/cookies.html">Política de galetes</a>.</p><div class="choices"><button type="button" data-choice="reject">Rebutjar-ho tot</button><button type="button" data-choice="config">Configurar</button><button type="button" data-choice="all">Acceptar-ho tot</button></div>' },
+en: { aria: 'Cookie preferences', cfg: '<p><strong>Cookie settings</strong></p><label class="opt"><input type="checkbox" data-opt="analytics"> <span><b>Analytics</b> (Google Analytics): how many visits the site gets and what is read.</span></label><label class="opt"><input type="checkbox" data-opt="ads"> <span><b>Advertising</b> (Google Ads and Meta): measuring whether our ads work.</span></label><div class="choices"><button type="button" data-choice="back">Back</button><button type="button" data-choice="save">Save my choice</button></div>', html: '<p><strong>You decide about cookies.</strong> With your permission, we measure visits with Google Analytics and, if you accept, we use advertising cookies to measure the effectiveness of our ads (Google Ads and Meta/Facebook). You can use the website and forms even if you reject everything. We store your choice for 12 months. <a href="/en/cookies.html">Cookie policy</a>.</p><div class="choices"><button type="button" data-choice="reject">Reject all</button><button type="button" data-choice="config">Settings</button><button type="button" data-choice="all">Accept all</button></div>' }
 };
 window.dataLayer = window.dataLayer || [];
 window.gtag = function () { window.dataLayer.push(arguments); };
@@ -100,15 +100,16 @@ if (pixelLoaded && window.fbq) window.fbq('consent', 'revoke');
 clearCookies(/^(_gcl_|_fbp$|_fbc$)/);
 }
 function announce() { try { document.dispatchEvent(new CustomEvent('rt:consent', {detail:{analytics:analyticsAllowed, ads:adsAllowed}})); } catch (_) {} }
-function save(choice) {
+function save(choice, a, d) {
 var hadTracker = loaded, hadPixel = pixelLoaded;
-var analytics = choice !== 'reject';
-var ads = choice === 'all';
+var analytics = choice === 'custom' ? !!a : choice !== 'reject';
+var ads = choice === 'custom' ? !!d : choice === 'all';
 try { localStorage.setItem(KEY, JSON.stringify({version:VERSION, analytics:analytics, ads:ads, at:Date.now()})); localStorage.removeItem(OLD); } catch (_) {}
-if (!analytics) {
+if (!analytics && !ads) {
 disableAll();
 } else {
-analyticsAllowed = true; window.__pmAnalyticsAllowed = true;
+analyticsAllowed = analytics; window.__pmAnalyticsAllowed = analytics;
+if (!analytics) { window['ga-disable-' + ID] = true; clearCookies(/^(_ga(?:_|$)|_gid$|_gat)/); }
 if (!ads) revokeAds();
 adsAllowed = ads; window.__pmAdsAllowed = ads;
 if (pixelLoaded && window.fbq && ads) window.fbq('consent', 'grant');
@@ -123,17 +124,29 @@ function show() {
 opener = document.activeElement;
 if (!box) {
 var style = document.createElement('style');
-style.textContent = '#privacy-choice[hidden]{display:none!important}#privacy-choice{position:fixed;bottom:16px;left:16px;right:16px;z-index:10000;max-width:620px;margin:auto;padding:20px;background:#fff;color:#171512;border:2px solid #171512;border-radius:8px;box-shadow:0 8px 35px #0003;font:15px/1.5 system-ui,sans-serif;max-height:85vh;overflow:auto}#privacy-choice p{margin:0 0 14px;color:#171512}#privacy-choice a{color:#171512;text-decoration:underline}#privacy-choice .choices{display:flex;gap:10px;flex-wrap:wrap}#privacy-choice button{flex:1;min-width:120px;background:#fff;color:#171512;border:2px solid #171512;border-radius:4px;padding:12px 14px;cursor:pointer;font:600 14px system-ui,sans-serif}#privacy-choice button:focus-visible{outline:3px solid #0067c0;outline-offset:3px}';
+style.textContent = '#privacy-choice[hidden]{display:none!important}#privacy-choice{position:fixed;bottom:16px;left:16px;right:16px;z-index:10000;max-width:620px;margin:auto;padding:20px;background:#fff;color:#171512;border:2px solid #171512;border-radius:8px;box-shadow:0 8px 35px #0003;font:15px/1.5 system-ui,sans-serif;max-height:85vh;overflow:auto}#privacy-choice p{margin:0 0 14px;color:#171512}#privacy-choice a{color:#171512;text-decoration:underline}#privacy-choice .choices{display:flex;gap:10px;flex-wrap:wrap}#privacy-choice button{flex:1;min-width:120px;background:#fff;color:#171512;border:2px solid #171512;border-radius:4px;padding:12px 14px;cursor:pointer;font:600 14px system-ui,sans-serif}#privacy-choice button:focus-visible{outline:3px solid #0067c0;outline-offset:3px}#privacy-choice .opt{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;cursor:pointer}#privacy-choice .opt input{width:20px;height:20px;margin-top:2px;flex:none}';
 document.head.appendChild(style);
 box = document.createElement('div'); box.id = 'privacy-choice'; box.setAttribute('role','dialog'); box.setAttribute('aria-label', T[LANG].aria);
-box.innerHTML = T[LANG].html;
 document.body.appendChild(box);
-box.querySelectorAll('[data-choice]').forEach(function (btn) {
-btn.addEventListener('click', function () { save(btn.dataset.choice); });
-});
 }
+mainView();
 box.hidden = false;
 box.querySelector('button').focus({preventScroll:true});
+}
+function mainView() {
+box.innerHTML = T[LANG].html;
+box.querySelectorAll('[data-choice]').forEach(function (btn) {
+btn.addEventListener('click', function () { if (btn.dataset.choice === 'config') cfgView(); else save(btn.dataset.choice); });
+});
+}
+function cfgView() {
+var cur = read();
+box.innerHTML = T[LANG].cfg;
+box.querySelector('[data-opt="analytics"]').checked = !!(cur && cur.analytics);
+box.querySelector('[data-opt="ads"]').checked = !!(cur && cur.ads);
+box.querySelector('[data-choice="back"]').onclick = function () { mainView(); box.querySelector('button').focus(); };
+box.querySelector('[data-choice="save"]').onclick = function () { save('custom', box.querySelector('[data-opt="analytics"]').checked, box.querySelector('[data-opt="ads"]').checked); };
+box.querySelector('input').focus();
 }
 window.siteConsent = {open:show, reject:function () { save('reject'); }, analyticsAllowed:function () { return analyticsAllowed; }, adsAllowed:function () { return adsAllowed; }};
 document.addEventListener('click', function (e) {
@@ -143,12 +156,12 @@ if (el) { e.preventDefault(); show(); }
 window.addEventListener('storage', function (e) {
 if (e.key !== KEY) return;
 var v = read();
-if (!v || !v.analytics) { var wasLoaded=loaded; disableAll(); if (wasLoaded) location.reload(); }
-else { var hadPixel = pixelLoaded; analyticsAllowed = true; window.__pmAnalyticsAllowed = true; if (!v.ads) revokeAds(); adsAllowed = !!v.ads; window.__pmAdsAllowed = adsAllowed; applyConsent(); if (!v.ads && hadPixel) location.reload(); }
+if (!v || (!v.analytics && !v.ads)) { var wasLoaded=loaded||pixelLoaded; disableAll(); if (wasLoaded) location.reload(); }
+else { var hadPixel = pixelLoaded; if (!v.analytics && loaded) { location.reload(); return; } analyticsAllowed = !!v.analytics; window.__pmAnalyticsAllowed = analyticsAllowed; if (!v.ads) revokeAds(); adsAllowed = !!v.ads; window.__pmAdsAllowed = adsAllowed; applyConsent(); if (!v.ads && hadPixel) location.reload(); }
 });
 window.addEventListener('pageshow', function () { var v=read(); if ((!v || !v.analytics) && analyticsAllowed) { disableAll(); location.reload(); } else if (v && !v.ads && pixelLoaded && adsAllowed) { revokeAds(); location.reload(); } });
 var initial = read();
-if (initial && initial.analytics) { analyticsAllowed = true; window.__pmAnalyticsAllowed = true; adsAllowed = !!initial.ads; window.__pmAdsAllowed = adsAllowed; applyConsent(); } else { disableAll(); }
+if (initial && (initial.analytics || initial.ads)) { analyticsAllowed = !!initial.analytics; window.__pmAnalyticsAllowed = analyticsAllowed; adsAllowed = !!initial.ads; window.__pmAdsAllowed = adsAllowed; applyConsent(); } else { disableAll(); }
 function init() { if (!initial) show(); }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

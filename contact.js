@@ -40,15 +40,26 @@ function looksRandom(s) {
 }
 function markTel(ok) { telErr.hidden = ok; tel.setAttribute('aria-invalid', ok ? 'false' : 'true'); }
 tel.addEventListener('input', function () { if (!telErr.hidden && normTel(tel.value)) markTel(true); });
+/* Preferencia de respuesta: WhatsApp (pide teléfono) o email (pide email). Solo es obligatorio el dato elegido. */
+var em = f.elements.email, telWrap = document.getElementById('telwrap'), emWrap = document.getElementById('emailwrap');
+function via() { var r = f.querySelector('input[name=via]:checked'); return r ? r.value : 'whatsapp'; }
+function syncVia() {
+  var byMail = via() === 'email';
+  if (telWrap) telWrap.hidden = byMail; tel.required = !byMail; if (byMail) markTel(true);
+  if (emWrap) emWrap.hidden = !byMail; if (em) em.required = byMail;
+}
+f.querySelectorAll('input[name=via]').forEach(function (r) { r.addEventListener('change', syncVia); });
+syncVia();
 
 f.addEventListener('submit', async function (ev) {
   ev.preventDefault();
   if (f.dataset.sending === 'true') return;
   ferr.hidden = true;
+  var byMail = via() === 'email';
   var n = normTel(tel.value);
-  markTel(!!n);
-  if (!f.checkValidity() || !n) {
-    var bad = !n ? tel : f.querySelector(':invalid');
+  if (!byMail) markTel(!!n);
+  if (!f.checkValidity() || (!byMail && !n)) {
+    var bad = (!byMail && !n) ? tel : f.querySelector(':invalid');
     if (bad) {
       var det = bad.closest('details'); if (det) det.open = true;
       bad.focus();
@@ -64,7 +75,8 @@ f.addEventListener('submit', async function (ev) {
   var sospecha = looksRandom(f.elements.negocio.value) || looksRandom(f.elements.sector.value);
   try {
     var body = new URLSearchParams(new FormData(f));
-    body.set('telefono', n);
+    body.set('telefono', n || '');
+    body.set('via', byMail ? 'email' : 'whatsapp');
     body.set('privacy_v', '2026-09-27');
     if (sospecha) body.set('revisar', '1');
     await window.submitConfirmed(f.action, body);
