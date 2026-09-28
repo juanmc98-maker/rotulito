@@ -171,7 +171,7 @@ textarea{min-height:90px;resize:vertical}
 .opt summary{cursor:pointer;font-weight:600;font-size:.92rem;min-height:46px;display:flex;align-items:center}
 .optin{display:grid;gap:12px;padding-bottom:12px}
 .check{display:flex;gap:10px;align-items:flex-start;font-size:.86rem;font-weight:400;color:var(--muted)}
-.check input{width:22px;height:22px;min-height:0;margin:1px 0 0;flex-shrink:0}
+.check input{width:22px;height:22px;min-height:0;margin:1px 0 0;flex-shrink:0}.pref{border:0;padding:0;margin:0;display:flex;gap:18px;flex-wrap:wrap}.pref legend{font-size:.92rem;font-weight:600;padding:0;margin:0 0 6px;width:100%}.pref .check{font-size:.95rem;color:inherit}#telwrap[hidden],#emailwrap[hidden]{display:none}
 .legal{font-size:.8rem;color:var(--muted);margin:0}
 .err{margin:0;color:var(--red-ink);font-size:.9rem;font-weight:600}
 .err[hidden]{display:none}
@@ -210,7 +210,7 @@ footer a,.linkbtn{color:var(--muted)}
 <span class="stamp">Summary</span>
 <h2 class="tk-h">One-page website</h2>
 <dl><div class="l"><dt>Build</dt><dd>€490 <span class="iva">+ VAT</span></dd></div><div class="l"><dt>Domain and hosting</dt><dd>included in year 1</dd></div><div class="l"><dt>From year 2</dt><dd>€20 <span class="iva">+ VAT</span>/month</dd></div><div class="l"><dt>Payment</dt><dd>50% + 50%</dd></div><div class="l"><dt>Estimated delivery</dt><dd>~1 week*</dd></div></dl>
-<p class="tk-note">*From when we have your texts, details and photos.</p>
+<p class="tk-note">*From when we have your business details and photos. We write the texts for you.</p>
 </div>
 </div></div>
 
@@ -296,12 +296,14 @@ footer a,.linkbtn{color:var(--muted)}
 <label>Business name<input id="negocio" name="negocio" autocomplete="organization" required maxlength="120"></label>
 <label>What you do<input id="sector" name="sector" placeholder="Hair salon, garage, carpentry…" required maxlength="120"></label>
 </div>
-<label>Phone<input id="telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel" required maxlength="20" aria-describedby="telerr"></label>
+<fieldset class="pref"><legend>How would you like us to reply?</legend><label class="check"><input type="radio" name="via" value="whatsapp" checked> <span>WhatsApp</span></label><label class="check"><input type="radio" name="via" value="email"> <span>Email</span></label></fieldset>
+<label id="telwrap">Phone<input id="telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel" required maxlength="20" aria-describedby="telerr"></label>
 <p class="err" id="telerr" hidden>Enter a 9-digit Spanish phone number.</p>
-<details class="opt"><summary>Add name, email or message (optional)</summary>
+<label id="emailwrap" hidden>Email<input id="email" name="email" type="email" autocomplete="email" maxlength="160"></label>
+<details class="opt"><summary>Add name or message (optional)</summary>
 <div class="optin">
 <label>Your name <small>(optional)</small><input id="nombre" name="nombre" autocomplete="name" maxlength="120"></label>
-<label>Email <small>(optional)</small><input id="email" name="email" type="email" autocomplete="email" maxlength="160"></label>
+
 <label>Anything else you want to tell us <small>(optional)</small><textarea id="mensaje" name="mensaje" maxlength="2000"></textarea></label>
 </div></details>
 <label class="check"><input type="checkbox" id="priv" name="privacidad" required> <span>I have read the <a href="/en/privacidad.html" target="_blank" rel="noopener">privacy policy</a> on the use of my data to respond to my request.</span></label>
