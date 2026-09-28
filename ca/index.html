@@ -171,7 +171,7 @@ textarea{min-height:90px;resize:vertical}
 .opt summary{cursor:pointer;font-weight:600;font-size:.92rem;min-height:46px;display:flex;align-items:center}
 .optin{display:grid;gap:12px;padding-bottom:12px}
 .check{display:flex;gap:10px;align-items:flex-start;font-size:.86rem;font-weight:400;color:var(--muted)}
-.check input{width:22px;height:22px;min-height:0;margin:1px 0 0;flex-shrink:0}
+.check input{width:22px;height:22px;min-height:0;margin:1px 0 0;flex-shrink:0}.pref{border:0;padding:0;margin:0;display:flex;gap:18px;flex-wrap:wrap}.pref legend{font-size:.92rem;font-weight:600;padding:0;margin:0 0 6px;width:100%}.pref .check{font-size:.95rem;color:inherit}#telwrap[hidden],#emailwrap[hidden]{display:none}
 .legal{font-size:.8rem;color:var(--muted);margin:0}
 .err{margin:0;color:var(--red-ink);font-size:.9rem;font-weight:600}
 .err[hidden]{display:none}
@@ -210,7 +210,7 @@ footer a,.linkbtn{color:var(--muted)}
 <span class="stamp">Resum</span>
 <h2 class="tk-h">Web d'una pàgina</h2>
 <dl><div class="l"><dt>Creació</dt><dd>490 € <span class="iva">+ IVA</span></dd></div><div class="l"><dt>Domini i allotjament</dt><dd>inclosos el 1r any</dd></div><div class="l"><dt>Des del 2n any</dt><dd>20 € <span class="iva">+ IVA</span>/mes</dd></div><div class="l"><dt>Pagament</dt><dd>50 % + 50 %</dd></div><div class="l"><dt>Lliurament orientatiu</dt><dd>~1 setmana*</dd></div></dl>
-<p class="tk-note">*Des que tenim els teus textos, dades i fotos.</p>
+<p class="tk-note">*Des que tenim les dades del teu negoci i les fotos. Els textos els preparem nosaltres.</p>
 </div>
 </div></div>
 
@@ -296,12 +296,14 @@ footer a,.linkbtn{color:var(--muted)}
 <label>Nom del negoci<input id="negocio" name="negocio" autocomplete="organization" required maxlength="120"></label>
 <label>A què et dediques<input id="sector" name="sector" placeholder="Perruqueria, taller, fusteria…" required maxlength="120"></label>
 </div>
-<label>Telèfon<input id="telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel" required maxlength="20" aria-describedby="telerr"></label>
+<fieldset class="pref"><legend>Com prefereixes que et responguem?</legend><label class="check"><input type="radio" name="via" value="whatsapp" checked> <span>WhatsApp</span></label><label class="check"><input type="radio" name="via" value="email"> <span>Correu electrònic</span></label></fieldset>
+<label id="telwrap">Telèfon<input id="telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel" required maxlength="20" aria-describedby="telerr"></label>
 <p class="err" id="telerr" hidden>Escriu un telèfon espanyol de 9 xifres.</p>
-<details class="opt"><summary>Afegir nom, correu o missatge (opcional)</summary>
+<label id="emailwrap" hidden>Correu electrònic<input id="email" name="email" type="email" autocomplete="email" maxlength="160"></label>
+<details class="opt"><summary>Afegir nom o missatge (opcional)</summary>
 <div class="optin">
 <label>El teu nom <small>(opcional)</small><input id="nombre" name="nombre" autocomplete="name" maxlength="120"></label>
-<label>Correu electrònic <small>(opcional)</small><input id="email" name="email" type="email" autocomplete="email" maxlength="160"></label>
+
 <label>Alguna cosa més que ens vulguis explicar <small>(opcional)</small><textarea id="mensaje" name="mensaje" maxlength="2000"></textarea></label>
 </div></details>
 <label class="check"><input type="checkbox" id="priv" name="privacidad" required> <span>He llegit la <a href="/ca/privacidad.html" target="_blank" rel="noopener">política de privacitat</a> sobre l'ús de les meves dades per respondre la meva sol·licitud.</span></label>
