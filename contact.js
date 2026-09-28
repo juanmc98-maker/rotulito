@@ -1,7 +1,8 @@
 /* Rotulito · formulario de contacto (ES/CA/EN) y botón flotante de WhatsApp.
    - Envía al Apps Script y solo da el envío por bueno si el servidor responde {ok:true} (submit-confirmed.js).
    - Tras la confirmación: evento "lead" (track.js, una sola vez) y paso a la página de gracias de su idioma.
-   - Antispam silencioso: campo trampa, envío en menos de 3 s o texto aleatorio → no se envía nada. */
+   - Antispam: solo el campo trampa (invisible para personas) descarta el envío. Un envío muy rápido espera
+     unos segundos y se envía; un texto que parece aleatorio se envía igualmente, marcado "revisar=1". */
 (function () {
 'use strict';
 var LANG = location.pathname.indexOf('/ca/') === 0 ? 'ca' : (location.pathname.indexOf('/en/') === 0 ? 'en' : 'es');
@@ -55,16 +56,17 @@ f.addEventListener('submit', async function (ev) {
     }
     return;
   }
-  if (f.elements._honey.value || Date.now() - t0 < 3000 || looksRandom(f.elements.negocio.value) || looksRandom(f.elements.sector.value)) {
-    location.assign(T.thanks);
-    return;
-  }
+  if (f.elements._honey.value) { location.assign(T.thanks); return; }
   var b = f.querySelector('button[type=submit]'), label = b.textContent;
   f.dataset.sending = 'true'; b.disabled = true; b.textContent = T.sending;
+  var wait = 3000 - (Date.now() - t0);
+  if (wait > 0) await new Promise(function (r) { setTimeout(r, wait); });
+  var sospecha = looksRandom(f.elements.negocio.value) || looksRandom(f.elements.sector.value);
   try {
     var body = new URLSearchParams(new FormData(f));
     body.set('telefono', n);
-    body.set('privacy_v', '2026-09-12');
+    body.set('privacy_v', '2026-09-27');
+    if (sospecha) body.set('revisar', '1');
     await window.submitConfirmed(f.action, body);
     if (window.rtTrack) window.rtTrack('lead', {form_id: 'contacto', lang: LANG});
     try { sessionStorage.setItem('rt_submission_confirmed', String(Date.now())); } catch (_) {}
