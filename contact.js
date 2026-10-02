@@ -78,6 +78,9 @@ f.addEventListener('submit', async function (ev) {
     body.set('telefono', n || '');
     body.set('via', byMail ? 'email' : 'whatsapp');
     body.set('privacy_v', '2026-09-27');
+    var origen = location.pathname;
+    try { var q = new URLSearchParams(location.search), u = []; ['utm_source', 'utm_medium', 'utm_campaign'].forEach(function (k) { var v = q.get(k); if (v) u.push(k.slice(4) + '=' + v.slice(0, 40)); }); if (u.length) origen += ' | ' + u.join(' '); } catch (_) {}
+    body.set('origen', origen.slice(0, 200));
     if (sospecha) body.set('revisar', '1');
     await window.submitConfirmed(f.action, body);
     if (window.rtTrack) window.rtTrack('lead', {form_id: 'contacto', lang: LANG});
