@@ -82,6 +82,7 @@ f.addEventListener('submit', async function (ev) {
     try { var q = new URLSearchParams(location.search), u = []; ['utm_source', 'utm_medium', 'utm_campaign'].forEach(function (k) { var v = q.get(k); if (v) u.push(k.slice(4) + '=' + v.slice(0, 40)); }); if (u.length) origen += ' | ' + u.join(' '); } catch (_) {}
     body.set('origen', origen.slice(0, 200));
     if (sospecha) body.set('revisar', '1');
+    body.set('_t', String(Math.round((Date.now() - t0) / 1000)));
     await window.submitConfirmed(f.action, body);
     if (window.rtTrack) window.rtTrack('lead', {form_id: 'contacto', lang: LANG});
     try { sessionStorage.setItem('rt_submission_confirmed', String(Date.now())); } catch (_) {}
