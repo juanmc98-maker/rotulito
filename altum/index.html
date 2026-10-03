@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Altum Real Estate · Versión de prueba</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f8f8f6; --ink:#1d2321; --pine:#33443b; --stone:#8a8c80; --brass:#9c8456; --line:#dcdcd5;
+  --serif:"Cormorant Garamond",Georgia,"Times New Roman",serif;
+  --sans:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6}
+a{color:inherit}
+img{max-width:100%;display:block}
+:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+.wrap{width:min(1180px,100% - 48px);margin-inline:auto}
+
+.prueba{background:var(--ink);color:#e9e9e4;font-size:13px;text-align:center;padding:7px 16px}
+
+header{position:sticky;top:0;z-index:20;background:rgba(248,248,246,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:24px;height:72px}
+.marca{font-family:var(--serif);font-size:30px;font-weight:500;letter-spacing:.06em;text-decoration:none}
+.marca small{font-family:var(--sans);font-size:11px;letter-spacing:.18em;margin-left:8px;color:var(--stone);font-weight:500}
+.nav ul{display:flex;gap:28px;list-style:none;font-size:15px}
+.nav ul a{text-decoration:none}
+.nav ul a:hover{color:var(--pine)}
+.btn{display:inline-block;font-family:var(--sans);font-size:15px;font-weight:600;padding:13px 24px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);text-decoration:none;cursor:pointer}
+.btn:hover{background:var(--pine);border-color:var(--pine)}
+.btn.claro{background:transparent;color:inherit}
+.btn.claro:hover{background:rgba(255,255,255,.12)}
+.btn[aria-disabled=true]{opacity:.55;cursor:not-allowed}
+.menu-movil{display:none}
+
+/* Portada */
+.hero{position:relative;min-height:calc(100vh - 105px);display:flex;align-items:flex-end;color:#f4f4f0;overflow:hidden;
+  background:
+   linear-gradient(180deg,rgba(20,26,23,.15) 0%,rgba(20,26,23,.72) 100%),
+   radial-gradient(120% 90% at 70% 20%,#5b6b5f 0%,#33443b 45%,#1d2321 100%)}
+.hero svg.perfil{position:absolute;inset:auto 0 0 0;width:100%;height:58%;opacity:.35}
+.hero .wrap{position:relative;padding:0 0 64px}
+.hero h1{font-family:var(--serif);font-weight:500;font-size:clamp(44px,7.4vw,104px);line-height:.98;max-width:13ch;letter-spacing:-.01em}
+.hero p{max-width:46ch;margin:26px 0 34px;font-size:18px;color:#dfe2dc}
+.hero .acciones{display:flex;gap:14px;flex-wrap:wrap}
+.hero .acciones .btn{background:#f4f4f0;color:var(--ink);border-color:#f4f4f0}
+.hero .acciones .btn.claro{background:transparent;color:#f4f4f0;border-color:#f4f4f0}
+.pie-foto{position:absolute;right:24px;bottom:22px;font-size:13px;color:#c9cec6}
+
+.buscador{background:#fff;border:1px solid var(--line);margin-top:-1px}
+.buscador form{display:grid;grid-template-columns:repeat(3,1fr) auto;gap:0}
+.buscador label{display:flex;flex-direction:column;padding:16px 22px;border-right:1px solid var(--line);font-size:13px;color:var(--stone)}
+.buscador select{border:0;background:transparent;font:500 16px var(--sans);color:var(--ink);padding:4px 0;appearance:none;cursor:pointer}
+.buscador .btn{margin:12px}
+
+section{padding:110px 0}
+.titulo{font-family:var(--serif);font-weight:500;font-size:clamp(36px,4.6vw,58px);line-height:1.05;max-width:18ch}
+.intro{max-width:58ch;color:#4a514d;margin-top:18px;font-size:17px}
+.cabecera{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:48px;flex-wrap:wrap}
+
+/* Propiedades */
+.casas{display:grid;grid-template-columns:1.4fr 1fr;grid-template-rows:auto auto;gap:28px}
+.casa{text-decoration:none}
+.casa:first-child{grid-row:span 2}
+.foto{position:relative;aspect-ratio:4/3;background:linear-gradient(160deg,#c9ccc3,#8e958a);overflow:hidden}
+.casa:first-child .foto{aspect-ratio:auto;height:calc(100% - 92px);min-height:420px}
+.foto span{position:absolute;left:14px;top:14px;background:var(--paper);font-size:12px;font-weight:600;padding:4px 10px}
+.foto em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;color:rgba(255,255,255,.8);font-size:14px}
+.datos{display:flex;justify-content:space-between;gap:16px;padding:16px 2px 0}
+.datos h3{font-family:var(--serif);font-weight:500;font-size:26px;line-height:1.1}
+.datos p{font-size:14px;color:var(--stone)}
+.precio{font-family:var(--serif);font-size:24px;white-space:nowrap}
+
+/* Vender */
+.vender{background:var(--pine);color:#eef0ea}
+.vender .intro{color:#cfd5cc}
+.vender-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start}
+.pasos{list-style:none;counter-reset:p;border-top:1px solid rgba(255,255,255,.22)}
+.pasos li{counter-increment:p;display:grid;grid-template-columns:48px 1fr;padding:22px 0;border-bottom:1px solid rgba(255,255,255,.22)}
+.pasos li::before{content:counter(p);font-family:var(--serif);font-size:28px;line-height:1;color:var(--brass)}
+.pasos strong{display:block;font-weight:600;margin-bottom:4px}
+.pasos p{color:#cfd5cc;font-size:15px}
+.discreta{margin-top:40px;padding-top:28px;border-top:1px solid rgba(255,255,255,.22)}
+.discreta h3{font-family:var(--serif);font-weight:500;font-size:30px;margin-bottom:10px}
+.vender .btn{background:#eef0ea;color:var(--pine);border-color:#eef0ea;margin-top:28px}
+.nota{font-size:13px;margin-top:12px;opacity:.75}
+
+/* Zonas */
+.zonas{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+.zonas li{list-style:none;padding:26px 20px 26px 0;border-bottom:1px solid var(--line)}
+.zonas strong{font-family:var(--serif);font-weight:500;font-size:28px;display:block}
+.zonas span{font-size:14px;color:var(--stone)}
+
+/* Quiénes somos */
+.somos{display:grid;grid-template-columns:1fr 1.2fr;gap:80px;border-top:1px solid var(--line)}
+.somos p{max-width:56ch;font-size:17px;color:#3b423e;margin-bottom:16px}
+.pendiente{border:1px dashed var(--stone);padding:14px 18px;font-size:14px;color:var(--stone)}
+
+/* Contacto */
+.contacto{background:#fff;border-top:1px solid var(--line)}
+.contacto-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px}
+.campos{display:grid;gap:14px}
+.campos label{font-size:13px;color:var(--stone);display:grid;gap:6px}
+.campos input,.campos textarea{font:16px var(--sans);padding:12px 14px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+.campos textarea{min-height:120px;resize:vertical}
+.campos fieldset{border:0;display:grid;gap:14px}
+.campos fieldset[disabled]{opacity:.6}
+.via{margin-top:28px;display:grid;gap:10px;font-size:16px}
+
+footer{padding:48px 0 60px;font-size:13px;color:var(--stone)}
+footer .wrap{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+footer .marca{font-size:22px;color:var(--ink)}
+.legal{max-width:62ch}
+
+@media (max-width:900px){
+  .nav ul{display:none}
+  .nav .btn{display:none}
+  .menu-movil{display:block;background:none;border:1px solid var(--ink);padding:8px 14px;font:600 14px var(--sans)}
+  .nav.abierto ul{display:flex;flex-direction:column;position:absolute;top:72px;left:0;right:0;background:var(--paper);padding:20px 24px;gap:16px;border-bottom:1px solid var(--line)}
+  .buscador form{grid-template-columns:1fr}
+  .buscador label{border-right:0;border-bottom:1px solid var(--line)}
+  .casas,.vender-grid,.somos,.contacto-grid{grid-template-columns:1fr;gap:40px}
+  .casa:first-child{grid-row:auto}
+  .casa:first-child .foto{height:auto;min-height:0;aspect-ratio:4/3}
+  .zonas{grid-template-columns:1fr 1fr}
+  section{padding:80px 0}
+  .pie-foto{position:static;padding:0 24px 18px}
+  .hero{flex-direction:column;justify-content:flex-end;align-items:stretch}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<div class="prueba">Versión de prueba. Las casas que aparecen son ejemplos y los formularios están desactivados.</div>
+
+<header>
+  <nav class="wrap nav" aria-label="Principal">
+    <a class="marca" href="#inicio">Altum<small>REAL ESTATE</small></a>
+    <ul>
+      <li><a href="#propiedades">Propiedades</a></li>
+      <li><a href="#vender">Vender</a></li>
+      <li><a href="#zonas">Zonas</a></li>
+      <li><a href="#quienes-somos">Quiénes somos</a></li>
+      <li><a href="#contacto">Contacto</a></li>
+    </ul>
+    <a class="btn" href="#vender">Valorar mi casa</a>
+    <button class="menu-movil" aria-expanded="false" onclick="const n=this.parentNode;n.classList.toggle('abierto');this.setAttribute('aria-expanded',n.classList.contains('abierto'))">Menú</button>
+  </nav>
+</header>
+
+<main id="inicio">
+  <div class="hero">
+    <svg class="perfil" viewBox="0 0 1440 400" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 260 L180 190 L320 230 L470 140 L610 200 L760 110 L900 180 L1040 130 L1200 210 L1340 160 L1440 190 L1440 400 L0 400Z" fill="#0f1513"/>
+      <path d="M0 320 L240 270 L420 300 L640 250 L860 300 L1080 260 L1300 300 L1440 280 L1440 400 L0 400Z" fill="#0b100e"/>
+    </svg>
+    <div class="wrap">
+      <h1>Casas singulares cerca de Barcelona</h1>
+      <p>Compra y venta de viviendas a partir de 500.000 € en el Vallès y la costa, con discreción y trato directo.</p>
+      <div class="acciones">
+        <a class="btn" href="#propiedades">Ver propiedades</a>
+        <a class="btn claro" href="#vender">Valorar mi casa</a>
+      </div>
+    </div>
+    <p class="pie-foto">Aquí irá el vídeo o la foto de una casa real, con su nombre y zona</p>
+  </div>
+
+  <div class="wrap buscador">
+    <form onsubmit="event.preventDefault();location.hash='propiedades'">
+      <label>Zona
+        <select><option>Todas las zonas</option><option>Sant Cugat</option><option>Valldoreix</option><option>Bellaterra</option><option>Matadepera</option><option>Maresme</option></select>
+      </label>
+      <label>Tipo
+        <select><option>Cualquier tipo</option><option>Casa</option><option>Piso</option><option>Ático</option></select>
+      </label>
+      <label>Precio desde
+        <select><option>500.000 €</option><option>750.000 €</option><option>1.000.000 €</option><option>2.000.000 €</option></select>
+      </label>
+      <button class="btn" type="submit">Buscar</button>
+    </form>
+  </div>
+
+  <section id="propiedades">
+    <div class="wrap">
+      <div class="cabecera">
+        <div>
+          <h2 class="titulo">Propiedades en venta</h2>
+          <p class="intro">Una selección corta, revisada una a una. Estas tres fichas son ejemplos para ver cómo quedará la web.</p>
+        </div>
+      </div>
+      <div class="casas">
+        <a class="casa" href="#contacto">
+          <div class="foto"><span>Ejemplo</span><em>Foto de la casa</em></div>
+          <div class="datos">
+            <div><h3>Casa con jardín en Valldoreix</h3><p>420 m² · 5 habitaciones · 4 baños</p></div>
+            <div class="precio">1.450.000 €</div>
+          </div>
+        </a>
+        <a class="casa" href="#contacto">
+          <div class="foto"><span>Ejemplo</span><em>Foto de la casa</em></div>
+          <div class="datos">
+            <div><h3>Casa en Bellaterra</h3><p>310 m² · 4 habitaciones · 3 baños</p></div>
+            <div class="precio">980.000 €</div>
+          </div>
+        </a>
+        <a class="casa" href="#contacto">
+          <div class="foto"><span>Ejemplo</span><em>Foto de la casa</em></div>
+          <div class="datos">
+            <div><h3>Ático con vistas al mar en el Maresme</h3><p>180 m² · 3 habitaciones · 2 baños</p></div>
+            <div class="precio">720.000 €</div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section id="vender" class="vender">
+    <div class="wrap vender-grid">
+      <div>
+        <h2 class="titulo">¿Piensas en vender tu casa?</h2>
+        <p class="intro">Te acompañamos desde la primera valoración hasta la firma en notaría. Una sola persona de contacto durante todo el proceso.</p>
+        <div class="discreta">
+          <h3>Venta discreta</h3>
+          <p class="intro">Si prefieres que tu casa no aparezca en portales, la presentamos solo a compradores con interés real, de forma privada.</p>
+        </div>
+        <a class="btn" aria-disabled="true" href="#vender" onclick="return false">Pedir valoración gratuita</a>
+        <p class="nota">Gratuita, confidencial y sin compromiso. El botón se activará al publicar la web definitiva.</p>
+      </div>
+      <ol class="pasos">
+        <li><div><strong>Valoración</strong><p>Estudiamos tu casa y las ventas comparables de la zona para fijar un precio realista.</p></div></li>
+        <li><div><strong>Preparación</strong><p>Fotografía profesional, plano y una descripción cuidada de la vivienda.</p></div></li>
+        <li><div><strong>Difusión</strong><p>Abierta o discreta, según prefieras. Filtramos a cada comprador antes de enseñar la casa.</p></div></li>
+        <li><div><strong>Negociación y firma</strong><p>Te acompañamos en la negociación, las arras y la escritura.</p></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="zonas">
+    <div class="wrap">
+      <div class="cabecera">
+        <div>
+          <h2 class="titulo">Dónde trabajamos</h2>
+          <p class="intro">Nos centramos en pocas zonas para conocerlas a fondo.</p>
+        </div>
+      </div>
+      <ul class="zonas">
+        <li><strong>Sant Cugat</strong><span>Vallès Occidental</span></li>
+        <li><strong>Valldoreix</strong><span>Vallès Occidental</span></li>
+        <li><strong>Bellaterra</strong><span>Vallès Occidental</span></li>
+        <li><strong>Matadepera</strong><span>Vallès Occidental</span></li>
+        <li><strong>La Floresta</strong><span>Vallès Occidental</span></li>
+        <li><strong>Sant Quirze</strong><span>Vallès Occidental</span></li>
+        <li><strong>Maresme</strong><span>Costa</span></li>
+        <li><strong>Garraf</strong><span>Costa</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="quienes-somos" class="wrap somos">
+    <h2 class="titulo">Quiénes somos</h2>
+    <div>
+      <p>Somos una inmobiliaria pequeña. Preferimos llevar pocas casas y dedicar a cada una el tiempo que necesita.</p>
+      <p class="pendiente">Texto pendiente: lo redactamos juntos antes de publicar.</p>
+    </div>
+  </section>
+
+  <section id="contacto" class="contacto">
+    <div class="wrap contacto-grid">
+      <div>
+        <h2 class="titulo">Hablemos</h2>
+        <p class="intro">Cuéntanos qué buscas o qué casa quieres vender y te respondemos personalmente.</p>
+        <div class="via">
+          <span>WhatsApp: pendiente</span>
+          <span>Email: pendiente</span>
+        </div>
+      </div>
+      <form class="campos" onsubmit="return false">
+        <fieldset disabled>
+          <label>Nombre<input type="text" autocomplete="name"></label>
+          <label>Teléfono<input type="tel" autocomplete="tel"></label>
+          <label>Email<input type="email" autocomplete="email"></label>
+          <label>Mensaje<textarea></textarea></label>
+          <button class="btn" type="submit">Enviar mensaje</button>
+        </fieldset>
+        <p class="nota">Formulario desactivado en la versión de prueba.</p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span class="marca">Altum</span>
+    <p class="legal">Versión de prueba. Toda la información es orientativa, puede contener errores y no es vinculante. Aviso legal, privacidad y cookies se añadirán antes de publicar.</p>
+  </div>
+</footer>
+
+</body>
+</html>
