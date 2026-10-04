@@ -67,10 +67,11 @@ section{padding:110px 0}
 .casas{display:grid;grid-template-columns:1.4fr 1fr;grid-template-rows:auto auto;gap:28px}
 .casa{text-decoration:none}
 .casa:first-child{grid-row:span 2}
-.foto{position:relative;aspect-ratio:4/3;background:linear-gradient(160deg,#c9ccc3,#8e958a);overflow:hidden}
+.foto{position:relative;aspect-ratio:4/3;background:#ecece6;color:var(--pine);overflow:hidden;display:grid;place-items:center;transition:background .3s}
+.foto svg{width:78%;height:auto}
+.casa:hover .foto{background:#e3e4dc}
 .casa:first-child .foto{aspect-ratio:auto;height:calc(100% - 92px);min-height:420px}
 .foto span{position:absolute;left:14px;top:14px;background:var(--paper);font-size:12px;font-weight:600;padding:4px 10px}
-.foto em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;color:rgba(255,255,255,.8);font-size:14px}
 .datos{display:flex;justify-content:space-between;gap:16px;padding:16px 2px 0}
 .datos h3{font-family:var(--serif);font-weight:500;font-size:26px;line-height:1.1}
 .datos p{font-size:14px;color:var(--stone)}
@@ -90,6 +91,9 @@ section{padding:110px 0}
 .vender .btn{background:#eef0ea;color:var(--pine);border-color:#eef0ea;margin-top:28px}
 .nota{font-size:13px;margin-top:12px;opacity:.75}
 
+/* Compradores */
+.busco{display:grid;grid-template-columns:1fr 1fr;gap:80px;border-top:1px solid var(--line)}
+
 /* Zonas */
 .zonas{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
 .zonas li{list-style:none;padding:26px 20px 26px 0;border-bottom:1px solid var(--line)}
@@ -106,7 +110,7 @@ section{padding:110px 0}
 .contacto-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px}
 .campos{display:grid;gap:14px}
 .campos label{font-size:13px;color:var(--stone);display:grid;gap:6px}
-.campos input,.campos textarea{font:16px var(--sans);padding:12px 14px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+.campos input,.campos textarea,.campos select{font:16px var(--sans);padding:12px 14px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
 .campos textarea{min-height:120px;resize:vertical}
 .campos fieldset{border:0;display:grid;gap:14px}
 .campos fieldset[disabled]{opacity:.6}
@@ -117,14 +121,18 @@ footer .wrap{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
 footer .marca{font-size:22px;color:var(--ink)}
 .legal{max-width:62ch}
 
+.barra-movil{display:none}
 @media (max-width:900px){
+  .barra-movil{display:grid;grid-template-columns:1fr 1fr;position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--paper);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:10px}
+  .barra-movil .btn{text-align:center;padding:12px 8px}
+  footer{padding-bottom:110px}
   .nav ul{display:none}
   .nav .btn{display:none}
   .menu-movil{display:block;background:none;border:1px solid var(--ink);padding:8px 14px;font:600 14px var(--sans)}
   .nav.abierto ul{display:flex;flex-direction:column;position:absolute;top:72px;left:0;right:0;background:var(--paper);padding:20px 24px;gap:16px;border-bottom:1px solid var(--line)}
   .buscador form{grid-template-columns:1fr}
   .buscador label{border-right:0;border-bottom:1px solid var(--line)}
-  .casas,.vender-grid,.somos,.contacto-grid{grid-template-columns:1fr;gap:40px}
+  .casas,.vender-grid,.somos,.contacto-grid,.busco{grid-template-columns:1fr;gap:40px}
   .casa:first-child{grid-row:auto}
   .casa:first-child .foto{height:auto;min-height:0;aspect-ratio:4/3}
   .zonas{grid-template-columns:1fr 1fr}
@@ -145,6 +153,7 @@ footer .marca{font-size:22px;color:var(--ink)}
     <ul>
       <li><a href="#propiedades">Propiedades</a></li>
       <li><a href="#vender">Vender</a></li>
+      <li><a href="#busco-casa">Comprar</a></li>
       <li><a href="#zonas">Zonas</a></li>
       <li><a href="#quien-soy">Quién soy</a></li>
       <li><a href="#contacto">Contacto</a></li>
@@ -159,6 +168,8 @@ footer .marca{font-size:22px;color:var(--ink)}
     <svg class="perfil" viewBox="0 0 1440 400" preserveAspectRatio="none" aria-hidden="true">
       <path d="M0 260 L180 190 L320 230 L470 140 L610 200 L760 110 L900 180 L1040 130 L1200 210 L1340 160 L1440 190 L1440 400 L0 400Z" fill="#0f1513"/>
       <path d="M0 320 L240 270 L420 300 L640 250 L860 300 L1080 260 L1300 300 L1440 280 L1440 400 L0 400Z" fill="#0b100e"/>
+      <g fill="none" stroke="#c9b48a" stroke-width="1.4" opacity=".9"><path d="M930 272V222H1100V272"/><path d="M915 222H1115"/><path d="M1040 222V186H1190V266"/><path d="M1028 186H1202"/><path d="M1060 200H1170V246H1060Z"/><path d="M1115 200V246"/><path d="M950 240H1010V272"/></g>
+      <g fill="#e8d9a8" opacity=".55"><rect x="1061" y="201" width="53" height="44"/><rect x="1116" y="201" width="53" height="44"/></g>
     </svg>
     <div class="wrap">
       <h1>Casas singulares cerca de Barcelona</h1>
@@ -168,7 +179,7 @@ footer .marca{font-size:22px;color:var(--ink)}
         <a class="btn claro" href="#vender">Valorar mi casa</a>
       </div>
     </div>
-    <p class="pie-foto">Aquí irá el vídeo o la foto de una casa real, con su nombre y zona</p>
+    <p class="pie-foto">Casa de ejemplo en Valldoreix, en venta. Aquí irá el vídeo o la foto de una casa real.</p>
   </div>
 
   <div class="wrap buscador">
@@ -196,21 +207,21 @@ footer .marca{font-size:22px;color:var(--ink)}
       </div>
       <div class="casas">
         <a class="casa" href="#contacto">
-          <div class="foto"><span>Ejemplo</span><em>Foto de la casa</em></div>
+          <div class="foto"><span>Ejemplo</span><svg viewBox="0 0 400 300" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 250H380"/><path d="M60 250V150H250V250"/><path d="M40 150H270"/><path d="M180 150V95H340V250"/><path d="M165 95H355"/><path d="M80 175H150V250"/><path d="M200 120H320V200H200Z"/><path d="M260 120V200"/><path d="M270 250V215H330V250"/><path d="M20 250C40 230 50 230 55 250"/><path d="M350 250C352 220 372 220 378 250"/></g></svg></div>
           <div class="datos">
             <div><h3>Casa con jardín en Valldoreix</h3><p>420 m² · 5 habitaciones · 4 baños</p></div>
             <div class="precio">1.450.000 €</div>
           </div>
         </a>
         <a class="casa" href="#contacto">
-          <div class="foto"><span>Ejemplo</span><em>Foto de la casa</em></div>
+          <div class="foto"><span>Ejemplo</span><svg viewBox="0 0 400 300" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 250H380"/><path d="M90 250V140L200 80L310 140V250"/><path d="M70 150L200 75L330 150"/><path d="M175 250V190H225V250"/><path d="M115 160H160V205H115Z"/><path d="M240 160H285V205H240Z"/><path d="M185 115H215V140H185Z"/><path d="M330 250C333 215 360 215 365 250"/><path d="M35 250C38 225 58 225 62 250"/></g></svg></div>
           <div class="datos">
             <div><h3>Casa en Bellaterra</h3><p>310 m² · 4 habitaciones · 3 baños</p></div>
             <div class="precio">980.000 €</div>
           </div>
         </a>
         <a class="casa" href="#contacto">
-          <div class="foto"><span>Ejemplo</span><em>Foto de la casa</em></div>
+          <div class="foto"><span>Ejemplo</span><svg viewBox="0 0 400 300" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 250H380"/><path d="M110 250V60H290V250"/><path d="M110 110H290M110 160H290M110 210H290"/><path d="M95 60H305"/><path d="M130 75H270V100H130Z"/><path d="M140 125H180V150H140ZM220 125H260V150H220ZM140 175H180V200H140ZM220 175H260V200H220Z"/><path d="M20 268C80 260 120 276 200 268S320 260 380 268"/><path d="M40 284C100 276 160 292 220 284S330 276 380 284"/></g></svg></div>
           <div class="datos">
             <div><h3>Ático con vistas al mar en el Maresme</h3><p>180 m² · 3 habitaciones · 2 baños</p></div>
             <div class="precio">720.000 €</div>
@@ -239,6 +250,22 @@ footer .marca{font-size:22px;color:var(--ink)}
         <li><div><strong>Negociación y firma</strong><p>Te acompaño en la negociación, las arras y la escritura.</p></div></li>
       </ol>
     </div>
+  </section>
+
+  <section id="busco-casa" class="wrap busco">
+    <div>
+      <h2 class="titulo">¿Buscas casa?</h2>
+      <p class="intro">Algunas casas se venden sin llegar a los portales. Cuéntame qué buscas y te aviso cuando entre algo que encaje, antes de publicarlo.</p>
+    </div>
+    <form class="campos" onsubmit="return false">
+      <fieldset disabled>
+        <label>Zona que te interesa<input type="text" placeholder="Sant Cugat, Bellaterra, Maresme…"></label>
+        <label>Presupuesto aproximado<select><option>500.000 € a 750.000 €</option><option>750.000 € a 1.000.000 €</option><option>1.000.000 € a 2.000.000 €</option><option>Más de 2.000.000 €</option></select></label>
+        <label>Qué no puede faltar<input type="text" placeholder="Jardín, piscina, vistas, cerca de colegios…"></label>
+        <button class="btn" type="submit">Guardar mi búsqueda</button>
+      </fieldset>
+      <p class="nota">Formulario desactivado en la versión de prueba.</p>
+    </form>
   </section>
 
   <section id="zonas">
@@ -276,7 +303,7 @@ footer .marca{font-size:22px;color:var(--ink)}
     <div class="wrap contacto-grid">
       <div>
         <h2 class="titulo">Hablemos</h2>
-        <p class="intro">Cuéntanos qué buscas o qué casa quieres vender y te respondo personalmente.</p>
+        <p class="intro">Cuéntame qué buscas o qué casa quieres vender y te respondo personalmente.</p>
         <div class="via">
           <span>WhatsApp: pendiente</span>
           <span>Email: pendiente</span>
@@ -295,6 +322,8 @@ footer .marca{font-size:22px;color:var(--ink)}
     </div>
   </section>
 </main>
+
+<div class="barra-movil"><a class="btn" href="#vender">Valorar mi casa</a><a class="btn claro" href="#busco-casa">Busco casa</a></div>
 
 <footer>
   <div class="wrap">
