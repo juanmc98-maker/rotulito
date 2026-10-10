@@ -165,3 +165,6 @@ if (initial && (initial.analytics || initial.ads)) { analyticsAllowed = !!initia
 function init() { if (!initial) show(); }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
+
+/* Menú de la cabecera en móvil (archivo aparte). */
+(function(){if(document.querySelector('script[src^="/menu.js"]'))return;var s=document.createElement('script');s.src='/menu.js?v=20261010';s.defer=true;document.head.appendChild(s);})();
