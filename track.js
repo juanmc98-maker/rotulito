@@ -45,6 +45,7 @@ document.addEventListener('rt:consent', function () {
 document.addEventListener('click', function (e) {
   var a = e.target.closest && e.target.closest('a[href]');
   if (!a) return;
+  if (a.hasAttribute('data-share')) return; // compartir no es un contacto
   var h = a.getAttribute('href') || '', place = a.getAttribute('data-wa') || a.getAttribute('data-place') || 'enlace';
   if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\//.test(h)) window.rtTrack('whatsapp_click', {placement: place});
   else if (h.indexOf('tel:') === 0) window.rtTrack('phone_click', {placement: place});
