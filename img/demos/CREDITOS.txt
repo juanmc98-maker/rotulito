@@ -14,3 +14,7 @@ peluqueria-hero / -hero-m / -card  imagen propia de Rotulito
 peluqueria-1  https://www.pexels.com/es-es/foto/herramientas-profesionales-de-peluqueria-en-la-mesa-36361320/  (Th2city Santana)
 peluqueria-2  https://www.pexels.com/es-es/foto/manos-mujer-peinado-cabellos-7755226/  (RDNE Stock project)
 peluqueria-3  https://www.pexels.com/es-es/foto/barbero-cortando-cabello-con-maquinilla-y-peine-33461079/  (Alexander Mass)
+reformas-hero / -hero-m / -card  https://www.pexels.com/es-es/foto/lampara-reflejo-reflexion-apartamento-7534282/  (Max Vakhtbovych)
+reformas-1  https://www.pexels.com/es-es/foto/cocina-minimalista-moderna-con-electrodomesticos-integrados-38071653/  (Ali Soheil)
+reformas-2  https://www.pexels.com/es-es/foto/hombre-mano-edificio-trabajando-19688828/  (GOWTHAM AGM)
+reformas-3  https://www.pexels.com/es-es/foto/panel-de-disyuntores-electricos-con-cableado-codificado-por-colores-28950842/  (ranjeet .)
