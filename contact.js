@@ -80,6 +80,7 @@ f.addEventListener('submit', async function (ev) {
     body.set('privacy_v', '2026-09-27');
     var origen = location.pathname;
     try { var q = new URLSearchParams(location.search), u = []; ['utm_source', 'utm_medium', 'utm_campaign'].forEach(function (k) { var v = q.get(k); if (v) u.push(k.slice(4) + '=' + v.slice(0, 40)); }); if (u.length) origen += ' | ' + u.join(' '); } catch (_) {}
+    try { var ent = sessionStorage.getItem('rt_entry'); if (ent && ent !== 'entrada=' + location.pathname.replace(/\.html$/, '')) origen += ' | ' + ent; } catch (_) {}
     body.set('origen', origen.slice(0, 200));
     if (sospecha) body.set('revisar', '1');
     body.set('_t', String(Math.round((Date.now() - t0) / 1000)));
@@ -88,6 +89,7 @@ f.addEventListener('submit', async function (ev) {
     try { sessionStorage.setItem('rt_submission_confirmed', String(Date.now())); } catch (_) {}
     location.assign(T.thanks);
   } catch (_) {
+    if (window.rtTrack) window.rtTrack('form_error', {form_id: 'contacto', lang: LANG});
     ferr.textContent = T.err; ferr.hidden = false;
     f.dataset.sending = 'false'; b.disabled = false; b.textContent = label;
   }

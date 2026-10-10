@@ -167,4 +167,4 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 })();
 
 /* Menú de la cabecera en móvil (archivo aparte). */
-(function(){if(document.querySelector('script[src^="/menu.js"]'))return;var s=document.createElement('script');s.src='/menu.js?v=20261010';s.defer=true;document.head.appendChild(s);})();
+(function(){if(document.querySelector('script[src^="/menu.js"]'))return;var s=document.createElement('script');s.src='/menu.js?v=20261011';s.defer=true;document.head.appendChild(s);})();

@@ -51,6 +51,35 @@ document.addEventListener('click', function (e) {
   else if (h.indexOf('mailto:') === 0) window.rtTrack('email_click', {placement: place});
 }, true);
 
+/* Clic en una demo concreta (páginas de sector y /web-490/). Donde la página ya marca sus
+   enlaces con data-ev, lo mide su propio script y aquí no se duplica. */
+document.addEventListener('click', function (e) {
+  var a = e.target.closest && e.target.closest('a[href^="/demo/"]');
+  if (!a || a.hasAttribute('data-ev')) return;
+  var m = /^\/demo\/([a-z-]+)/.exec(a.getAttribute('href'));
+  if (m) window.rtTrack('select_content', {content_type: 'demo', item_id: m[1]});
+}, true);
+
+/* Formulario: inicio (primera interacción). El error lo envía contact.js. Nunca se envían datos personales. */
+var fm = document.getElementById('f');
+if (fm) fm.addEventListener('focusin', function on() { fm.removeEventListener('focusin', on); window.rtTrack('form_start', {form_id: 'contacto'}); });
+
+/* Página de entrada de la visita (ruta, UTM y web de procedencia), para atribuir el contacto aunque se
+   envíe desde otra página. Solo con consentimiento de analítica y solo durante la sesión del navegador. */
+function saveEntry() {
+  try {
+    if (!(window.siteConsent && window.siteConsent.analyticsAllowed()) || sessionStorage.getItem('rt_entry')) return;
+    var q = new URLSearchParams(location.search), u = [];
+    ['utm_source', 'utm_medium', 'utm_campaign'].forEach(function (k) { var v = q.get(k); if (v) u.push(k.slice(4) + '=' + v.slice(0, 40)); });
+    var ref = '';
+    try { if (document.referrer) { var h = new URL(document.referrer).hostname; if (!/(^|\.)rotulito\.com$/.test(h)) ref = h; } } catch (_) {}
+    var v = 'entrada=' + PAGE + (u.length ? ' ' + u.join(' ') : '') + (ref ? ' ref=' + ref : '');
+    sessionStorage.setItem('rt_entry', v.slice(0, 160));
+  } catch (_) {}
+}
+saveEntry();
+document.addEventListener('rt:consent', saveEntry);
+
 /* Portada: "view_demos" una vez cuando se ve la sección de ejemplos */
 var ej = document.getElementById('ejemplos');
 if (ej && 'IntersectionObserver' in window) {
