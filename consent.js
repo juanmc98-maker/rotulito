@@ -168,3 +168,14 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
 
 /* Menú de la cabecera en móvil (archivo aparte). */
 (function(){if(document.querySelector('script[src^="/menu.js"]'))return;var s=document.createElement('script');s.src='/menu.js?v=20261011';s.defer=true;document.head.appendChild(s);})();
+
+/* Instagram de Rotulito en el pie (enlace simple, sin widgets ni cookies de terceros). */
+(function(){
+function run(){
+  var m=document.querySelector('footer a[href="mailto:hola@rotulito.com"]');
+  if(!m||document.querySelector('footer a[href*="instagram.com/rotulito.web"]'))return;
+  var a=document.createElement('a');a.href='https://www.instagram.com/rotulito.web/';a.target='_blank';a.rel='noopener';a.textContent='Instagram';a.setAttribute('aria-label','Instagram @rotulito.web');
+  m.parentNode.insertBefore(a,m.nextSibling);m.parentNode.insertBefore(document.createTextNode(' · '),a);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+})();
