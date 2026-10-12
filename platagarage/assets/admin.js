@@ -31,6 +31,10 @@ const IC = {
   edit: svg('<path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>'),
   sold: svg('<path d="M20 6L9 17l-5-5"/>'),
   menu: svg('<path d="M3 6h18M3 12h18M3 18h18"/>'),
+  x: svg('<path d="M18 6L6 18M6 6l12 12"/>'),
+  clientes: svg('<path d="M3 4h18l-7 8v6l-4 2v-8z"/>'),
+  copy: svg('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>'),
+  wa: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2a9.9 9.9 0 00-8.5 15l-1.5 5 5.2-1.4A9.9 9.9 0 1012.04 2zm5.8 14.1c-.25.7-1.45 1.33-2 1.4-.52.08-1.17.11-1.89-.12a17 17 0 01-1.7-.63c-3-1.3-4.95-4.32-5.1-4.52-.15-.2-1.22-1.62-1.22-3.09 0-1.46.77-2.18 1.04-2.48.27-.3.6-.37.79-.37h.57c.18 0 .43-.07.67.51.25.6.84 2.05.92 2.2.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.17-.31.38-.45.51-.15.15-.3.31-.13.6.17.3.77 1.27 1.65 2.06 1.13 1.01 2.09 1.33 2.39 1.48.3.14.47.12.64-.08.17-.2.74-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.73.82 2.03.97.3.15.5.22.57.35.07.12.07.72-.18 1.41z"/></svg>',
 };
 
 async function api(path, opt = {}) {
@@ -55,16 +59,17 @@ function showLogin() {
 }
 
 // ---------- layout ----------
-const NAV = [['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['coches', 'Coches'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['horarios', 'Horarios'], ['valoraciones', 'Valoraciones'], ['busquedas', 'Te lo buscamos'], ['alertas', 'Alertas'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog'], ['usuarios', 'Usuarios']];
+const NAV = [['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes'], ['coches', 'Coches'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['horarios', 'Horarios'], ['valoraciones', 'Valoraciones'], ['busquedas', 'Te lo buscamos'], ['alertas', 'Alertas'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog'], ['usuarios', 'Usuarios']];
 let badges = {};
 function shell(active) {
   if (!$('.lay')) {
-    $('#app').innerHTML = `<div class="mob"><button class="ib" id="mb">${IC.menu}</button><img src="${B}/assets/logo.png" alt=""></div><div class="lay"><aside id="sb"></aside><main id="mn"></main></div>`;
-    $('#mb').onclick = () => $('#sb').classList.toggle('open');
+    $('#app').innerHTML = `<div class="mob"><img src="${B}/assets/logo.png" alt="Plata Garage"><button class="rb" id="mb" aria-label="Menú">${IC.menu}</button></div><div class="lay"><aside id="sb"></aside><main id="mn"></main></div>`;
+    $('#mb').onclick = () => $('#sb').classList.add('open');
   }
-  $('#sb').innerHTML = `<a class="lg" href="#resumen" style="display:block;padding:0 6px"><img src="${B}/assets/logo.png" alt="Plata Garage"><small>Backoffice</small></a>` +
+  $('#sb').innerHTML = `<div class="sbh"><a class="lg" href="#resumen"><img src="${B}/assets/logo.png" alt="Plata Garage"></a><button class="rb mo" id="sx" aria-label="Cerrar menú">${IC.x}</button></div><small class="sbl">Backoffice</small>` +
     NAV.map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') +
     `<div class="sp"></div><a href="${B}/" target="_blank">${IC.web}Ver web pública</a><a href="#" id="lo">${IC.out}Cerrar sesión</a>`;
+  $('#sx').onclick = () => $('#sb').classList.remove('open');
   $('#lo').onclick = guard(async (e) => { e.preventDefault(); await fetch(API + '/logout'); showLogin(); });
   $('#sb').classList.remove('open');
   return $('#mn');
@@ -75,17 +80,44 @@ const badge = (s) => { const m = { pendiente: 'w', confirmada: 'b', completada: 
 // ---------- vistas ----------
 const V = {};
 
+const fechaLarga = (iso) => (iso ? new Date(iso + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }) : '');
+// Recordatorio de cita por WhatsApp: se abre el chat con el texto escrito y Cristina solo pulsa enviar
+const recordatorio = (b) => { const hoyM = new Date(); hoyM.setDate(hoyM.getDate() + 1); const man = hoyM.toISOString().slice(0, 10) === b.fecha;
+  return waLink(b.telefono, `Hola ${String(b.nombre || '').split(' ')[0]}, te recordamos la cita en Plata Garage ${man ? 'mañana' : 'el ' + fechaLarga(b.fecha)} a las ${b.hora}${b.cocheNombre ? ' para ver el ' + b.cocheNombre.replace(/\s*\(\d{4}\)$/, '') : ''}. Si no te va bien, dínoslo por aquí y la cambiamos sin problema. ¡Hasta pronto!`); };
+const KIC = { coches: IC.coches, 'coches/vendidos': IC.coches, reservas: IC.reservas, valoraciones: IC.valoraciones, envios: IC.envios, mensajes: IC.mensajes, busquedas: IC.busquedas, alertas: IC.alertas, clientes: IC.clientes };
 V.resumen = async (m) => {
   const s = await api('/admin/summary');
   badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes };
   m = shell('resumen');
-  const k = (n, t, h) => `<a class="card" href="#${h}"><span>${t}</span><b>${n}</b></a>`;
-  m.innerHTML = top('Resumen', 'Estado general de la actividad reciente.') +
+  const k = (n, t, h) => `<a class="card" href="#${h}"><span>${t}</span><i>${KIC[h] || IC.resumen}</i><b>${n}</b></a>`;
+  const fila = (b, right) => `<div class="li"><div><b>${esc(b.nombre)}</b><span>${esc(b.motivo || b.cocheNombre || '')} · ${esc(b.telefono)}</span></div><div class="r">${right}</div></div>`;
+  m.innerHTML = top('Resumen', 'Estado general de la actividad reciente.', notifBtn()) +
     `<div class="kp">${k(s.enStock, 'Coches en stock', 'coches')}${k(s.vendidos, 'Coches vendidos', 'coches/vendidos')}${k(s.citasPendientes, 'Citas pendientes', 'reservas')}${k(s.tasacionesNuevas, 'Valoraciones nuevas', 'valoraciones')}${k(s.enviosPendientes, 'Envíos pendientes', 'envios')}${k(s.mensajesSinLeer, 'Mensajes sin leer', 'mensajes')}${k(s.busquedasPendientes || 0, 'Te lo buscamos (nuevas)', 'busquedas')}${k(s.alertasActivas || 0, 'Alertas de stock activas', 'alertas')}${k(s.destacados, 'Destacados activos', 'coches')}${k(eur(s.valorStock), 'Valor del stock', 'coches')}</div>
-    <div class="two"><div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3>Próximas citas</h3><a href="#reservas" class="sm" style="color:var(--or)">Ver todas</a></div>${s.proximasCitas.length ? `<table>${s.proximasCitas.map((b) => `<tr><td><b>${esc(b.nombre)}</b><br><span class="mu sm">${esc(b.cocheNombre || b.motivo)}</span></td><td>${fdate(b.fecha)} · ${b.hora}</td><td>${badge(b.status)}</td></tr>`).join('')}</table>` : '<p class="mu">No hay citas próximas.</p>'}</div>
+    ${s.manana?.length ? `<div class="card sec hl"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Citas de mañana (${s.manana.length})</h3><span class="mu sm">Envía el recordatorio por WhatsApp con un clic</span></div>${s.manana.map((b) => fila(b, `<b class="o">${b.hora}</b> <a class="btn g s" target="_blank" rel="noopener" href="${recordatorio(b)}">${IC.wa}Recordar</a>`)).join('')}</div>` : ''}
+    <div class="card sec"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Últimas reservas</h3><a href="#reservas" class="sm" style="color:var(--or)">Ver todas</a></div>${s.ultimasReservas?.length ? s.ultimasReservas.map((b) => fila(b, `${fdate(b.fecha)}<br><b class="o">${b.hora}</b>`)).join('') : '<p class="mu">Aún no hay reservas.</p>'}</div>
+    <div class="two"><div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3>Próximas citas</h3><a href="#reservas/semana" class="sm" style="color:var(--or)">Ver la semana</a></div>${s.proximasCitas.length ? `<table>${s.proximasCitas.map((b) => `<tr><td><b>${esc(b.nombre)}</b><br><span class="mu sm">${esc(b.cocheNombre || b.motivo)}</span></td><td>${fdate(b.fecha)} · ${b.hora}</td><td>${badge(b.status)}</td></tr>`).join('')}</table>` : '<p class="mu">No hay citas próximas.</p>'}</div>
     <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3>Últimas tasaciones</h3><a href="#valoraciones" class="sm" style="color:var(--or)">Ver todas</a></div>${s.ultimasTasaciones.length ? `<table>${s.ultimasTasaciones.map((t) => `<tr><td><b>${esc(t.marca)} ${esc(t.modelo)}</b><br><span class="mu sm">${esc(t.nombre)}</span></td><td>${fdate(t.created)}</td><td>${badge(t.status)}</td></tr>`).join('')}</table>` : '<p class="mu">Aún no hay tasaciones.</p>'}</div></div>`;
+  bindNotif();
 };
 
+// ---------- avisos en el móvil/ordenador (con el panel abierto o instalado como app) ----------
+const notifBtn = () => ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') ? `<button class="btn g" id="nb">${IC.alertas}Activar avisos</button>` : '';
+function bindNotif() { const b = $('#nb'); if (b) b.onclick = async () => { const r = await Notification.requestPermission(); toast(r === 'granted' ? 'Avisos activados en este dispositivo' : 'No se han activado los avisos', r !== 'granted'); b.remove(); }; }
+let lastSum = null;
+async function poll() {
+  try {
+    const s = await api('/admin/summary');
+    const cur = { citas: s.citasPendientes, tas: s.tasacionesNuevas, env: s.enviosPendientes, msg: s.mensajesSinLeer, bus: s.busquedasPendientes };
+    badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes };
+    if (lastSum) {
+      const t = { citas: 'Nueva cita', tas: 'Nueva tasación', env: 'Nueva solicitud de envío', msg: 'Nuevo mensaje', bus: 'Nueva petición "Te lo buscamos"' };
+      const h = { citas: 'reservas', tas: 'valoraciones', env: 'envios', msg: 'mensajes', bus: 'busquedas' };
+      Object.keys(cur).forEach((k) => { if (cur[k] > lastSum[k]) { if ('Notification' in window && Notification.permission === 'granted') { const o = { body: 'Ábrela en el panel', icon: B + '/assets/icon-192.png', tag: k }; if (swReg) swReg.showNotification(t[k] + ' · Plata Garage', o); else { const n = new Notification(t[k] + ' · Plata Garage', o); n.onclick = () => { window.focus(); location.hash = '#' + h[k]; }; } } toast(t[k]); } });
+      const act = (location.hash.slice(1) || 'resumen').split('/')[0]; if ($('#sb') && !$('#sb').classList.contains('open')) shell(act);
+    }
+    lastSum = cur;
+  } catch (e) { /* sin sesión */ }
+}
 V.coches = async (m, arg) => {
   const cars = await api('/admin/cars'); m = shell('coches');
   const f = arg || 'stock';
@@ -94,16 +126,32 @@ V.coches = async (m, arg) => {
   m.innerHTML = top('Coches', `${cars.filter((c) => !c.sold).length} en stock · ${cars.filter((c) => c.sold).length} vendidos`, `<a class="btn" href="#coche/nuevo">+ Nuevo coche</a>`) +
     `<div class="filt">${[['stock', 'En stock'], ['vendidos', 'Vendidos'], ['todos', 'Todos']].map(([k, t]) => `<button data-f="${k}" class="${f === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     <div class="tw"><table><thead><tr><th>Coche</th><th>Año</th><th class="hide-m">Km</th><th>Precio</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>${list.map((c) => `<tr data-id="${c.id}"><td><div class="cn"><img class="thumb" src="${esc(c.images?.[0] || '')}" alt="" loading="lazy"><div><b>${esc(c.brand)} ${esc(c.model)}</b><small>${esc(c.version || '')}</small></div></div></td><td>${c.year}</td><td class="hide-m">${nf(c.km)}</td><td><b>${eur(c.price)}</b></td><td>${st(c)}</td>
-    <td><div class="acts"><button class="ib ${c.featured ? 'on' : ''}" data-a="star" title="Destacar en la portada">${IC.star}</button><a class="ib" href="#coche/${c.id}" title="Editar">${IC.edit}</a><button class="btn g s" data-a="sold">${c.sold ? 'Volver a stock' : 'Vendido'}</button><button class="btn r s" data-a="del">Eliminar</button></div></td></tr>`).join('') || '<tr><td colspan="6" class="mu">No hay coches.</td></tr>'}</tbody></table></div>`;
+    <td><div class="acts"><button class="ib ${c.featured ? 'on' : ''}" data-a="star" title="Destacar en la portada">${IC.star}</button><a class="ib" href="#coche/${c.id}" title="Editar">${IC.edit}</a><button class="ib" data-a="dup" title="Duplicar (para dar de alta uno parecido)">${IC.copy}</button><button class="btn g s" data-a="sold">${c.sold ? 'Volver a stock' : 'Vendido'}</button><button class="btn r s" data-a="del">Eliminar</button></div></td></tr>`).join('') || '<tr><td colspan="6" class="mu">No hay coches.</td></tr>'}</tbody></table></div>`;
   m.querySelectorAll('.filt button').forEach((b) => (b.onclick = () => (location.hash = '#coches/' + b.dataset.f)));
   m.querySelectorAll('[data-a]').forEach((b) => (b.onclick = guard(async () => {
     const id = b.closest('tr').dataset.id, c = cars.find((x) => x.id === id), a = b.dataset.a;
     if (a === 'del') { if (!confirm(`¿Eliminar definitivamente el ${c.brand} ${c.model}? Si se ha vendido, mejor márcalo como vendido.`)) return; await api('/admin/cars/' + id, { method: 'DELETE' }); toast('Coche eliminado'); }
     if (a === 'star') { await api('/admin/cars/' + id, { method: 'PUT', body: { featured: !c.featured } }); }
-    if (a === 'sold') { if (!c.sold && !confirm(`¿Marcar el ${c.brand} ${c.model} como vendido? Dejará de verse en la web.`)) return; await api('/admin/cars/' + id, { method: 'PUT', body: { sold: !c.sold } }); toast(c.sold ? 'Vuelve a estar en stock' : 'Marcado como vendido'); }
+    if (a === 'dup') { const n = await api(`/admin/cars/${id}/duplicar`, { method: 'POST' }); toast('Copia creada (oculta): cambia los datos y las fotos'); location.hash = '#coche/' + n.id; return; }
+    if (a === 'sold') {
+      if (c.sold) { await api('/admin/cars/' + id, { method: 'PUT', body: { sold: false } }); toast('Vuelve a estar en stock'); }
+      else { const buyer = await pickBuyer(c); if (buyer === null) return; await api('/admin/cars/' + id, { method: 'PUT', body: { sold: true, buyer } }); toast('Marcado como vendido'); }
+    }
     route();
   })));
 };
+
+// Ventana para elegir quién lo ha comprado (opcional): así el embudo pasa solo a "Vendido"
+function modal(html) { const d = document.createElement('div'); d.className = 'mdl'; d.innerHTML = `<div class="card">${html}</div>`; document.body.appendChild(d); d.onclick = (e) => { if (e.target === d) d.remove(); }; return d; }
+async function pickBuyer(c) {
+  const cl = await api('/admin/clientes').catch(() => []);
+  return new Promise((ok) => {
+    const d = modal(`<h3 style="margin-bottom:6px">Marcar como vendido</h3><p class="mu" style="margin:0 0 14px">${esc(c.brand)} ${esc(c.model)} dejará de verse en la web (su enlace lleva al catálogo).</p>
+    <label>¿Quién lo ha comprado? (opcional)<select id="bu"><option value="">— No lo sé / no está en la lista —</option>${cl.map((x) => `<option value="${x.key}"${x.leads.some((l) => l.coche === c.slug) ? ' selected' : ''}>${esc(x.nombre)} · ${esc(x.telefono)}</option>`).join('')}</select></label>
+    <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn g" id="bc">Cancelar</button><button class="btn" id="bo">Marcar vendido</button></div>`);
+    $('#bc', d).onclick = () => { d.remove(); ok(null); }; $('#bo', d).onclick = () => { const v = $('#bu', d).value; d.remove(); ok(v); };
+  });
+}
 
 // Reduce la foto en el navegador antes de subirla (máx. 1600 px, JPEG)
 function shrink(file, max = 1600) {
@@ -119,7 +167,7 @@ async function upload(files, onEach) {
 
 V.coche = async (m, id) => {
   const isNew = id === 'nuevo';
-  const [c, holders] = await Promise.all([isNew ? Promise.resolve({ images: [], features: [], status: 'disponible', featured: true }) : api('/admin/cars/' + id), api('/admin/holders')]);
+  const [c, holders, cl, als, bus] = await Promise.all([isNew ? Promise.resolve({ images: [], features: [], status: 'disponible', featured: true }) : api('/admin/cars/' + id), api('/admin/holders'), isNew ? [] : api('/admin/clientes').catch(() => []), isNew ? [] : api('/admin/alertas').catch(() => []), isNew ? [] : api('/admin/busquedas').catch(() => [])]);
   m = shell('coches');
   let imgs = [...(c.images || [])];
   const sel = (n, opts, v) => `<select name="${n}">${opts.map((o) => (Array.isArray(o) ? o : [o, o])).map(([val, t]) => `<option value="${esc(val)}"${String(v ?? '') === String(val) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
@@ -133,13 +181,16 @@ V.coche = async (m, id) => {
   <div class="card sec"><h3>Financiación (uso interno)</h3><div class="fg">${inp('monthly', 'Cuota desde (€/mes)', 'number')}${inp('term', 'Plazo (meses)', 'number')}</div><p class="mu sm">No se muestra en la web: para publicar una cuota hay que poner también TIN, TAE y un ejemplo representativo (Ley 16/2011).</p></div>
   <div class="card sec"><h3>Reserva</h3><div class="fg"><label>Titular de las cuentas para la reserva${sel('holder', [['', '— Sin reserva —'], ...holders.map((h) => [h.id, `${h.name} · ${h.accounts.length} cuenta${h.accounts.length === 1 ? '' : 's'}`])], c.holder)}</label>${inp('reserve', 'Importe de la señal (€)', 'number')}</div><p class="mu sm">Si pones importe, la ficha muestra "Reserva este coche" y el cliente pide la reserva. Las cuentas no salen en la web: se las pasáis al confirmar.</p></div>
   <div class="card sec"><h3>Descripción y equipamiento</h3><div class="fg"><label class="s3">Descripción *<textarea name="desc" required rows="8">${esc(c.desc || '')}</textarea></label><label class="s3">Cómo lo vemos (opcional: vuestra opinión del coche, sale en la ficha)<textarea name="comment" rows="4">${esc(c.comment || '')}</textarea></label><label class="s3">Equipamiento (uno por línea)<textarea name="features" rows="8">${esc((c.features || []).join('\n'))}</textarea></label></div></div>
-  <div class="card sec"><h3>Imágenes</h3><p class="mu sm" style="margin:-6px 0 12px">La primera es la portada. Usa las flechas para ordenarlas. Se reducen solas antes de subir.</p><div class="imgs" id="ig"></div><input type="file" id="fi" accept="image/*" multiple hidden></div>
+  <div class="card sec"><h3>Imágenes</h3><p class="mu sm" style="margin:-6px 0 12px">La primera es la portada (★ para cambiarla). Arrástralas o usa las flechas para ordenarlas. Se reducen solas antes de subir.</p><div class="imgs" id="ig"></div><input type="file" id="fi" accept="image/*" multiple hidden></div>
   <div class="card sec"><h3>Visibilidad</h3><div class="row" style="gap:22px"><label>Estado${sel('status', [['disponible', 'Disponible'], ['preparacion', 'En preparación (próximamente)'], ['reservado', 'Reservado']], c.status)}</label>
-  <label class="chk"><input type="checkbox" name="featured" ${c.featured ? 'checked' : ''}>Destacado en la portada</label><label class="chk"><input type="checkbox" name="hidden" ${c.hidden ? 'checked' : ''}>Ocultar de la web</label><label class="chk"><input type="checkbox" name="sold" ${c.sold ? 'checked' : ''}>Marcar como vendido</label></div></div>
-  <div class="row" style="justify-content:flex-end"><a class="btn g" href="#coches">Cancelar</a><button class="btn" type="submit">${isNew ? 'Crear coche' : 'Guardar cambios'}</button></div></form>`;
+  <label class="chk"><input type="checkbox" name="featured" ${c.featured ? 'checked' : ''}>Destacado en la portada</label><label class="chk"><input type="checkbox" name="hidden" ${c.hidden ? 'checked' : ''}>Ocultar de la web</label><label class="chk"><input type="checkbox" name="sold" ${c.sold ? 'checked' : ''}>Marcar como vendido</label></div>
+  ${isNew ? '' : `<label style="margin-top:12px;max-width:420px">Comprador (para el embudo de clientes)<select name="buyer"><option value="">—</option>${cl.map((x) => `<option value="${x.key}"${c.buyer === x.key ? ' selected' : ''}>${esc(x.nombre)} · ${esc(x.telefono)}</option>`).join('')}</select></label>`}</div>
+  <div class="row" style="justify-content:flex-end"><a class="btn g" href="#coches">Cancelar</a><button class="btn" type="submit">${isNew ? 'Crear coche' : 'Guardar cambios'}</button></div></form>${isNew ? '' : interesados(c, als, bus) + historial(c)}`;
   const drawImgs = () => {
-    $('#ig').innerHTML = imgs.map((u, i) => `<div class="im"><img src="${esc(u)}" alt="">${i === 0 ? '<span class="bg o p">Portada</span>' : ''}<div class="t"><span><button type="button" data-m="${i}" data-d="-1">←</button> <button type="button" data-m="${i}" data-d="1">→</button></span><button type="button" data-x="${i}">✕</button></div></div>`).join('') + `<div class="drop" id="dz">+ Añadir fotos<br><span class="sm">o arrástralas aquí</span></div>`;
+    $('#ig').innerHTML = imgs.map((u, i) => `<div class="im"><img src="${esc(u)}" alt="">${i === 0 ? '<span class="bg o p">Portada</span>' : ''}<div class="t"><span><button type="button" data-m="${i}" data-d="-1">←</button> <button type="button" data-m="${i}" data-d="1">→</button>${i ? ` <button type="button" data-c="${i}" title="Poner de portada">★</button>` : ''}</span><button type="button" data-x="${i}">✕</button></div></div>`).join('') + `<div class="drop" id="dz">+ Añadir fotos<br><span class="sm">o arrástralas aquí</span></div>`;
     $('#ig').querySelectorAll('[data-m]').forEach((b) => (b.onclick = () => { const i = +b.dataset.m, j = i + +b.dataset.d; if (j < 0 || j >= imgs.length) return; [imgs[i], imgs[j]] = [imgs[j], imgs[i]]; drawImgs(); }));
+    $('#ig').querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => { const [x] = imgs.splice(+b.dataset.c, 1); imgs.unshift(x); drawImgs(); }));
+    $('#ig').querySelectorAll('.im').forEach((el, i) => { el.draggable = true; el.ondragstart = (e) => e.dataTransfer.setData('text/x-i', String(i)); el.ondragover = (e) => e.preventDefault(); el.ondrop = (e) => { const f = e.dataTransfer.getData('text/x-i'); if (f === '') return; e.preventDefault(); e.stopPropagation(); const [x] = imgs.splice(+f, 1); imgs.splice(i, 0, x); drawImgs(); }; });
     $('#ig').querySelectorAll('[data-x]').forEach((b) => (b.onclick = () => { imgs.splice(+b.dataset.x, 1); drawImgs(); }));
     const dz = $('#dz'); dz.onclick = () => $('#fi').click();
     dz.ondragover = (e) => { e.preventDefault(); dz.style.borderColor = 'var(--or)'; }; dz.ondragleave = () => (dz.style.borderColor = '');
@@ -158,6 +209,35 @@ V.coche = async (m, id) => {
     } finally { b.disabled = false; }
   });
 };
+
+// Personas que pidieron aviso o encargo y encajan con este coche (solo las que dieron su consentimiento para ello)
+function interesados(c, als, bus) {
+  const N = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const txt = N([c.brand, c.model, c.version, c.fuel, c.trans, c.body].join(' '));
+  const okA = als.filter((a) => a.status === 'activa' && (!a.max || c.price <= a.max * 1.05) && (!a.busca || N(a.busca).split(/[^a-z0-9]+/).filter((w) => w.length > 2).some((w) => txt.includes(w))));
+  const okB = bus.filter((b) => !['cerrada'].includes(b.status) && (!b.presupuesto || c.price <= b.presupuesto * 1.05) && (!b.marca || N(c.brand).includes(N(b.marca))) && (!b.modelo || txt.includes(N(b.modelo).split(' ')[0])) && (!b.combustible || N(c.fuel).startsWith(N(b.combustible).slice(0, 5))) && (!b.cambio || c.trans === b.cambio) && (!b.kmMax || c.km <= b.kmMax) && (!b.anioDesde || c.year >= b.anioDesde));
+  const url = location.origin + B + '/vehiculos/' + c.slug; const nm = `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''} (${c.year})`;
+  if (!okA.length && !okB.length) return `<div class="card sec"><h3>Avisar a interesados</h3><p class="mu" style="margin:6px 0 0">Ahora mismo nadie de "Alertas" ni de "Te lo buscamos" encaja con este coche.</p></div>`;
+  return `<div class="card sec"><h3>Avisar a interesados (${okA.length + okB.length})</h3><p class="mu sm" style="margin:4px 0 12px">Encajan por presupuesto y por lo que buscaban. Cada botón abre el mensaje ya escrito; tú decides si lo envías.</p>
+  ${okB.map((b) => `<div class="li"><div><b>${esc(b.nombre)}</b><span>Te lo buscamos: ${esc([b.marca, b.modelo].filter(Boolean).join(' ') || 'cualquiera')} · hasta ${eur(b.presupuesto)}</span></div><div class="r"><a class="btn g s" target="_blank" rel="noopener" href="${waLink(b.telefono, `Hola ${String(b.nombre).split(' ')[0]}, te escribimos de Plata Garage por el coche que nos pediste que te buscáramos. Nos ha entrado un ${nm} por ${eur(c.price)} que puede encajarte: ${url}`)}">${IC.wa}WhatsApp</a></div></div>`).join('')}
+  ${okA.map((a) => `<div class="li"><div><b>${esc(a.email)}</b><span>Alerta: ${esc(a.busca || 'cualquier coche')}${a.max ? ' · hasta ' + eur(a.max) : ''}</span></div><div class="r"><a class="btn g s" href="mailto:${esc(a.email)}?subject=${encodeURIComponent('Ha entrado un coche que te puede interesar · Plata Garage')}&body=${encodeURIComponent(`Hola,
+
+Nos pediste que te avisáramos cuando entrara un coche como el que buscas. Acaba de entrar este ${nm} por ${eur(c.price)}:
+${url}
+
+Si quieres verlo, puedes pedir cita en la web o escribirnos por WhatsApp al 660 49 32 28.
+
+Un saludo,
+Plata Garage
+
+Si ya no quieres recibir estos avisos, responde a este correo con "baja".`)}">Email</a></div></div>`).join('')}</div>`;
+}
+function historial(c) {
+  const ph = c.priceHistory || []; const lg = [...(c.log || [])].reverse();
+  if (!ph.length && !lg.length) return '';
+  return `<div class="card sec"><h3>Historial</h3>${ph.length > 1 ? `<p class="sm mu" style="margin:8px 0 4px">Precios: ${ph.map((x) => `${fdate(x.d)} <b style="color:#fff">${eur(x.p)}</b>`).join(' → ')}. Precio más bajo de los últimos 30 días: <b style="color:#fff">${eur(Math.min(...ph.filter((x) => (Date.now() - new Date(x.d)) / 864e5 <= 30).map((x) => x.p).concat(c.price)))}</b> (es el que habría que tachar si se anuncia una rebaja).</p>` : ''}
+  ${lg.slice(0, 15).map((x) => `<div class="sm" style="padding:6px 0;border-bottom:1px solid var(--line)"><span class="mu">${fdt(x.d)} · ${esc(x.by || '')}</span> — ${esc(x.t)}</div>`).join('')}</div>`;
+}
 
 V.bancos = async (m) => {
   let hs = await api('/admin/holders'); m = shell('bancos');
@@ -183,12 +263,13 @@ function inbox({ key, path, title, sub, states, body }) {
   return async (m, arg) => {
     const [list, holders, cars] = await Promise.all([api('/admin/' + path), key === 'reservas' ? api('/admin/holders') : [], key === 'reservas' ? api('/admin/cars') : []]);
     m = shell(key); const f = arg || 'todas';
+    if (key === 'reservas' && f === 'semana') return agenda(m, list);
     const shown = list.filter((x) => (f === 'todas' ? true : f === 'activas' ? !['cancelada', 'completada', 'cerrada', 'rechazado', 'respondido'].includes(x.status) : x.status === f));
-    m.innerHTML = top(title, sub(list)) + `<div class="filt">${[['todas', 'Todas'], ['activas', 'Abiertas'], ...states.map((s) => [s, s[0].toUpperCase() + s.slice(1)])].map(([k, t]) => `<button data-f="${k}" class="${f === k ? 'on' : ''}">${t}</button>`).join('')}</div>` +
+    m.innerHTML = top(title, sub(list)) + `<div class="filt">${[...(key === 'reservas' ? [['semana', 'Agenda semanal']] : []), ['todas', 'Todas'], ['activas', 'Abiertas'], ...states.map((s) => [s, s[0].toUpperCase() + s.slice(1)])].map(([k, t]) => `<button data-f="${k}" class="${f === k ? 'on' : ''}">${t}</button>`).join('')}</div>` +
       (shown.map((x) => `<div class="card it" data-id="${x.id}"><div class="hd"><div><b style="font-size:16px">${esc(x.nombre)}</b><div class="meta">${x.email ? esc(x.email) + ' · ' : ''}<a href="tel:${esc(x.telefono)}">${esc(x.telefono)}</a> · recibido ${fdt(x.created)}</div></div>${badge(x.status)}</div>
       <div class="row" style="margin:14px 0;align-items:stretch">${body(x, { holders, cars })}</div>
       <label>Notas internas<textarea data-n rows="2" style="min-height:60px">${esc(x.notas || '')}</textarea></label>
-      <div class="row" style="margin-top:12px"><select data-s style="width:auto">${states.map((s) => `<option${s === x.status ? ' selected' : ''}>${s}</option>`).join('')}</select><button class="btn s" data-sv>Guardar</button><a class="btn g s" target="_blank" rel="noopener" href="${waLink(x.telefono, 'Hola ' + x.nombre.split(' ')[0] + ', te escribimos de Plata Garage. ')}">Responder por WhatsApp</a>${x.email ? `<a class="btn g s" href="mailto:${esc(x.email)}">Email</a>` : ''}<span style="flex:1"></span><button class="btn r s" data-del>Borrar</button></div></div>`).join('') || '<div class="card mu">No hay nada aquí todavía.</div>');
+      <div class="row" style="margin-top:12px"><select data-s style="width:auto">${states.map((s) => `<option${s === x.status ? ' selected' : ''}>${s}</option>`).join('')}</select><button class="btn s" data-sv>Guardar</button><a class="btn g s" target="_blank" rel="noopener" href="${waLink(x.telefono, 'Hola ' + x.nombre.split(' ')[0] + ', te escribimos de Plata Garage. ')}">Responder por WhatsApp</a>${key === 'reservas' && x.fecha >= new Date().toISOString().slice(0, 10) && x.status !== 'cancelada' ? `<a class="btn g s" target="_blank" rel="noopener" href="${recordatorio(x)}">${IC.wa}Recordar cita</a>` : ''}<a class="btn g s" href="#cliente/${String(x.telefono).replace(/\D/g, '').slice(-9)}">Ficha del cliente</a>${x.email ? `<a class="btn g s" href="mailto:${esc(x.email)}">Email</a>` : ''}<span style="flex:1"></span><button class="btn r s" data-del>Borrar</button></div></div>`).join('') || '<div class="card mu">No hay nada aquí todavía.</div>');
     m.querySelectorAll('.filt button').forEach((b) => (b.onclick = () => (location.hash = `#${key}/${b.dataset.f}`)));
     m.querySelectorAll('.it').forEach((el) => {
       const id = el.dataset.id;
@@ -197,6 +278,14 @@ function inbox({ key, path, title, sub, states, body }) {
     });
     if (key === 'mensajes') list.filter((x) => !x.leido).forEach((x) => api(`/admin/mensajes/${x.id}`, { method: 'PUT', body: { leido: true } }).catch(() => {}));
   };
+}
+// Agenda de 7 días a partir de hoy (o de la semana elegida)
+function agenda(m, list, off = 0) {
+  const d0 = new Date(); d0.setDate(d0.getDate() + off * 7); const days = [...Array(7)].map((_, i) => { const d = new Date(d0); d.setDate(d.getDate() + i); return d.toISOString().slice(0, 10); });
+  m.innerHTML = top('Reservas', 'Agenda de los próximos 7 días.', `<button class="btn g" id="ap">‹ Anterior</button><button class="btn g" id="an">Siguiente ›</button>`) + `<div class="filt"><button class="on">Agenda semanal</button><button data-f="todas">Lista</button></div>
+  <div class="ag">${days.map((d) => { const bs = list.filter((b) => b.fecha === d && b.status !== 'cancelada').sort((a, z) => a.hora.localeCompare(z.hora)); return `<div class="card"><h4>${new Date(d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' })}</h4>${bs.map((b) => `<div class="ev ${b.status}"><b>${b.hora}</b> ${esc(b.nombre)}<span>${esc(b.cocheNombre || b.motivo || '')}</span><div class="row" style="margin-top:6px">${badge(b.status)}<a class="btn g s" target="_blank" rel="noopener" href="${recordatorio(b)}">${IC.wa}Recordar</a></div></div>`).join('') || '<p class="mu sm">Sin citas</p>'}</div>`; }).join('')}</div>`;
+  $('#ap').onclick = () => agenda(m, list, off - 1); $('#an').onclick = () => agenda(m, list, off + 1);
+  m.querySelector('[data-f]').onclick = () => (location.hash = '#reservas/todas');
 }
 const bx = (k, v) => `<div class="box2" style="flex:1;min-width:150px"><small>${k}</small>${v}</div>`;
 V.reservas = inbox({ key: 'reservas', path: 'reservas', title: 'Reservas', sub: (l) => `${l.length} citas registradas · ${l.filter((x) => x.status === 'pendiente').length} pendientes`, states: ['pendiente', 'confirmada', 'cancelada', 'completada'],
@@ -228,16 +317,18 @@ V.alertas = async (m) => {
 V.analiticas = async (m, arg) => {
   const dias = +arg || 30; const st = await api('/admin/stats?dias=' + dias); const cars = await api('/admin/cars'); m = shell('analiticas');
   const sum = (g) => { const o = {}; st.forEach((d) => Object.entries(d[g] || {}).forEach(([k, v]) => (o[k] = (o[k] || 0) + v))); return Object.entries(o).sort((a, b) => b[1] - a[1]); };
-  const tot = st.reduce((a, d) => a + ((d.tot || {}).visitas || 0), 0); const ev = Object.fromEntries(sum('ev'));
+  const tot = st.reduce((a, d) => a + ((d.tot || {}).visitas || 0), 0); const ent = st.reduce((a, d) => a + ((d.tot || {}).nuevas || 0), 0); const ev = Object.fromEntries(sum('ev'));
   const forms = Object.entries(ev).filter(([k]) => k.startsWith('form-')).reduce((a, [, v]) => a + v, 0);
   const max = Math.max(1, ...st.map((d) => (d.tot || {}).visitas || 0));
   const nm = (slug) => { const c = cars.find((x) => x.slug === slug); return c ? `${c.brand} ${c.model} ${c.version || ''} (${c.year})` : slug; };
   const tbl = (rows, h1, h2, f = (x) => esc(x)) => `<table>${rows.slice(0, 10).map(([k, v]) => `<tr><td>${f(k)}</td><td style="text-align:right"><b>${v}</b></td></tr>`).join('') || `<tr><td class="mu">Sin datos todavía.</td></tr>`}</table>`;
   m.innerHTML = top('Analíticas', 'Visitas y contactos de la web, sin cookies ni datos personales.', `<div class="filt" style="margin:0">${[7, 30, 90].map((d) => `<button data-d="${d}" class="${d === dias ? 'on' : ''}">${d} días</button>`).join('')}</div>`) +
-  `<div class="kp"><div class="card"><span>Visitas</span><b>${nf(tot)}</b></div><div class="card"><span>Clics a WhatsApp</span><b>${ev.wa || 0}</b></div><div class="card"><span>Clics a teléfono</span><b>${ev.tel || 0}</b></div><div class="card"><span>Formularios enviados</span><b>${forms}</b></div></div>
-  <div class="card sec"><h3 style="margin-bottom:14px">Visitas por día</h3><div style="display:flex;align-items:flex-end;gap:3px;height:140px">${st.map((d) => { const v = (d.tot || {}).visitas || 0; return `<div title="${fdate(d.d)}: ${v}" style="flex:1;background:var(--or);opacity:${v ? 1 : .15};height:${Math.max(2, v / max * 100)}%;border-radius:3px 3px 0 0"></div>`; }).join('')}</div></div>
+  `<div class="kp"><div class="card"><span>Visitas (entradas a la web)</span><b>${nf(ent)}</b></div><div class="card"><span>Páginas vistas</span><b>${nf(tot)}</b></div><div class="card"><span>Clics a WhatsApp</span><b>${ev.wa || 0}</b></div><div class="card"><span>Clics a teléfono</span><b>${ev.tel || 0}</b></div><div class="card"><span>Formularios enviados</span><b>${forms}</b></div></div>
+  <div class="card sec"><h3 style="margin-bottom:14px">Páginas vistas por día</h3><div style="display:flex;align-items:flex-end;gap:3px;height:140px">${st.map((d) => { const v = (d.tot || {}).visitas || 0; return `<div title="${fdate(d.d)}: ${v}" style="flex:1;background:var(--or);opacity:${v ? 1 : .15};height:${Math.max(2, v / max * 100)}%;border-radius:3px 3px 0 0"></div>`; }).join('')}</div></div>
   <div class="two"><div class="card"><h3 style="margin-bottom:10px">Coches más vistos</h3>${tbl(sum('car'), 'Coche', 'Visitas', nm)}</div><div class="card"><h3 style="margin-bottom:10px">De dónde llegan</h3>${tbl(sum('src'))}</div></div>
-  <div class="two" style="margin-top:16px"><div class="card"><h3 style="margin-bottom:10px">Páginas más vistas</h3>${tbl(sum('pv'))}</div><div class="card"><h3 style="margin-bottom:10px">Formularios por tipo</h3>${tbl(Object.entries(ev).filter(([k]) => k.startsWith('form-')).map(([k, v]) => [k.slice(5), v]))}</div></div>`;
+  <div class="two" style="margin-top:16px"><div class="card"><h3 style="margin-bottom:10px">Páginas más vistas</h3>${tbl(sum('pv'))}</div><div class="card"><h3 style="margin-bottom:10px">Formularios por tipo</h3>${tbl(Object.entries(ev).filter(([k]) => k.startsWith('form-')).map(([k, v]) => [k.slice(5), v]))}</div></div>
+  <div class="two" style="margin-top:16px"><div class="card"><h3 style="margin-bottom:10px">Ciudades (aproximadas)</h3>${tbl(sum('city'))}</div><div class="card"><h3 style="margin-bottom:10px">Dispositivos</h3>${tbl(sum('dev'))}</div></div>
+  <p class="mu sm" style="margin-top:14px">Sin cookies ni datos personales: no se guarda la IP ni nada que identifique a nadie. Las ciudades salen de la conexión y son aproximadas.</p>`;
   m.querySelectorAll('[data-d]').forEach((b) => (b.onclick = () => (location.hash = '#analiticas/' + b.dataset.d)));
 };
 
@@ -261,7 +352,7 @@ V.usuarios = async (m) => {
 };
 
 V.horarios = async (m) => {
-  const s = await api('/admin/schedule'); m = shell('horarios');
+  const [s, ic] = await Promise.all([api('/admin/schedule'), api('/admin/ical').catch(() => ({}))]); m = shell('horarios');
   const save = guard(async (msg = 'Horario guardado') => { Object.assign(s, await api('/admin/schedule', { method: 'PUT', body: s })); toast(msg); draw(); });
   const draw = () => {
     m.innerHTML = top('Horarios', 'Configura las horas disponibles para reservar cita y bloquea días u horas concretas cuando lo necesites.') +
@@ -269,6 +360,10 @@ V.horarios = async (m) => {
     <div class="hrs">${(s.week[d] || []).map((h) => `<button data-d="${d}" data-h="${h}" title="Quitar">${h}</button>`).join('') || '<span class="mu sm">Cerrado — sin horarios configurados.</span>'}</div><div class="row"><input type="time" data-in="${d}" step="900" style="flex:1"><button class="btn g s" data-ad="${d}">+ Añadir</button></div></div>`).join('')}</div>
     <div class="two" style="margin-top:16px"><div class="card"><h3 style="margin-bottom:12px">Bloquear día u horas</h3><div style="display:grid;gap:12px"><label>Fecha<input type="date" id="bd"></label><label class="chk"><input type="checkbox" id="ba" checked>Cerrar todo el día</label><label>Bloquear horas concretas (separadas por comas)<input id="bh" placeholder="10:00, 10:30" disabled></label><label>Motivo (opcional)<input id="br" maxlength="120"></label><button class="btn" id="bs">Guardar bloqueo</button></div></div>
     <div class="card"><h3 style="margin-bottom:12px">Próximos bloqueos</h3>${(s.blocks || []).sort((a, b) => a.date.localeCompare(b.date)).map((b, i) => `<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:8px 0"><span><b>${fdate(b.date)}</b> · ${b.allDay ? 'todo el día' : b.hours.join(', ')}${b.reason ? ` <span class="mu">(${esc(b.reason)})</span>` : ''}</span><button class="btn r s" data-xb="${b.id}">Quitar</button></div>`).join('') || '<p class="mu">No hay días bloqueados próximamente.</p>'}</div></div>`;
+    m.insertAdjacentHTML('beforeend', ic.url ? `<div class="card sec" style="margin-top:16px"><h3 style="margin-bottom:6px">Ver las citas en tu móvil</h3><p class="mu" style="margin:0 0 12px">Suscribe tu calendario a este enlace y las citas de la web aparecerán solas en tu agenda (se actualiza cada poco). Es privado: no lo compartas.</p>
+    <div class="row"><input id="icu" readonly value="${esc(ic.url)}" style="flex:1;min-width:240px"><button class="btn g" id="icc">${IC.copy}Copiar</button><a class="btn g" href="${esc(ic.url.replace(/^https?:/, 'webcal:'))}">Abrir en el calendario</a></div>
+    <details style="margin-top:12px"><summary class="sm" style="cursor:pointer">Cómo hacerlo</summary><p class="sm mu"><b>iPhone:</b> pulsa "Abrir en el calendario" desde el iPhone y acepta "Suscribirse".<br><b>Google Calendar (Android o PC):</b> en calendar.google.com, en el ordenador: "Otros calendarios" → "+" → "Desde URL" → pega el enlace → "Añadir calendario". Google tarda unas horas en refrescar los cambios.</p></details></div>` : '');
+    if ($('#icc')) $('#icc').onclick = () => { navigator.clipboard.writeText($('#icu').value).then(() => toast('Enlace copiado')); };
     m.querySelectorAll('.hrs button').forEach((b) => (b.onclick = () => { s.week[b.dataset.d] = s.week[b.dataset.d].filter((h) => h !== b.dataset.h); save('Hora quitada'); }));
     m.querySelectorAll('[data-ad]').forEach((b) => (b.onclick = () => { const v = m.querySelector(`[data-in="${b.dataset.ad}"]`).value; if (!v) return; s.week[b.dataset.ad] = [...(s.week[b.dataset.ad] || []), v]; save('Hora añadida'); }));
     m.querySelectorAll('[data-cp]').forEach((sel) => (sel.onchange = () => { const from = sel.dataset.cp, to = sel.value; if (!to) return; (to === 'all' ? [1, 2, 3, 4, 5] : [to]).forEach((d) => { if (String(d) !== from) s.week[d] = [...s.week[from]]; }); save('Horario copiado'); }));
@@ -306,15 +401,53 @@ V.post = async (m, id) => {
   $('#pf').onsubmit = guard(async (e) => { e.preventDefault(); const d = Object.fromEntries(new FormData(e.target)); d.published = e.target.published.checked; d.cover = cover; const r = await api(isNew ? '/admin/posts' : '/admin/posts/' + id, { method: isNew ? 'POST' : 'PUT', body: d }); toast('Artículo guardado'); location.hash = '#post/' + r.id; });
 };
 
+// ---------- clientes: embudo de ventas ----------
+const ETAPAS = [['nuevo', 'Nuevo'], ['contactado', 'Contactado'], ['cita', 'Con cita'], ['visitado', 'Ha venido'], ['reserva', 'Reserva'], ['vendido', 'Vendido'], ['perdido', 'Perdido']];
+const etq = (k) => (ETAPAS.find((x) => x[0] === k) || [k, k])[1];
+const TIPO = { cita: 'Cita', tasacion: 'Tasación', envio: 'Envío', mensaje: 'Mensaje', busqueda: 'Te lo buscamos' };
+const RUTA = { cita: 'reservas', tasacion: 'valoraciones', envio: 'envios', mensaje: 'mensajes', busqueda: 'busquedas' };
+V.clientes = async (m) => {
+  const all = await api('/admin/clientes'); m = shell('clientes'); let q = '';
+  const draw = () => {
+    const list = all.filter((c) => !q || `${c.nombre} ${c.telefono} ${c.email}`.toLowerCase().includes(q));
+    $('#kb').innerHTML = ETAPAS.map(([k, t]) => { const cs = list.filter((c) => c.etapa === k); return `<div class="col" data-e="${k}"><h4>${t} <span>${cs.length}</span></h4>${cs.map((c) => `<a class="kc" draggable="true" data-k="${c.key}" href="#cliente/${c.key}"><b>${esc(c.nombre)}</b><span>${esc(c.leads[0]?.resumen || '')}</span><small>${fdate(c.last)} · ${c.leads.length} solicitud${c.leads.length === 1 ? '' : 'es'}${c.manual ? '' : ' · auto'}</small></a>`).join('') || '<p class="mu sm" style="padding:6px">—</p>'}</div>`; }).join('');
+    $('#kb').querySelectorAll('.kc').forEach((el) => (el.ondragstart = (e) => e.dataTransfer.setData('text/plain', el.dataset.k)));
+    $('#kb').querySelectorAll('.col').forEach((col) => { col.ondragover = (e) => { e.preventDefault(); col.classList.add('ov'); }; col.ondragleave = () => col.classList.remove('ov');
+      col.ondrop = guard(async (e) => { e.preventDefault(); col.classList.remove('ov'); const k = e.dataTransfer.getData('text/plain'); const c = all.find((x) => x.key === k); if (!c || c.etapa === col.dataset.e) return; await api('/admin/clientes/' + k, { method: 'PUT', body: { etapa: col.dataset.e } }); c.etapa = col.dataset.e; c.manual = col.dataset.e; draw(); toast(`${c.nombre}: ${etq(c.etapa)}`); }); });
+  };
+  const n = (k) => all.filter((c) => c.etapa === k).length; const vend = n('vendido'), tot = all.length;
+  m.innerHTML = top('Clientes', `${tot} personas han contactado por la web. El estado avanza solo (cita, visita, reserva, venta); también puedes arrastrar la tarjeta.`, `<button class="btn g" id="csv">Exportar a Excel (CSV)</button>`) +
+    `<div class="kp">${[['Nuevos sin atender', n('nuevo')], ['En marcha', n('contactado') + n('cita') + n('visitado') + n('reserva')], ['Vendidos', vend], ['Conversión', tot ? Math.round(vend / tot * 100) + ' %' : '—']].map(([t, v]) => `<div class="card"><span>${t}</span><b>${v}</b></div>`).join('')}</div>
+    <input id="qq" placeholder="Buscar por nombre, teléfono o email" style="max-width:420px;margin-bottom:14px"><div class="kb" id="kb"></div>`;
+  $('#qq').oninput = (e) => { q = e.target.value.toLowerCase().trim(); draw(); };
+  $('#csv').onclick = () => { const rows = [['Nombre', 'Teléfono', 'Email', 'Estado', 'Última actividad', 'Solicitudes', 'Último interés', 'Notas'], ...all.map((c) => [c.nombre, c.telefono, c.email, etq(c.etapa), (c.last || '').slice(0, 10), c.leads.length, c.leads[0]?.resumen || '', c.notas || ''])];
+    const csv = '﻿' + rows.map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `clientes-plata-garage-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); };
+  draw();
+};
+V.cliente = async (m, key) => {
+  const c = (await api('/admin/clientes')).find((x) => x.key === key); m = shell('clientes');
+  if (!c) { m.innerHTML = top('Cliente') + '<div class="card mu">No encontrado.</div>'; return; }
+  m.innerHTML = top(esc(c.nombre), `${esc(c.telefono)}${c.email ? ' · ' + esc(c.email) : ''} · última actividad ${fdt(c.last)}`, `<a class="btn g" href="#clientes">Volver</a>`) +
+    `<div class="two"><div class="card"><h3 style="margin-bottom:12px">Estado</h3><label>Etapa del embudo<select id="et"><option value="">Automático (ahora: ${etq(c.auto)})</option>${ETAPAS.map(([k, t]) => `<option value="${k}"${c.manual === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+    <p class="mu sm">Si lo dejas en automático, avanza solo con sus citas, su reserva o la venta. Sin movimiento en 45 días pasa a "Perdido".</p>
+    <label>Notas internas<textarea id="nt" rows="5">${esc(c.notas || '')}</textarea></label><div class="row" style="margin-top:12px"><button class="btn" id="sv">Guardar</button><a class="btn g" target="_blank" rel="noopener" href="${waLink(c.telefono, 'Hola ' + String(c.nombre).split(' ')[0] + ', te escribimos de Plata Garage. ')}">${IC.wa}WhatsApp</a><a class="btn g" href="tel:${esc(c.telefono)}">Llamar</a>${c.email ? `<a class="btn g" href="mailto:${esc(c.email)}">Email</a>` : ''}</div></div>
+    <div class="card"><h3 style="margin-bottom:12px">Historial (${c.leads.length})</h3>${c.leads.map((l) => `<a class="li" href="#${RUTA[l.tipo]}" style="text-decoration:none"><div><b>${TIPO[l.tipo]}</b><span>${esc(l.resumen)}</span></div><div class="r">${fdate(l.created)}<br>${l.status ? badge(l.status) : ''}</div></a>`).join('')}
+    ${c.compras.length ? `<h3 style="margin:18px 0 8px">Compras</h3>${c.compras.map((x) => `<div class="li"><div><b>${esc(x.nombre)}</b><span>${x.sold ? 'Vendido el ' + fdate(x.soldAt) : 'Reservado'}</span></div></div>`).join('')}` : ''}</div></div>`;
+  $('#sv').onclick = guard(async () => { await api('/admin/clientes/' + key, { method: 'PUT', body: { etapa: $('#et').value, notas: $('#nt').value } }); toast('Guardado'); route(); });
+};
+
 // ---------- router ----------
 async function route() {
   const [k, arg] = (location.hash.slice(1) || 'resumen').split('/');
   const fn = V[k] || V.resumen;
   try { await fn($('#mn'), arg); window.scrollTo(0, 0); } catch (e) { if (e.message !== 'Sesión caducada') { shell(k).innerHTML = `<div class="card">No se ha podido cargar: ${esc(e.message)}</div>`; } }
 }
+let polling = null;
 async function boot() {
-  try { const s = await api('/admin/summary'); badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes }; route(); } catch (e) { /* login ya mostrado */ }
+  try { const s = await api('/admin/summary'); badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes }; route(); if (!polling) { poll(); polling = setInterval(poll, 60000); } } catch (e) { /* login ya mostrado */ }
 }
+let swReg = null;
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(B + '/admin-sw.js', { scope: B + '/admin' }).then((r) => (swReg = r)).catch(() => {});
 
 window.addEventListener('hashchange', () => $('.lay') && route());
 boot();
