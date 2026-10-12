@@ -171,14 +171,13 @@ export function rebaja(c) {
   if (!ref.length) return null; const antes = Math.min(...ref);
   return c.price < antes ? { antes } : null;
 }
-const nuevo = (c) => c.llegada && Date.now() - Date.parse(c.llegada) <= 15 * DAY;
-const tagDe = (c) => c.status === 'reservado' ? '<span class="tag r">Reservado</span>' : c.status === 'preparacion' ? '<span class="tag">Próximamente</span>' : rebaja(c) ? '<span class="tag rb">Rebajado</span>' : nuevo(c) ? '<span class="tag nw">Recién llegado</span>' : '';
+const tagDe = (c) => c.status === 'reservado' ? '<span class="tag r">Reservado</span>' : c.status === 'preparacion' ? '<span class="tag">Próximamente</span>' : '';
 const heart = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>';
 const cover = (c) => (c.images && c.images[0]) || `${B}/assets/logo.png`;
 export function card(c) {
-  const tag = tagDe(c); const rb = rebaja(c);
+  const tag = tagDe(c);
   return `<a class="card" href="${B}/vehiculos/${c.slug}" data-p="${c.price}" data-f="${esc(c.fuel)}" data-t="${esc(c.trans)}" data-y="${c.year}" data-k="${c.km}" data-m="${esc(c.brand)}" data-c="${esc(c.body)}" data-s="${c.created || ''}" data-e="${c.seats || ''}" data-x="${esc(normTxt([c.brand, c.model, c.version, c.color, c.body, c.etiqueta].join(' ')))}">
-<div class="ph"><img src="${esc(im(cover(c), 600))}" alt="${esc(carName(c) + ' ' + c.year)}" loading="lazy" width="400" height="300">${tag}<span class="fv" role="button" tabindex="0" data-fav="${c.slug}" aria-label="Guardar en favoritos" title="Guardar en favoritos">${heart}</span><span class="pr">${rb ? `<s>${eur(rb.antes)}</s> ` : ''}${eur(c.price)}</span></div>
+<div class="ph"><img src="${esc(im(cover(c), 600))}" alt="${esc(carName(c) + ' ' + c.year)}" loading="lazy" width="400" height="300">${tag}<span class="fv" role="button" tabindex="0" data-fav="${c.slug}" aria-label="Guardar en favoritos" title="Guardar en favoritos">${heart}</span><span class="pr">${eur(c.price)}</span></div>
 <div class="b"><div class="br">${esc(c.brand)}</div><div class="md"><b>${esc(c.model)}</b> <span>${esc(c.version || '')}</span></div>
 <div class="sp"><div>${ic.cal}${c.year}</div><div>${ic.gauge}${kms(c.km)}</div><div>${ic.fuel}${esc(c.fuel)}</div><div>${ic.gear}${esc(c.trans)}</div></div></div></a>`;
 }
@@ -375,7 +374,6 @@ export function ficha({ car: c, cars, holders, qr = '', fichaUrl = '' }) {
   const okIc = I('<path d="M20 6L9 17l-5-5"/>');
   const stt = c.status === 'reservado' ? '<span class="st re">Reservado</span>' : c.status === 'preparacion' ? '<span class="st pr">Próximamente</span>' : '<span class="st ok">Disponible</span>';
   const secs = [['coche', 'El coche'], feats.length >= 3 ? ['destacado', 'Lo destacado'] : null, c.comment ? ['opinion', 'Cómo lo vemos'] : null, feats.length ? ['equipamiento', 'Equipamiento'] : null, ['ficha', 'Ficha técnica'], imgs.length > 1 ? ['fotos', 'Fotos'] : null, ['dudas', 'Dudas'], ['visita', 'Verlo en persona']].filter(Boolean);
-  const rbj = rebaja(c);
   const fq = [[`¿Puedo ver y probar el ${name}?`, `Sí. Pide cita en esta página eligiendo día y hora y te lo tenemos preparado en Sabadell. Atendemos de lunes a viernes de 9:30 a 19:30 y los sábados de 10:00 a 14:00.`], [`¿El ${c.brand} ${c.model} tiene garantía?`, 'Sí, garantía de 12 meses. Según la antigüedad del coche, se puede ampliar con coste adicional.'], ...(c.reserve > 0 && c.status === 'disponible' ? [['¿Puedo reservarlo?', `Sí, con una señal de ${eur(c.reserve)} que se descuenta del precio. Primero te confirmamos que sigue disponible y te explicamos las condiciones.`]] : []), ['¿Me lo podéis llevar a casa?', 'Sí, es posible. Pide presupuesto del envío con tu código postal aquí abajo, sin compromiso.'], ['¿Puedo financiarlo?', 'Consúltanos y te explicamos las opciones y condiciones antes de decidir.']];
   const title = (() => { const full = `${name} ${c.year} de segunda mano en Sabadell | Plata Garage`; if (full.length <= 70) return full; const s = `${c.brand} ${c.model} ${c.year} de segunda mano en Sabadell | Plata Garage`; return s.length <= 70 ? s : `${c.brand} ${c.model} ${c.year} en Sabadell | Plata Garage`; })();
   const desc = `${name} ${c.year}, ${kms(c.km)}, ${c.fuel.toLowerCase()}, ${c.trans.toLowerCase()}. ${eur(c.price)}. Garantía de 12 meses en Sabadell. Pide cita.`.slice(0, 158);
@@ -389,7 +387,7 @@ export function ficha({ car: c, cars, holders, qr = '', fichaUrl = '' }) {
 <div class="cr"><a href="${B}/">Inicio</a> · <a href="${B}/vehiculos/">Vehículos</a> · ${esc(c.brand)} ${esc(c.model)}</div>${stt}
 <h1>${esc(c.brand)} ${esc(c.model)}${c.version ? `<span>${esc(c.version)}</span>` : ''}</h1>
 <div class="chips"><span>${ic.cal}${c.year}</span><span>${ic.gauge}${kms(c.km)}</span><span>${ic.fuel}${esc(c.fuel)}</span><span>${ic.gear}${esc(c.trans)}</span>${c.cv ? `<span>${c.cv} CV</span>` : ''}${etq ? `<span>${etq.startsWith('Sin') ? esc(etq) : 'Etiqueta ' + esc(etq)}</span>` : ''}</div>
-<div class="pz">${rbj ? `<s>${eur(rbj.antes)}</s>` : ''}${eur(c.price)}</div>${rbj ? `<p class="note" style="margin:-14px 0 18px">Rebajado. Precio anterior: el más bajo de los 30 días previos a la rebaja.</p>` : ''}
+<div class="pz">${eur(c.price)}</div>
 <div class="row"><a class="btn" href="#visita">${ic.cal}Pedir cita para verlo</a><a class="btn g" href="${wa(waTxt)}" rel="noopener">${ic.wa}WhatsApp</a><a class="btn g" href="#ficha">Ver los datos</a></div>
 <a class="pdf" href="#" id="pdf">Descargar ficha (PDF)</a> · <a class="pdf" href="#" data-fav="${c.slug}">Guardar en favoritos</a> · <a class="pdf" href="#bp" id="bpl">Avísame si baja de precio</a>
 <form id="bp" class="bpf" novalidate hidden>${hp()}<input type="hidden" name="coche" value="${c.slug}"><input name="email" type="email" required maxlength="200" placeholder="Tu email"><label class="chk"><input type="checkbox" name="consent" value="si"><span>Quiero que me aviséis por email si baja de precio este coche. Me puedo dar de baja cuando quiera. <a href="${B}/privacidad" target="_blank">Privacidad</a></span></label><div class="msg" role="alert"></div><button class="btn sm" type="submit">Avisarme</button></form></div></section>
@@ -576,7 +574,7 @@ export function notFound(msg = 'Esta página no existe o el coche ya no está di
   return page({ noindex: true, title: 'Página no encontrada | Plata Garage', desc: msg, body: `<section><div class="w"><div class="cta"><h2>Vaya…</h2><p class="lead">${esc(msg)}</p><div class="row"><a class="btn" href="${B}/vehiculos/">Ver coches en stock</a></div></div></div></section>` });
 }
 
-const AV = '2';
+const AV = '3';
 export function adminShell() {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Backoffice · Plata Garage</title><link rel="icon" href="${B}/assets/icon-192.png"><link rel="manifest" href="${B}/assets/manifest.webmanifest"><link rel="apple-touch-icon" href="${B}/assets/icon-192.png"><meta name="theme-color" content="#050505"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Plata Garage"><link rel="stylesheet" href="${B}/assets/admin.css?v=${AV}"></head><body><div id="app"></div><script src="${B}/assets/admin.js?v=${AV}"></script></body></html>`;
 }
