@@ -113,8 +113,9 @@ const pubCars = (cars) => cars.filter((c) => !c.sold && !c.hidden);
 function cleanCar(b, old = {}) {
   const c = { ...old };
   const S = (k, n = 120) => { if (k in b) c[k] = clip(b[k], n); };
-  ['brand', 'model', 'version', 'fuel', 'trans', 'body', 'color', 'holder', 'status'].forEach((k) => S(k));
+  ['brand', 'model', 'version', 'fuel', 'trans', 'body', 'color', 'holder', 'status', 'etiqueta'].forEach((k) => S(k));
   if ('desc' in b) c.desc = clip(b.desc, 8000);
+  if ('comment' in b) c.comment = clip(b.comment, 3000);
   ['year', 'km', 'price', 'cv', 'doors', 'seats', 'monthly', 'term', 'reserve'].forEach((k) => { if (k in b) c[k] = num(b[k]); });
   if ('features' in b) c.features = (Array.isArray(b.features) ? b.features : String(b.features).split('\n')).map((x) => clip(x, 120)).filter(Boolean).slice(0, 80);
   if ('images' in b) c.images = (b.images || []).filter((u) => typeof u === 'string' && u.startsWith(BASE + '/')).slice(0, 40);

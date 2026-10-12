@@ -192,34 +192,109 @@ document.querySelectorAll('.filters select').forEach(s=>s.addEventListener('chan
   return page({ title: 'Coches de segunda mano en Sabadell | Plata Garage', desc: `${cars.length} coches de ocasión en Sabadell con garantía de 12 meses. Filtra por marca, precio y combustible y pide cita.`, on: 'veh', body, script });
 }
 
+const FICHA_CSS = `
+.fh{position:relative;min-height:min(82vh,760px);display:flex;align-items:flex-end;overflow:hidden;background:#0d0d0d}
+.fh img.bgi{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.fh:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#050505 0%,rgba(5,5,5,.86) 26%,rgba(5,5,5,.25) 60%,rgba(5,5,5,.15) 100%),linear-gradient(90deg,rgba(5,5,5,.7),transparent 60%)}
+.fh .w{position:relative;z-index:1;width:100%;padding-top:120px;padding-bottom:52px}
+.fh .cr{font-size:13px;color:#cfcfcf;margin-bottom:16px}.fh .cr a{color:#cfcfcf;text-decoration:none}
+.st{display:inline-block;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px}
+.st.ok{background:#dcfce7;color:#14532d}.st.re{background:#fff;color:#000}.st.pr{background:var(--or);color:#000}
+.fh h1{font-size:clamp(40px,6.4vw,84px)}.fh h1 span{display:block;font-size:.38em;font-weight:500;color:#cfcfcf;letter-spacing:0;margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:8px 18px;margin:20px 0 6px;color:#e5e5e5;font-size:15px}.chips span{display:inline-flex;gap:7px;align-items:center}.chips svg{width:16px;height:16px;color:var(--or)}
+.fh .pz{font-family:'Space Grotesk',sans-serif;font-size:clamp(40px,5vw,58px);font-weight:700;margin:14px 0 22px}
+.fh .pdf{display:inline-block;margin-top:14px;color:#cfcfcf;font-size:14px}
+.fl{display:grid;grid-template-columns:200px 1fr;gap:48px;align-items:start;padding-top:40px}
+.idx{position:sticky;top:104px;display:grid;gap:2px;border-left:1px solid var(--line);padding-left:14px}
+.idx a{color:var(--mu);text-decoration:none;font-size:14px;padding:6px 0;position:relative}.idx a.on{color:#fff}.idx a.on:before{content:"";position:absolute;left:-15px;top:6px;bottom:6px;width:2px;background:var(--or)}
+.fs{padding:34px 0 56px;border-bottom:1px solid var(--line);scroll-margin-top:96px}.fs:last-child{border:0}
+.ey{color:var(--or);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;margin-bottom:8px}
+.fs h2{font-size:clamp(28px,3.4vw,40px);margin-bottom:22px}
+.alt{display:grid;grid-template-columns:1.1fr 1fr;gap:36px;align-items:center;margin-bottom:34px}.alt.r{grid-template-columns:1fr 1.1fr}.alt.r .ai{order:2}
+.ai{border-radius:20px;overflow:hidden;aspect-ratio:4/3;background:#0d0d0d;border:1px solid var(--line);cursor:zoom-in}.ai img{width:100%;height:100%;object-fit:cover}
+.hl{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.hl div{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;gap:10px;align-items:flex-start;font-size:15px}.hl svg{width:18px;height:18px;color:var(--or);flex:none;margin-top:3px}
+.op{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--or);border-radius:16px;padding:22px 24px;color:#ddd;white-space:pre-line}
+.band{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;background:radial-gradient(80% 140% at 0% 0%,rgba(247,104,6,.18),transparent 60%),var(--card);border:1px solid var(--line);border-radius:20px;padding:22px 26px;margin:6px 0 0}.band b{font-size:18px;font-family:'Space Grotesk',sans-serif}
+.dk{background:#0b0b0b;border:1px solid var(--line);border-radius:24px;padding:28px}
+.big{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}.big div{border:1px solid var(--line);border-radius:16px;padding:16px}.big b{display:block;font-family:'Space Grotesk',sans-serif;font-size:28px}.big span{color:var(--mu);font-size:13px}
+.dt{display:grid;grid-template-columns:1fr 1fr;gap:0 32px}.dt div{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}.dt dt{color:var(--mu)}.dt dd{margin:0;text-align:right}
+.ph6{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.ph6 button{padding:0;border:0;border-radius:14px;overflow:hidden;aspect-ratio:4/3;background:#0d0d0d;cursor:zoom-in}.ph6 img{width:100%;height:100%;object-fit:cover;transition:transform .3s}.ph6 button:hover img{transform:scale(1.04)}
+.vis{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;align-items:start}
+.lb{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.94);display:none;align-items:center;justify-content:center}.lb.on{display:flex}.lb img{max-width:94vw;max-height:86vh;border-radius:10px}
+.lb button{position:absolute;background:rgba(255,255,255,.1);border:0;color:#fff;width:48px;height:48px;border-radius:50%;font-size:24px;cursor:pointer}.lb .x{top:18px;right:18px}.lb .p{left:18px;top:50%}.lb .n{right:18px;top:50%}.lb .c{position:absolute;bottom:18px;color:#bbb;font-size:14px}
+.sb{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(10,10,10,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:10px 16px;display:none;align-items:center;gap:10px;transform:translateY(100%);transition:transform .2s}.sb.on{transform:none}
+.sb b{font-family:'Space Grotesk',sans-serif;font-size:20px;flex:1}.sb .btn{padding:11px 18px}.sb a.wa{width:46px;height:46px;border-radius:50%;background:var(--wa);display:grid;place-items:center;flex:none}.sb a.wa svg{width:24px;height:24px;color:#fff}
+.pn{display:none}
+@media(max-width:980px){.fl{grid-template-columns:1fr;gap:0}.idx{position:sticky;top:68px;z-index:30;display:flex;overflow-x:auto;gap:6px;border:0;padding:10px 0;background:rgba(5,5,5,.94);margin:0 -18px;padding-left:18px}.idx a{white-space:nowrap;border:1px solid var(--line);border-radius:999px;padding:6px 14px}.idx a.on{border-color:var(--or)}.idx a.on:before{display:none}
+.alt,.alt.r,.vis{grid-template-columns:1fr}.alt.r .ai{order:0}.hl{grid-template-columns:1fr 1fr}.big{grid-template-columns:1fr 1fr}.big b{font-size:21px;overflow-wrap:anywhere}.dt{grid-template-columns:1fr}.ph6{grid-template-columns:1fr 1fr}.sb{display:flex}.wf{display:none}.fh{min-height:76vh}}
+@media(max-width:560px){.hl{grid-template-columns:1fr}}
+@media print{header,footer,.wf,.sb,.idx,.lb,.ph6,.vis,.band,#similares,.fh .btn,.fh .pdf,form{display:none!important}body{background:#fff;color:#000}.fh{min-height:0;display:block}.fh:after{display:none}.fh img.bgi{position:static;height:300px;border-radius:12px}.fh .w{padding:16px 0}.fh h1,.fh .pz,.chips,.dt dd{color:#000}.fl{display:block}.dk,.hl div,.op{background:#fff;border-color:#ccc;color:#000}.big b{color:#000}.pn{display:block;margin-top:20px;font-size:13px}.fs{padding:16px 0;break-inside:avoid}}`;
+
+const etiquetaDe = (c) => (c.etiqueta === 'SIN' ? 'Sin etiqueta' : c.etiqueta) || ((c.desc || '').match(/(?:pegatina|distintivo|etiqueta)(?: medioambiental| ambiental)?:?\s*(ECO|CERO|0|C|B)\b/i)?.[1] || '').toUpperCase().replace(/^0$/, 'CERO');
+
 export function ficha({ car: c, cars, holders }) {
   const name = carName(c);
   const imgs = c.images?.length ? c.images : [cover(c)];
-  const rows = [['Marca', c.brand], ['Modelo', c.model], ['Versión', c.version], ['Año', c.year], ['Kilómetros', kms(c.km)], ['Combustible', c.fuel], ['Cambio', c.trans], ['Carrocería', c.body], ['Potencia', c.cv ? c.cv + ' CV' : ''], ['Puertas', c.doors], ['Plazas', c.seats], ['Color', c.color]].filter((r) => r[1] != null && r[1] !== '');
+  const etq = etiquetaDe(c);
+  const big = [[c.year, 'Año'], [kms(c.km), 'Kilómetros'], [c.cv ? c.cv + ' CV' : '—', 'Potencia'], [c.trans, 'Cambio']];
+  const rows = [['Marca', c.brand], ['Modelo', c.model], ['Versión', c.version], ['Año', c.year], ['Kilómetros', kms(c.km)], ['Combustible', c.fuel], ['Cambio', c.trans], ['Potencia', c.cv ? c.cv + ' CV' : ''], ['Carrocería', c.body], ['Puertas', c.doors], ['Plazas', c.seats], ['Color', c.color], ['Etiqueta DGT', etq], ['Garantía', '12 meses']].filter((r) => r[1] != null && r[1] !== '');
   const sim = cars.filter((x) => x.id !== c.id).sort((a, b) => (a.brand === c.brand ? -1 : 0) - (b.brand === c.brand ? -1 : 0) || Math.abs(a.price - c.price) - Math.abs(b.price - c.price)).slice(0, 3);
   const holder = holders.find((h) => h.id === c.holder);
-  const reservaBox = c.reserve > 0 && c.status === 'disponible' ? `<div class="box"><h3>${ic.key}Reserva este coche</h3><p class="mu" style="margin:0 0 12px;font-size:14px">Señal de <b style="color:#fff">${eur(c.reserve)}</b> que se descuenta del precio. Primero te confirmamos que sigue disponible y te explicamos las condiciones; después puedes pagarla por Bizum${holder?.accounts?.length ? ' o transferencia' : ''}.</p><a class="btn g" href="${B}/cita?coche=${c.slug}&motivo=${encodeURIComponent('Reservar este coche')}">Solicitar reserva</a></div>` : '';
+  const feats = c.features || [];
+  const paras = (c.desc || '').split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
+  const okIc = I('<path d="M20 6L9 17l-5-5"/>');
+  const stt = c.status === 'reservado' ? '<span class="st re">Reservado</span>' : c.status === 'preparacion' ? '<span class="st pr">Próximamente</span>' : '<span class="st ok">Disponible</span>';
+  const secs = [['coche', 'El coche'], feats.length >= 3 ? ['destacado', 'Lo destacado'] : null, c.comment ? ['opinion', 'Cómo lo vemos'] : null, feats.length ? ['equipamiento', 'Equipamiento'] : null, ['ficha', 'Ficha técnica'], imgs.length > 1 ? ['fotos', 'Fotos'] : null, ['visita', 'Verlo en persona']].filter(Boolean);
   const title = (() => { const full = `${name} ${c.year} de segunda mano en Sabadell | Plata Garage`; if (full.length <= 70) return full; const s = `${c.brand} ${c.model} ${c.year} de segunda mano en Sabadell | Plata Garage`; return s.length <= 70 ? s : `${c.brand} ${c.model} ${c.year} en Sabadell | Plata Garage`; })();
   const desc = `${name} ${c.year}, ${kms(c.km)}, ${c.fuel.toLowerCase()}, ${c.trans.toLowerCase()}. ${eur(c.price)}. Garantía de 12 meses en Sabadell. Pide cita.`.slice(0, 158);
-  const ldCar = { '@context': 'https://schema.org', '@type': ['Product', 'Car'], name: `${name} ${c.year}`, brand: { '@type': 'Brand', name: c.brand }, model: c.model, vehicleModelDate: String(c.year), mileageFromOdometer: { '@type': 'QuantitativeValue', value: c.km, unitCode: 'KMT' }, fuelType: c.fuel, vehicleTransmission: c.trans, color: c.color || undefined, bodyType: c.body || undefined, numberOfDoors: c.doors || undefined, vehicleSeatingCapacity: c.seats || undefined, image: imgs, description: (c.desc || '').slice(0, 500), offers: { '@type': 'Offer', price: c.price, priceCurrency: 'EUR', availability: c.status === 'reservado' ? 'https://schema.org/LimitedAvailability' : c.status === 'preparacion' ? 'https://schema.org/PreOrder' : 'https://schema.org/InStock', itemCondition: 'https://schema.org/UsedCondition', seller: { '@id': '#negocio' } } };
-  const crumbs = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Inicio', item: `${B}/` }, { '@type': 'ListItem', position: 2, name: 'Vehículos', item: `${B}/vehiculos/` }, { '@type': 'ListItem', position: 3, name } ] };
-  const estado = c.status === 'reservado' ? '<span class="pill" style="border-color:#fff">Reservado</span>' : c.status === 'preparacion' ? '<span class="pill"><i></i>En preparación · próximamente</span>' : '';
-  const body = `<div class="w"><div class="crumb"><a href="${B}/vehiculos/">${ic.back}Volver al catálogo</a></div>
-<div class="fic"><div class="gal"><div class="main"><img id="mi" src="${esc(imgs[0])}" alt="${esc(name)} ${c.year} – foto 1" width="800" height="600"></div>
-${imgs.length > 1 ? `<div class="th">${imgs.map((u, i) => `<img src="${esc(u)}" alt="${esc(name)} ${c.year} – foto ${i + 1}" loading="lazy" tabindex="0" width="160" height="120"${i ? '' : ' class="on"'}>`).join('')}</div>` : ''}</div>
-<div><div class="br" style="color:var(--or);font-size:13px;letter-spacing:.08em;text-transform:uppercase">${esc(c.brand)}</div><h1 class="s">${esc(c.model)} <span style="font-weight:400;color:#9a9a9a">${esc(c.version || '')}</span></h1>${estado}
-<div class="price">${eur(c.price)}</div><div class="sp" style="margin-bottom:20px"><div>${ic.cal}${c.year}</div><div>${ic.gauge}${kms(c.km)}</div><div>${ic.fuel}${esc(c.fuel)}</div><div>${ic.gear}${esc(c.trans)}</div></div>
-<div class="box"><a class="btn" href="${B}/cita?coche=${c.slug}">${ic.cal}Pedir cita para verlo</a><a class="btn g" href="${wa(`Hola, me interesa el ${name} (${c.year}) de ${eur(c.price)}.`)}" rel="noopener">${ic.wa}Preguntar por WhatsApp</a><a class="tx" href="tel:+34660493228">${ic.tel} ${TEL}</a></div>
-${reservaBox}
+  const ldCar = { '@context': 'https://schema.org', '@type': ['Product', 'Car'], name: `${name} ${c.year}`, brand: { '@type': 'Brand', name: c.brand }, model: c.model, vehicleModelDate: String(c.year), mileageFromOdometer: { '@type': 'QuantitativeValue', value: c.km, unitCode: 'KMT' }, fuelType: c.fuel, vehicleTransmission: c.trans, color: c.color || undefined, bodyType: c.body || undefined, numberOfDoors: c.doors || undefined, vehicleSeatingCapacity: c.seats || undefined, vehicleEngine: c.cv ? { '@type': 'EngineSpecification', enginePower: { '@type': 'QuantitativeValue', value: c.cv, unitCode: 'BHP' } } : undefined, image: imgs, description: (c.desc || '').slice(0, 500), offers: { '@type': 'Offer', price: c.price, priceCurrency: 'EUR', availability: c.status === 'reservado' ? 'https://schema.org/LimitedAvailability' : c.status === 'preparacion' ? 'https://schema.org/PreOrder' : 'https://schema.org/InStock', itemCondition: 'https://schema.org/UsedCondition', seller: { '@id': '#negocio' } } };
+  const crumbs = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Inicio', item: `${B}/` }, { '@type': 'ListItem', position: 2, name: 'Vehículos', item: `${B}/vehiculos/` }, { '@type': 'ListItem', position: 3, name }] };
+  const ph = (i) => imgs[i] ? `<div class="ai" data-i="${i}"><img src="${esc(imgs[i])}" alt="${esc(name)} ${c.year} – foto ${i + 1}" loading="lazy" width="800" height="600"></div>` : '';
+  const waTxt = `Hola, me interesa el ${name} (${c.year}) de ${eur(c.price)}.`;
+  const reservaBox = c.reserve > 0 && c.status === 'disponible' ? `<div class="box"><h3>${ic.key}Reserva este coche</h3><p class="mu" style="margin:0 0 12px;font-size:14px">Señal de <b style="color:#fff">${eur(c.reserve)}</b> que se descuenta del precio. Primero te confirmamos que sigue disponible y te explicamos las condiciones; después puedes pagarla por Bizum${holder?.accounts?.length ? ' o transferencia' : ''}.</p><a class="btn g" href="${B}/cita?coche=${c.slug}&motivo=${encodeURIComponent('Reservar este coche')}">Solicitar reserva</a></div>` : '';
+
+  const body = `<section class="fh" style="padding:0"><img class="bgi" src="${esc(imgs[0])}" alt="${esc(name)} ${c.year}" fetchpriority="high" width="1600" height="1200"><div class="w">
+<div class="cr"><a href="${B}/">Inicio</a> · <a href="${B}/vehiculos/">Vehículos</a> · ${esc(c.brand)} ${esc(c.model)}</div>${stt}
+<h1>${esc(c.brand)} ${esc(c.model)}${c.version ? `<span>${esc(c.version)}</span>` : ''}</h1>
+<div class="chips"><span>${ic.cal}${c.year}</span><span>${ic.gauge}${kms(c.km)}</span><span>${ic.fuel}${esc(c.fuel)}</span><span>${ic.gear}${esc(c.trans)}</span>${c.cv ? `<span>${c.cv} CV</span>` : ''}${etq ? `<span>${etq.startsWith('Sin') ? esc(etq) : 'Etiqueta ' + esc(etq)}</span>` : ''}</div>
+<div class="pz">${eur(c.price)}</div>
+<div class="row"><a class="btn" href="#visita">${ic.cal}Pedir cita para verlo</a><a class="btn g" href="${wa(waTxt)}" rel="noopener">${ic.wa}WhatsApp</a><a class="btn g" href="#ficha">Ver los datos</a></div>
+<a class="pdf" href="#" id="pdf">Descargar ficha (PDF)</a></div></section>
+<div class="w fl"><nav class="idx" aria-label="En esta página">${secs.map(([id, t], i) => `<a href="#${id}"${i ? '' : ' class="on"'}>${t}</a>`).join('')}</nav><div>
+<section class="fs" id="coche"><div class="ey">El coche</div><h2>${esc(name)}</h2>
+<div class="alt">${ph(1) || ph(0)}<div class="desc" style="white-space:pre-line">${esc(paras[0] || '')}</div></div>
+${paras.length > 1 ? `<div class="alt r">${ph(2) || ''}<div class="desc" style="white-space:pre-line">${esc(paras.slice(1).join('\n\n'))}</div></div>` : ''}
+<div class="band"><div><b>¿Quieres verlo en persona?</b><div class="mu" style="font-size:14px">Elige día y hora y te lo tenemos preparado.</div></div><a class="btn" href="#visita">Pedir cita</a></div></section>
+${feats.length >= 3 ? `<section class="fs" id="destacado"><div class="ey">Lo destacado</div><h2>Lo que más se agradece</h2><div class="hl">${feats.slice(0, 6).map((f) => `<div>${okIc}<span>${esc(f)}</span></div>`).join('')}</div>${imgs[3] ? `<div class="alt" style="margin:28px 0 0">${ph(3)}${ph(4) || ''}</div>` : ''}</section>` : ''}
+${c.comment ? `<section class="fs" id="opinion"><div class="ey">Cómo lo vemos</div><h2>Nuestra opinión</h2><div class="op">${esc(c.comment)}</div></section>` : ''}
+${feats.length ? `<section class="fs" id="equipamiento"><div class="ey">Equipamiento</div><h2>Todo lo que lleva</h2><ul class="eq">${feats.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></section>` : ''}
+<section class="fs" id="ficha"><div class="ey">Ficha técnica</div><h2>Los datos</h2><div class="dk"><div class="big">${big.map(([v, k]) => `<div><b>${esc(v)}</b><span>${k}</span></div>`).join('')}</div>
+<dl class="dt">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></div>
+<p class="note">Datos orientativos y no vinculantes; pueden contener errores. Confírmalos con nosotros antes de decidir.</p>
+<div class="pn">Plata Garage · Sabadell · ${TEL} · rotulito.com${B}/vehiculos/${c.slug}</div></section>
+${imgs.length > 1 ? `<section class="fs" id="fotos"><div class="ey">Fotos</div><h2>Todas las fotos (${imgs.length})</h2><div class="ph6">${imgs.map((u, i) => `<button type="button" data-i="${i}" aria-label="Ver foto ${i + 1} en grande"><img src="${esc(u)}" alt="${esc(name)} ${c.year} – foto ${i + 1}" loading="lazy" width="400" height="300"></button>`).join('')}</div></section>` : ''}
+<section class="fs" id="visita"><div class="ey">Verlo en persona</div><h2>Ven a verlo a Sabadell</h2><div class="vis">
+<div class="box" style="padding:26px"><h3>${ic.cal}Pide cita para este coche</h3>${citaForm({ cars, coche: c.slug })}</div>
+<div><div class="box"><a class="btn" href="${wa(waTxt)}" rel="noopener">${ic.wa}Preguntar por WhatsApp</a><a class="tx" href="tel:+34660493228">${ic.tel} ${TEL}</a></div>${reservaBox}
 <div class="box"><h3>${ic.truck}Te lo llevamos a casa</h3><p class="mu" style="margin:0 0 12px;font-size:14px">Dinos tu código postal y te pasamos presupuesto del envío, sin compromiso.</p>
 <form class="f" data-api="${B}/api/envio" data-t="envio" novalidate>${hp()}<input type="hidden" name="coche" value="${c.slug}"><label>Código postal *<input name="cp" required inputmode="numeric" pattern="\\d{5}" maxlength="5"></label>${contactFields()}${priv()}<div class="msg" role="alert"></div><button class="btn g" type="submit">Pedir presupuesto de envío</button></form></div>
-<p class="note">Garantía de 12 meses. Financiación: consúltanos condiciones. Datos orientativos y no vinculantes; pueden contener errores.</p></div></div>
-<section style="padding:30px 0"><div class="two" style="align-items:start;gap:40px"><div class="box"><h3>Características técnicas</h3><table>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${esc(v)}</td></tr>`).join('')}</table></div>
-<div class="box"><h3>Descripción</h3><p class="desc">${esc(c.desc || '')}</p></div></div>
-${c.features?.length ? `<div class="box"><h3>Equipamiento</h3><ul class="eq">${c.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></div>` : ''}</section>
-${sim.length ? `<section style="padding:40px 0 80px"><h2 style="font-size:32px;margin-bottom:28px">También te puede interesar</h2><div class="grid">${sim.map(card).join('')}</div></section>` : ''}</div>`;
-  const script = `const mi=document.getElementById('mi');document.querySelectorAll('.th img').forEach(t=>{const go=()=>{mi.src=t.src;mi.alt=t.alt;document.querySelectorAll('.th img').forEach(x=>x.classList.remove('on'));t.classList.add('on')};t.onclick=go;t.onkeydown=e=>{if(e.key==='Enter')go()}});${FORM_JS}`;
-  return page({ title, desc, on: 'veh', body, head: ld(ldCar) + ld(crumbs) + `<meta property="og:image" content="${esc(imgs[0])}">`, script });
+<p class="note">Garantía de 12 meses. Financiación: consúltanos condiciones.</p></div></div></section></div></div>
+${sim.length ? `<section id="similares" style="padding:40px 0 90px"><div class="w"><h2 style="font-size:32px;margin-bottom:28px">También te puede interesar</h2><div class="grid">${sim.map(card).join('')}</div></div></section>` : ''}
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Fotos"><button class="x" aria-label="Cerrar">×</button><button class="p" aria-label="Anterior">‹</button><img alt=""><button class="n" aria-label="Siguiente">›</button><span class="c"></span></div>
+<div class="sb" id="sb"><b>${eur(c.price)}</b><a class="btn" href="#visita">Pedir cita</a><a class="wa" href="${wa(waTxt)}" rel="noopener" aria-label="WhatsApp">${ic.wa}</a></div>`;
+
+  const script = `const IM=${JSON.stringify(imgs)},lb=document.getElementById('lb'),li=lb.querySelector('img'),lc=lb.querySelector('.c');let k=0;
+const show=i=>{k=(i+IM.length)%IM.length;li.src=IM[k];li.alt='${esc(name).replace(/'/g, '')} – foto '+(k+1);lc.textContent=(k+1)+' / '+IM.length;lb.classList.add('on')};
+document.querySelectorAll('[data-i]').forEach(e=>e.addEventListener('click',()=>show(+e.dataset.i)));
+lb.querySelector('.x').onclick=()=>lb.classList.remove('on');lb.querySelector('.p').onclick=()=>show(k-1);lb.querySelector('.n').onclick=()=>show(k+1);
+lb.onclick=e=>{if(e.target===lb)lb.classList.remove('on')};document.addEventListener('keydown',e=>{if(!lb.classList.contains('on'))return;if(e.key==='Escape')lb.classList.remove('on');if(e.key==='ArrowLeft')show(k-1);if(e.key==='ArrowRight')show(k+1)});
+let sx=0;lb.addEventListener('touchstart',e=>sx=e.touches[0].clientX,{passive:true});lb.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-sx;if(Math.abs(d)>40)show(k+(d<0?1:-1))});
+document.getElementById('pdf').onclick=e=>{e.preventDefault();window.print()};
+const sb=document.getElementById('sb'),hero=document.querySelector('.fh');new IntersectionObserver(([e])=>sb.classList.toggle('on',!e.isIntersecting)).observe(hero);
+const links=[...document.querySelectorAll('.idx a')];const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id))}}),{rootMargin:'-40% 0px -55% 0px'});
+links.forEach(a=>{const s=document.querySelector(a.getAttribute('href'));if(s)io.observe(s)});
+${FORM_JS}${SLOTS_JS}`;
+  return page({ title, desc, on: 'veh', body, head: `<style>${FICHA_CSS}</style>` + ld(ldCar) + ld(crumbs) + `<meta property="og:image" content="${esc(imgs[0])}">`, script });
 }
 
 export function cita({ cars, coche, motivo }) {
