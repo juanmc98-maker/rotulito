@@ -63,13 +63,15 @@ const NAV = [['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes',
 let badges = {};
 function shell(active) {
   if (!$('.lay')) {
-    $('#app').innerHTML = `<div class="mob"><img src="${B}/assets/logo.png" alt="Plata Garage"><button class="rb" id="mb" aria-label="Menú">${IC.menu}</button></div><div class="lay"><aside id="sb"></aside><main id="mn"></main></div>`;
+    $('#app').innerHTML = `<div class="mob"><a href="#resumen" id="mlg"><img src="${B}/assets/logo.png" alt="Plata Garage"></a><button class="rb" id="mb" aria-label="Menú">${IC.menu}</button></div><div class="lay"><aside id="sb"></aside><main id="mn"></main></div>`;
     $('#mb').onclick = () => $('#sb').classList.add('open');
+    $('#mlg').onclick = (e) => { e.preventDefault(); if (location.hash === '#resumen') route(); else location.hash = '#resumen'; };
   }
-  $('#sb').innerHTML = `<div class="sbh"><a class="lg" href="#resumen"><img src="${B}/assets/logo.png" alt="Plata Garage"></a><button class="rb mo" id="sx" aria-label="Cerrar menú">${IC.x}</button></div><small class="sbl">Backoffice</small>` +
+  $('#sb').innerHTML = `<div class="sbh"><a class="lg" href="#resumen" id="slg"><img src="${B}/assets/logo.png" alt="Plata Garage"></a><button class="rb mo" id="sx" aria-label="Cerrar menú">${IC.x}</button></div><small class="sbl">Backoffice</small>` +
     NAV.map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') +
     `<div class="sp"></div><a href="${B}/" target="_blank">${IC.web}Ver web pública</a><a href="#" id="lo">${IC.out}Cerrar sesión</a>`;
   $('#sx').onclick = () => $('#sb').classList.remove('open');
+  $('#slg').onclick = (e) => { e.preventDefault(); $('#sb').classList.remove('open'); if (location.hash === '#resumen') route(); else location.hash = '#resumen'; };
   $('#lo').onclick = guard(async (e) => { e.preventDefault(); await fetch(API + '/logout'); showLogin(); });
   $('#sb').classList.remove('open');
   return $('#mn');
@@ -177,7 +179,7 @@ V.coche = async (m, id) => {
   <div class="card sec"><h3>Identificación</h3><div class="fg">${inp('brand', 'Marca *', 'text', 'required')}${inp('model', 'Modelo *', 'text', 'required')}${inp('version', 'Versión')}</div></div>
   <div class="card sec"><h3>Datos principales</h3><div class="fg">${inp('year', 'Año *', 'number', 'min="1950" max="2100" required')}${inp('km', 'Kilómetros *', 'number', 'min="0" required')}${inp('price', 'Precio (€) *', 'number', 'min="0" required')}
   <label>Combustible *${sel('fuel', ['Gasolina', 'Diésel', 'Híbrido', 'Híbrido enchufable', 'Eléctrico', 'GLP'], c.fuel || 'Gasolina')}</label><label>Cambio *${sel('trans', ['Manual', 'Automático'], c.trans || 'Manual')}</label><label>Carrocería${sel('body', [['', '—'], 'Berlina', 'Compacto', 'Familiar', 'SUV', 'Coupé', 'Cabrio', 'Monovolumen', 'Furgoneta', 'Pickup'], c.body)}</label>
-  ${inp('cv', 'Potencia (CV)', 'number')}${inp('llegada', 'Entrada en stock (sale "Recién llegado" 15 días)', 'date')}<label>Etiqueta DGT${sel('etiqueta', [['', 'Según la descripción'], 'CERO', 'ECO', 'C', 'B', ['SIN', 'Sin etiqueta']], c.etiqueta)}</label>${inp('doors', 'Puertas', 'number')}${inp('seats', 'Plazas', 'number')}${inp('color', 'Color')}</div></div>
+  ${inp('cv', 'Potencia (CV)', 'number')}<label>Etiqueta DGT${sel('etiqueta', [['', 'Según la descripción'], 'CERO', 'ECO', 'C', 'B', ['SIN', 'Sin etiqueta']], c.etiqueta)}</label>${inp('doors', 'Puertas', 'number')}${inp('seats', 'Plazas', 'number')}${inp('color', 'Color')}</div></div>
   <div class="card sec"><h3>Financiación (uso interno)</h3><div class="fg">${inp('monthly', 'Cuota desde (€/mes)', 'number')}${inp('term', 'Plazo (meses)', 'number')}</div><p class="mu sm">No se muestra en la web: para publicar una cuota hay que poner también TIN, TAE y un ejemplo representativo (Ley 16/2011).</p></div>
   <div class="card sec"><h3>Reserva</h3><div class="fg"><label>Titular de las cuentas para la reserva${sel('holder', [['', '— Sin reserva —'], ...holders.map((h) => [h.id, `${h.name} · ${h.accounts.length} cuenta${h.accounts.length === 1 ? '' : 's'}`])], c.holder)}</label>${inp('reserve', 'Importe de la señal (€)', 'number')}</div><p class="mu sm">Si pones importe, la ficha muestra "Reserva este coche" y el cliente pide la reserva. Las cuentas no salen en la web: se las pasáis al confirmar.</p></div>
   <div class="card sec"><h3>Descripción y equipamiento</h3><div class="fg"><label class="s3">Descripción *<textarea name="desc" required rows="8">${esc(c.desc || '')}</textarea></label><label class="s3">Cómo lo vemos (opcional: vuestra opinión del coche, sale en la ficha)<textarea name="comment" rows="4">${esc(c.comment || '')}</textarea></label><label class="s3">Equipamiento (uno por línea)<textarea name="features" rows="8">${esc((c.features || []).join('\n'))}</textarea></label></div></div>
@@ -404,8 +406,8 @@ V.post = async (m, id) => {
 // ---------- clientes: embudo de ventas ----------
 const ETAPAS = [['nuevo', 'Nuevo'], ['contactado', 'Contactado'], ['cita', 'Con cita'], ['visitado', 'Ha venido'], ['reserva', 'Reserva'], ['vendido', 'Vendido'], ['perdido', 'Perdido']];
 const etq = (k) => (ETAPAS.find((x) => x[0] === k) || [k, k])[1];
-const TIPO = { cita: 'Cita', tasacion: 'Tasación', envio: 'Envío', mensaje: 'Mensaje', busqueda: 'Te lo buscamos' };
-const RUTA = { cita: 'reservas', tasacion: 'valoraciones', envio: 'envios', mensaje: 'mensajes', busqueda: 'busquedas' };
+const TIPO = { cita: 'Cita', tasacion: 'Tasación', envio: 'Envío', mensaje: 'Mensaje', busqueda: 'Te lo buscamos', portal: 'Portal' };
+const RUTA = { cita: 'reservas', tasacion: 'valoraciones', envio: 'envios', mensajes: 'mensajes', mensaje: 'mensajes', busqueda: 'busquedas', portal: 'clientes' };
 V.clientes = async (m) => {
   const all = await api('/admin/clientes'); m = shell('clientes'); let q = '';
   const draw = () => {
