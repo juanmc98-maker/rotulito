@@ -84,8 +84,8 @@ const V = {};
 
 const fechaLarga = (iso) => (iso ? new Date(iso + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }) : '');
 // Recordatorio de cita por WhatsApp: se abre el chat con el texto escrito y Cristina solo pulsa enviar
-const recordatorio = (b) => { const hoyM = new Date(); hoyM.setDate(hoyM.getDate() + 1); const man = hoyM.toISOString().slice(0, 10) === b.fecha;
-  return waLink(b.telefono, `Hola ${String(b.nombre || '').split(' ')[0]}, te recordamos la cita en Plata Garage ${man ? 'mañana' : 'el ' + fechaLarga(b.fecha)} a las ${b.hora}${b.cocheNombre ? ' para ver el ' + b.cocheNombre.replace(/\s*\(\d{4}\)$/, '') : ''}. Si no te va bien, dínoslo por aquí y la cambiamos sin problema. ¡Hasta pronto!`); };
+const recordatorio = (b) => { const [y, mo, d] = String(b.fecha || '').split('-');
+  return waLink(b.telefono, `Tenemos una visita para ver el coche:\n\n📅 ${d}/${mo} a las ${b.hora}\n📍 Calle Tetuán 92, Sabadell\n\nQuedo pendiente de tu confirmación.\n\nSi te interesa asegurarlo antes de venir, podemos dejarlo reservado y así evitar que otro cliente se adelante. Si quieres, te indico cómo hacerlo.`); };
 const KIC = { coches: IC.coches, 'coches/vendidos': IC.coches, reservas: IC.reservas, valoraciones: IC.valoraciones, envios: IC.envios, mensajes: IC.mensajes, busquedas: IC.busquedas, alertas: IC.alertas, clientes: IC.clientes };
 V.resumen = async (m) => {
   const s = await api('/admin/summary');
@@ -412,8 +412,10 @@ V.clientes = async (m) => {
   const all = await api('/admin/clientes'); m = shell('clientes'); let q = '';
   const draw = () => {
     const list = all.filter((c) => !q || `${c.nombre} ${c.telefono} ${c.email}`.toLowerCase().includes(q));
-    $('#kb').innerHTML = ETAPAS.map(([k, t]) => { const cs = list.filter((c) => c.etapa === k); return `<div class="col" data-e="${k}"><h4>${t} <span>${cs.length}</span></h4>${cs.map((c) => `<a class="kc" draggable="true" data-k="${c.key}" href="#cliente/${c.key}"><b>${esc(c.nombre)}</b><span>${esc(c.leads[0]?.resumen || '')}</span><small>${fdate(c.last)} · ${c.leads.length} solicitud${c.leads.length === 1 ? '' : 'es'}${c.manual ? '' : ' · auto'}</small></a>`).join('') || '<p class="mu sm" style="padding:6px">—</p>'}</div>`; }).join('');
+    $('#kb').innerHTML = ETAPAS.map(([k, t]) => { const cs = list.filter((c) => c.etapa === k); return `<div class="col" data-e="${k}"><h4>${t} <span>${cs.length}</span></h4>${cs.map((c) => `<div class="kc" draggable="true" data-k="${c.key}"><a href="#cliente/${c.key}"><b>${esc(c.nombre)}</b><span>${esc(c.leads[0]?.resumen || '')}</span><small>${fdate(c.last)} · ${c.leads.length} solicitud${c.leads.length === 1 ? '' : 'es'}${c.manual ? '' : ' · auto'}</small></a><select class="mv" data-k="${c.key}" aria-label="Mover a">${ETAPAS.map(([k2, t2]) => `<option value="${k2}"${k2 === c.etapa ? ' selected' : ''}>${t2}</option>`).join('')}</select></div>`).join('') || '<p class="mu sm" style="padding:6px">—</p>'}</div>`; }).join('');
     $('#kb').querySelectorAll('.kc').forEach((el) => (el.ondragstart = (e) => e.dataTransfer.setData('text/plain', el.dataset.k)));
+    // En el móvil no se puede arrastrar: cada tarjeta lleva su selector de etapa
+    $('#kb').querySelectorAll('.mv').forEach((sel) => (sel.onchange = guard(async () => { const c = all.find((x) => x.key === sel.dataset.k); await api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: sel.value } }); c.etapa = sel.value; c.manual = sel.value; draw(); toast(`${c.nombre}: ${etq(c.etapa)}`); })));
     $('#kb').querySelectorAll('.col').forEach((col) => { col.ondragover = (e) => { e.preventDefault(); col.classList.add('ov'); }; col.ondragleave = () => col.classList.remove('ov');
       col.ondrop = guard(async (e) => { e.preventDefault(); col.classList.remove('ov'); const k = e.dataTransfer.getData('text/plain'); const c = all.find((x) => x.key === k); if (!c || c.etapa === col.dataset.e) return; await api('/admin/clientes/' + k, { method: 'PUT', body: { etapa: col.dataset.e } }); c.etapa = col.dataset.e; c.manual = col.dataset.e; draw(); toast(`${c.nombre}: ${etq(c.etapa)}`); }); });
   };
@@ -435,7 +437,9 @@ V.cliente = async (m, key) => {
     <label>Notas internas<textarea id="nt" rows="5">${esc(c.notas || '')}</textarea></label><div class="row" style="margin-top:12px"><button class="btn" id="sv">Guardar</button><a class="btn g" target="_blank" rel="noopener" href="${waLink(c.telefono, 'Hola ' + String(c.nombre).split(' ')[0] + ', te escribimos de Plata Garage. ')}">${IC.wa}WhatsApp</a><a class="btn g" href="tel:${esc(c.telefono)}">Llamar</a>${c.email ? `<a class="btn g" href="mailto:${esc(c.email)}">Email</a>` : ''}</div></div>
     <div class="card"><h3 style="margin-bottom:12px">Historial (${c.leads.length})</h3>${c.leads.map((l) => `<a class="li" href="#${RUTA[l.tipo]}" style="text-decoration:none"><div><b>${TIPO[l.tipo]}</b><span>${esc(l.resumen)}</span></div><div class="r">${fdate(l.created)}<br>${l.status ? badge(l.status) : ''}</div></a>`).join('')}
     ${c.compras.length ? `<h3 style="margin:18px 0 8px">Compras</h3>${c.compras.map((x) => `<div class="li"><div><b>${esc(x.nombre)}</b><span>${x.sold ? 'Vendido el ' + fdate(x.soldAt) : 'Reservado'}</span></div></div>`).join('')}` : ''}</div></div>`;
-  $('#sv').onclick = guard(async () => { await api('/admin/clientes/' + key, { method: 'PUT', body: { etapa: $('#et').value, notas: $('#nt').value } }); toast('Guardado'); route(); });
+  const guardar = guard(async (msg = 'Guardado') => { await api('/admin/clientes/' + key, { method: 'PUT', body: { etapa: $('#et').value, notas: $('#nt').value } }); toast(msg); route(); });
+  $('#sv').onclick = () => guardar();
+  $('#et').onchange = () => guardar('Etapa cambiada'); // se guarda sola al elegirla (en el móvil no hay que pulsar Guardar)
 };
 
 // ---------- router ----------
