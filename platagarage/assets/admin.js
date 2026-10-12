@@ -32,6 +32,7 @@ const IC = {
   sold: svg('<path d="M20 6L9 17l-5-5"/>'),
   menu: svg('<path d="M3 6h18M3 12h18M3 18h18"/>'),
   x: svg('<path d="M18 6L6 18M6 6l12 12"/>'),
+  conexion: svg('<path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/>'),
   clientes: svg('<path d="M3 4h18l-7 8v6l-4 2v-8z"/>'),
   copy: svg('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>'),
   wa: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2a9.9 9.9 0 00-8.5 15l-1.5 5 5.2-1.4A9.9 9.9 0 1012.04 2zm5.8 14.1c-.25.7-1.45 1.33-2 1.4-.52.08-1.17.11-1.89-.12a17 17 0 01-1.7-.63c-3-1.3-4.95-4.32-5.1-4.52-.15-.2-1.22-1.62-1.22-3.09 0-1.46.77-2.18 1.04-2.48.27-.3.6-.37.79-.37h.57c.18 0 .43-.07.67.51.25.6.84 2.05.92 2.2.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.17-.31.38-.45.51-.15.15-.3.31-.13.6.17.3.77 1.27 1.65 2.06 1.13 1.01 2.09 1.33 2.39 1.48.3.14.47.12.64-.08.17-.2.74-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.73.82 2.03.97.3.15.5.22.57.35.07.12.07.72-.18 1.41z"/></svg>',
@@ -61,16 +62,24 @@ function showLogin() {
 // ---------- layout ----------
 const NAV = [['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes'], ['coches', 'Coches'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['horarios', 'Horarios'], ['valoraciones', 'Valoraciones'], ['busquedas', 'Te lo buscamos'], ['alertas', 'Alertas'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog'], ['usuarios', 'Usuarios']];
 let badges = {};
+// Negocio activo: Plata Garage (panel completo), Plata Marine y Rotulito (embudo de clientes)
+const NEGS = { garage: { n: 'Plata Garage', logo: B + '/assets/logo.png', dark: true }, marine: { n: 'Plata Marine', logo: '/img/plata-marine-logo.png' }, rotulito: { n: 'Rotulito', logo: '/assets/rotulito-logo.svg' } };
+let NEG = 'garage'; try { NEG = localStorage.getItem('pg_neg') || 'garage'; if (!NEGS[NEG]) NEG = 'garage'; } catch (e) { /* sin almacenamiento */ }
+const NAV_OTRO = [['resumen', 'Resumen'], ['clientes', 'Clientes'], ['conexion', 'Entrada de leads']];
+const logoTag = (n = NEG) => `<span class="nlg${NEGS[n].dark ? '' : ' w'}"><img src="${NEGS[n].logo}" alt="${NEGS[n].n}"></span>`;
 function shell(active) {
   if (!$('.lay')) {
-    $('#app').innerHTML = `<div class="mob"><a href="#resumen" id="mlg"><img src="${B}/assets/logo.png" alt="Plata Garage"></a><button class="rb" id="mb" aria-label="Menú">${IC.menu}</button></div><div class="lay"><aside id="sb"></aside><main id="mn"></main></div>`;
+    $('#app').innerHTML = `<div class="mob"><a href="#resumen" id="mlg">${logoTag()}</a><button class="rb" id="mb" aria-label="Menú">${IC.menu}</button></div><div class="lay"><aside id="sb"></aside><main id="mn"></main></div>`;
     $('#mb').onclick = () => $('#sb').classList.add('open');
     $('#mlg').onclick = (e) => { e.preventDefault(); if (location.hash === '#resumen') route(); else location.hash = '#resumen'; };
   }
-  $('#sb').innerHTML = `<div class="sbh"><a class="lg" href="#resumen" id="slg"><img src="${B}/assets/logo.png" alt="Plata Garage"></a><button class="rb mo" id="sx" aria-label="Cerrar menú">${IC.x}</button></div><small class="sbl">Backoffice</small>` +
-    NAV.map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') +
-    `<div class="sp"></div><a href="${B}/" target="_blank">${IC.web}Ver web pública</a><a href="#" id="lo">${IC.out}Cerrar sesión</a>`;
+  const ml = $('#mlg'); if (ml) ml.innerHTML = logoTag();
+  $('#sb').innerHTML = `<div class="sbh"><a class="lg" href="#resumen" id="slg">${logoTag()}</a><button class="rb mo" id="sx" aria-label="Cerrar menú">${IC.x}</button></div>
+    <div class="negs">${Object.keys(NEGS).map((k) => `<button data-neg="${k}" class="${k === NEG ? 'on' : ''}" title="${NEGS[k].n}">${NEGS[k].n}</button>`).join('')}</div><small class="sbl">Backoffice</small>` +
+    (NEG === 'garage' ? NAV : NAV_OTRO).map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') +
+    `<div class="sp"></div><a href="${NEG === 'marine' ? 'https://www.platamarine.com/' : NEG === 'rotulito' ? 'https://www.rotulito.com/' : B + '/'}" target="_blank" rel="noopener">${IC.web}Ver web pública</a><a href="#" id="lo">${IC.out}Cerrar sesión</a>`;
   $('#sx').onclick = () => $('#sb').classList.remove('open');
+  $('#sb').querySelectorAll('[data-neg]').forEach((b) => (b.onclick = () => { NEG = b.dataset.neg; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } $('#sb').classList.remove('open'); if (location.hash === '#resumen') route(); else location.hash = '#resumen'; }));
   $('#slg').onclick = (e) => { e.preventDefault(); $('#sb').classList.remove('open'); if (location.hash === '#resumen') route(); else location.hash = '#resumen'; };
   $('#lo').onclick = guard(async (e) => { e.preventDefault(); await fetch(API + '/logout'); showLogin(); });
   $('#sb').classList.remove('open');
@@ -95,11 +104,18 @@ V.resumen = async (m) => {
   const fila = (b, right) => `<div class="li"><div><b>${esc(b.nombre)}</b><span>${esc(b.motivo || b.cocheNombre || '')} · ${esc(b.telefono)}</span></div><div class="r">${right}</div></div>`;
   m.innerHTML = top('Resumen', 'Estado general de la actividad reciente.', notifBtn()) +
     `<div class="kp">${k(s.enStock, 'Coches en stock', 'coches')}${k(s.vendidos, 'Coches vendidos', 'coches/vendidos')}${k(s.citasPendientes, 'Citas pendientes', 'reservas')}${k(s.tasacionesNuevas, 'Valoraciones nuevas', 'valoraciones')}${k(s.enviosPendientes, 'Envíos pendientes', 'envios')}${k(s.mensajesSinLeer, 'Mensajes sin leer', 'mensajes')}${k(s.busquedasPendientes || 0, 'Te lo buscamos (nuevas)', 'busquedas')}${k(s.alertasActivas || 0, 'Alertas de stock activas', 'alertas')}${k(s.destacados, 'Destacados activos', 'coches')}${k(eur(s.valorStock), 'Valor del stock', 'coches')}</div>
+    ${s.porDueno?.length ? `<div class="kp">${s.porDueno.map((d) => `<a class="card" href="#coches/${d.o === 'Cristina' ? 'cristina' : d.o === 'Juan' ? 'juan' : 'stock'}"><span>Stock de ${esc(d.o)}</span><i>${IC.coches}</i><b>${d.n} · ${eur(d.v)}</b></a>`).join('')}</div>` : ''}
+    <div id="int"></div>
     ${s.manana?.length ? `<div class="card sec hl"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Citas de mañana (${s.manana.length})</h3><span class="mu sm">Envía el recordatorio por WhatsApp con un clic</span></div>${s.manana.map((b) => fila(b, `<b class="o">${b.hora}</b> <a class="btn g s" target="_blank" rel="noopener" href="${recordatorio(b)}">${IC.wa}Recordar</a>`)).join('')}</div>` : ''}
     <div class="card sec"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Últimas reservas</h3><a href="#reservas" class="sm" style="color:var(--or)">Ver todas</a></div>${s.ultimasReservas?.length ? s.ultimasReservas.map((b) => fila(b, `${fdate(b.fecha)}<br><b class="o">${b.hora}</b>`)).join('') : '<p class="mu">Aún no hay reservas.</p>'}</div>
     <div class="two"><div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3>Próximas citas</h3><a href="#reservas/semana" class="sm" style="color:var(--or)">Ver la semana</a></div>${s.proximasCitas.length ? `<table>${s.proximasCitas.map((b) => `<tr><td><b>${esc(b.nombre)}</b><br><span class="mu sm">${esc(b.cocheNombre || b.motivo)}</span></td><td>${fdate(b.fecha)} · ${b.hora}</td><td>${badge(b.status)}</td></tr>`).join('')}</table>` : '<p class="mu">No hay citas próximas.</p>'}</div>
     <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3>Últimas tasaciones</h3><a href="#valoraciones" class="sm" style="color:var(--or)">Ver todas</a></div>${s.ultimasTasaciones.length ? `<table>${s.ultimasTasaciones.map((t) => `<tr><td><b>${esc(t.marca)} ${esc(t.modelo)}</b><br><span class="mu sm">${esc(t.nombre)}</span></td><td>${fdate(t.created)}</td><td>${badge(t.status)}</td></tr>`).join('')}</table>` : '<p class="mu">Aún no hay tasaciones.</p>'}</div></div>`;
   bindNotif();
+  // #44 coches del stock que encajan con alguien que pidió aviso o que nos encargó buscarle uno
+  Promise.all([api('/admin/cars'), api('/admin/alertas'), api('/admin/busquedas')]).then(([cars, als, bus]) => {
+    const rows = cars.filter((c) => !c.sold && !c.hidden).map((c) => ({ c, n: matches(c, als, bus).length })).filter((x) => x.n).sort((a, b) => b.n - a.n).slice(0, 6);
+    if (rows.length && $('#int')) $('#int').innerHTML = `<div class="card sec hl"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Coches con interesados esperando</h3><span class="mu sm">Ábrelos y pulsa "Avisar a interesados"</span></div>${rows.map(({ c, n }) => `<a class="li" href="#coche/${c.id}" style="text-decoration:none"><div><b>${esc(c.brand)} ${esc(c.model)} ${esc(c.version || '')}</b><span>${eur(c.price)} · ${c.year}</span></div><div class="r"><b class="o">${n} interesado${n === 1 ? '' : 's'}</b></div></a>`).join('')}</div>`;
+  }).catch(() => {});
 };
 
 // ---------- avisos en el móvil/ordenador (con el panel abierto o instalado como app) ----------
@@ -107,6 +123,7 @@ const notifBtn = () => ('Notification' in window && Notification.permission !== 
 function bindNotif() { const b = $('#nb'); if (b) b.onclick = async () => { const r = await Notification.requestPermission(); toast(r === 'granted' ? 'Avisos activados en este dispositivo' : 'No se han activado los avisos', r !== 'granted'); b.remove(); }; }
 let lastSum = null;
 async function poll() {
+  if (NEG !== 'garage') return;
   try {
     const s = await api('/admin/summary');
     const cur = { citas: s.citasPendientes, tas: s.tasacionesNuevas, env: s.enviosPendientes, msg: s.mensajesSinLeer, bus: s.busquedasPendientes };
@@ -123,11 +140,11 @@ async function poll() {
 V.coches = async (m, arg) => {
   const cars = await api('/admin/cars'); m = shell('coches');
   const f = arg || 'stock';
-  const list = cars.filter((c) => (f === 'stock' ? !c.sold : f === 'vendidos' ? c.sold : true));
+  const list = cars.filter((c) => (f === 'stock' ? !c.sold : f === 'vendidos' ? c.sold : f === 'cristina' ? !c.sold && c.owner === 'Cristina' : f === 'juan' ? !c.sold && c.owner === 'Juan' : true));
   const st = (c) => (c.sold ? '<span class="bg x">Vendido</span>' : c.status === 'reservado' ? '<span class="bg b">Reservado</span>' : c.status === 'preparacion' ? '<span class="bg w">En preparación</span>' : '<span class="bg ok">En stock</span>') + (c.featured && !c.sold ? '<span class="bg o">Destacado</span>' : '') + (c.hidden ? '<span class="bg r">Oculto</span>' : '');
   m.innerHTML = top('Coches', `${cars.filter((c) => !c.sold).length} en stock · ${cars.filter((c) => c.sold).length} vendidos`, `<a class="btn" href="#coche/nuevo">+ Nuevo coche</a>`) +
-    `<div class="filt">${[['stock', 'En stock'], ['vendidos', 'Vendidos'], ['todos', 'Todos']].map(([k, t]) => `<button data-f="${k}" class="${f === k ? 'on' : ''}">${t}</button>`).join('')}</div>
-    <div class="tw"><table><thead><tr><th>Coche</th><th>Año</th><th class="hide-m">Km</th><th>Precio</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>${list.map((c) => `<tr data-id="${c.id}"><td><div class="cn"><img class="thumb" src="${esc(c.images?.[0] || '')}" alt="" loading="lazy"><div><b>${esc(c.brand)} ${esc(c.model)}</b><small>${esc(c.version || '')}</small></div></div></td><td>${c.year}</td><td class="hide-m">${nf(c.km)}</td><td><b>${eur(c.price)}</b></td><td>${st(c)}</td>
+    `<div class="filt">${[['stock', 'En stock'], ['cristina', 'De Cristina'], ['juan', 'De Juan'], ['vendidos', 'Vendidos'], ['todos', 'Todos']].map(([k, t]) => `<button data-f="${k}" class="${f === k ? 'on' : ''}">${t}</button>`).join('')}</div>
+    <div class="tw"><table><thead><tr><th>Coche</th><th>Año</th><th class="hide-m">Km</th><th>Precio</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>${list.map((c) => `<tr data-id="${c.id}"><td><div class="cn"><img class="thumb" src="${esc(c.images?.[0] || '')}" alt="" loading="lazy"><div><b>${esc(c.brand)} ${esc(c.model)}</b><small>${esc(c.version || '')}${c.owner ? ' · ' + esc(c.owner) : ''}</small></div></div></td><td>${c.year}</td><td class="hide-m">${nf(c.km)}</td><td><b>${eur(c.price)}</b></td><td>${st(c)}</td>
     <td><div class="acts"><button class="ib ${c.featured ? 'on' : ''}" data-a="star" title="Destacar en la portada">${IC.star}</button><a class="ib" href="#coche/${c.id}" title="Editar">${IC.edit}</a><button class="ib" data-a="dup" title="Duplicar (para dar de alta uno parecido)">${IC.copy}</button><button class="btn g s" data-a="sold">${c.sold ? 'Volver a stock' : 'Vendido'}</button><button class="btn r s" data-a="del">Eliminar</button></div></td></tr>`).join('') || '<tr><td colspan="6" class="mu">No hay coches.</td></tr>'}</tbody></table></div>`;
   m.querySelectorAll('.filt button').forEach((b) => (b.onclick = () => (location.hash = '#coches/' + b.dataset.f)));
   m.querySelectorAll('[data-a]').forEach((b) => (b.onclick = guard(async () => {
@@ -176,7 +193,7 @@ V.coche = async (m, id) => {
   const inp = (n, l, t = 'text', extra = '') => `<label>${l}<input name="${n}" type="${t}" value="${esc(c[n] ?? '')}" ${extra}></label>`;
   m.innerHTML = top(isNew ? 'Nuevo coche' : `${esc(c.brand)} ${esc(c.model)}`, isNew ? 'Rellena los datos y añade las fotos.' : `Ficha pública: <a href="${B}/vehiculos/${c.slug}" target="_blank" style="color:var(--or)">${B}/vehiculos/${c.slug}</a>`, `<a class="btn g" href="#coches">Volver</a>`) +
   `<form id="cf">
-  <div class="card sec"><h3>Identificación</h3><div class="fg">${inp('brand', 'Marca *', 'text', 'required')}${inp('model', 'Modelo *', 'text', 'required')}${inp('version', 'Versión')}</div></div>
+  <div class="card sec"><h3>Identificación</h3><div class="fg">${inp('brand', 'Marca *', 'text', 'required')}${inp('model', 'Modelo *', 'text', 'required')}${inp('version', 'Versión')}<label>De quién es (interno, no sale en la web)${sel('owner', [['', '— Sin asignar —'], 'Cristina', 'Juan'], c.owner)}</label></div></div>
   <div class="card sec"><h3>Datos principales</h3><div class="fg">${inp('year', 'Año *', 'number', 'min="1950" max="2100" required')}${inp('km', 'Kilómetros *', 'number', 'min="0" required')}${inp('price', 'Precio (€) *', 'number', 'min="0" required')}
   <label>Combustible *${sel('fuel', ['Gasolina', 'Diésel', 'Híbrido', 'Híbrido enchufable', 'Eléctrico', 'GLP'], c.fuel || 'Gasolina')}</label><label>Cambio *${sel('trans', ['Manual', 'Automático'], c.trans || 'Manual')}</label><label>Carrocería${sel('body', [['', '—'], 'Berlina', 'Compacto', 'Familiar', 'SUV', 'Coupé', 'Cabrio', 'Monovolumen', 'Furgoneta', 'Pickup'], c.body)}</label>
   ${inp('cv', 'Potencia (CV)', 'number')}<label>Etiqueta DGT${sel('etiqueta', [['', 'Según la descripción'], 'CERO', 'ECO', 'C', 'B', ['SIN', 'Sin etiqueta']], c.etiqueta)}</label>${inp('doors', 'Puertas', 'number')}${inp('seats', 'Plazas', 'number')}${inp('color', 'Color')}</div></div>
@@ -213,6 +230,13 @@ V.coche = async (m, id) => {
 };
 
 // Personas que pidieron aviso o encargo y encajan con este coche (solo las que dieron su consentimiento para ello)
+function matches(c, als, bus) {
+  const N = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const txt = N([c.brand, c.model, c.version, c.fuel, c.trans, c.body].join(' '));
+  const a = als.filter((x) => x.status === 'activa' && (x.coche ? x.coche === c.slug : (!x.max || c.price <= x.max * 1.05) && (!x.busca || N(x.busca).split(/[^a-z0-9]+/).filter((w) => w.length > 2).some((w) => txt.includes(w)))));
+  const b = bus.filter((y) => y.status !== 'cerrada' && (!y.presupuesto || c.price <= y.presupuesto * 1.05) && (!y.marca || N(c.brand).includes(N(y.marca))) && (!y.modelo || txt.includes(N(y.modelo).split(' ')[0])) && (!y.combustible || N(c.fuel).startsWith(N(y.combustible).slice(0, 5))) && (!y.cambio || c.trans === y.cambio) && (!y.kmMax || c.km <= y.kmMax) && (!y.anioDesde || c.year >= y.anioDesde));
+  return [...a, ...b];
+}
 function interesados(c, als, bus) {
   const N = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const txt = N([c.brand, c.model, c.version, c.fuel, c.trans, c.body].join(' '));
@@ -330,9 +354,23 @@ V.analiticas = async (m, arg) => {
   <div class="two"><div class="card"><h3 style="margin-bottom:10px">Coches más vistos</h3>${tbl(sum('car'), 'Coche', 'Visitas', nm)}</div><div class="card"><h3 style="margin-bottom:10px">De dónde llegan</h3>${tbl(sum('src'))}</div></div>
   <div class="two" style="margin-top:16px"><div class="card"><h3 style="margin-bottom:10px">Páginas más vistas</h3>${tbl(sum('pv'))}</div><div class="card"><h3 style="margin-bottom:10px">Formularios por tipo</h3>${tbl(Object.entries(ev).filter(([k]) => k.startsWith('form-')).map(([k, v]) => [k.slice(5), v]))}</div></div>
   <div class="two" style="margin-top:16px"><div class="card"><h3 style="margin-bottom:10px">Ciudades (aproximadas)</h3>${tbl(sum('city'))}</div><div class="card"><h3 style="margin-bottom:10px">Dispositivos</h3>${tbl(sum('dev'))}</div></div>
+  ${cwvHtml(sum('cwv'))}
   <p class="mu sm" style="margin-top:14px">Sin cookies ni datos personales: no se guarda la IP ni nada que identifique a nadie. Las ciudades salen de la conexión y son aproximadas.</p>`;
   m.querySelectorAll('[data-d]').forEach((b) => (b.onclick = () => (location.hash = '#analiticas/' + b.dataset.d)));
 };
+
+// Velocidad real de la web medida en los móviles y ordenadores de los visitantes (percentil 75, como Google)
+function cwvHtml(rows) {
+  const B = { lcp: [1000, 1500, 2000, 2500, 3000, 4000, 6000], inp: [100, 200, 300, 500, 800], cls: [0.05, 0.1, 0.15, 0.25, 0.4] };
+  const L = { lcp: [2500, 4000], inp: [200, 500], cls: [0.1, 0.25] };
+  const d = {}; rows.forEach(([k, v]) => { const [t, m, i] = k.split('|'); ((d[t] = d[t] || {})[m] = d[t][m] || []).push([+i, v]); });
+  const tpls = Object.keys(d); if (!tpls.length) return '';
+  const p75 = (m, arr) => { const tot = arr.reduce((s, [, v]) => s + v, 0); let acc = 0; for (const [i, v] of arr.sort((a, b) => a[0] - b[0])) { acc += v; if (acc >= tot * 0.75) return { v: i < B[m].length ? B[m][i] : B[m][B[m].length - 1] * 1.5, n: tot, mas: i >= B[m].length }; } return null; };
+  const fmt = (m, x) => (m === 'cls' ? '≤ ' + x.v : (x.mas ? '> ' : '≤ ') + (m === 'lcp' ? (x.v / 1000).toFixed(1) + ' s' : x.v + ' ms'));
+  const col = (m, x) => (x.v <= L[m][0] ? 'ok' : x.v <= L[m][1] ? 'w' : 'r');
+  const nom = { home: 'Portada', catalogo: 'Catálogo', ficha: 'Fichas de coche', landing: 'Páginas de zona/tipo', cita: 'Cita', otra: 'Otras' };
+  return `<div class="card sec" style="margin-top:16px"><h3 style="margin-bottom:4px">Velocidad real de la web</h3><p class="mu sm" style="margin:0 0 10px">Medida en los dispositivos de los visitantes. Verde = bien para Google; amarillo = mejorable; rojo = lento.</p><table><tr><th>Página</th><th>Carga (LCP)</th><th>Respuesta (INP)</th><th>Estabilidad (CLS)</th><th>Medidas</th></tr>${tpls.map((t) => { const r = { lcp: d[t].lcp && p75('lcp', d[t].lcp), inp: d[t].inp && p75('inp', d[t].inp), cls: d[t].cls && p75('cls', d[t].cls) }; return `<tr><td>${nom[t] || t}</td>${['lcp', 'inp', 'cls'].map((m) => `<td>${r[m] ? `<span class="bg ${col(m, r[m])}">${fmt(m, r[m])}</span>` : '—'}</td>`).join('')}<td>${r.lcp?.n || 0}</td></tr>`; }).join('')}</table></div>`;
+}
 
 V.usuarios = async (m) => {
   let us; try { us = await api('/admin/users'); } catch (e) { m = shell('usuarios'); m.innerHTML = top('Usuarios') + `<div class="card mu">${esc(e.message)}</div>`; return; }
@@ -442,10 +480,60 @@ V.cliente = async (m, key) => {
   $('#et').onchange = () => guardar('Etapa cambiada'); // se guarda sola al elegirla (en el móvil no hay que pulsar Guardar)
 };
 
+// ---------- Plata Marine y Rotulito: embudo de clientes ----------
+const nApi = (p = '', o) => api(`/admin/neg/${NEG}${p}`, o);
+V.nresumen = async (m) => {
+  const d = await nApi(); m = shell('resumen'); const L = d.leads; const td = new Date().toISOString().slice(0, 10);
+  const hoy = L.filter((x) => (x.updated || '').slice(0, 10) === td).length, sem = L.filter((x) => Date.now() - Date.parse(x.created) < 7 * 864e5).length;
+  const prim = L.filter((x) => x.etapa === d.etapas[0]);
+  m.innerHTML = top(`Resumen · ${NEGS[NEG].n}`, 'Lo que ha entrado y en qué punto está cada cliente.', `<a class="btn" href="#clientes">Ver embudo</a>`) +
+    `<div class="kp">${[['Clientes en total', L.length], ['Nuevos esta semana', sem], ['Con movimiento hoy', hoy], [`Sin atender (${d.etapas[0]})`, prim.length]].map(([t, v]) => `<a class="card" href="#clientes"><span>${t}</span><i>${IC.clientes}</i><b>${v}</b></a>`).join('')}</div>
+    <div class="card sec"><h3 style="margin-bottom:8px">Por etapa</h3>${d.etapas.map((e) => { const n = L.filter((x) => x.etapa === e).length; return `<div class="li"><div><b>${esc(e)}</b></div><div class="r"><b class="o">${n}</b></div></div>`; }).join('')}</div>
+    <div class="card sec"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Últimos contactos</h3><a href="#clientes" class="sm" style="color:var(--or)">Ver todos</a></div>${[...L].sort((a, b) => (b.updated || '').localeCompare(a.updated || '')).slice(0, 8).map((x) => `<a class="li" href="#ncliente/${x.id}" style="text-decoration:none"><div><b>${esc(x.nombre)}</b><span>${esc(x.historial?.[0]?.t || x.interes || '')}</span></div><div class="r">${fdate(x.updated)}<br><span class="mu">${esc(x.etapa)}</span></div></a>`).join('') || '<p class="mu">Todavía no ha entrado ningún contacto. Mira "Entrada de leads".</p>'}</div>`;
+};
+V.nclientes = async (m) => {
+  const d = await nApi(); m = shell('clientes'); let q = '';
+  const draw = () => {
+    const list = d.leads.filter((c) => !q || `${c.nombre} ${c.telefono} ${c.email} ${c.interes}`.toLowerCase().includes(q));
+    $('#kb').innerHTML = d.etapas.map((e) => { const cs = list.filter((c) => c.etapa === e); return `<div class="col" data-e="${esc(e)}"><h4>${esc(e)} <span>${cs.length}</span></h4>${cs.map((c) => `<div class="kc" draggable="true" data-k="${c.id}"><a href="#ncliente/${c.id}"><b>${esc(c.nombre)}</b><span>${esc(c.interes || c.historial?.[0]?.t || '')}</span><small>${fdate(c.updated)}${c.origen ? ' · ' + esc(c.origen) : ''}</small></a><select class="mv" data-k="${c.id}" aria-label="Mover a">${d.etapas.map((x) => `<option${x === c.etapa ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></div>`).join('') || '<p class="mu sm" style="padding:6px">—</p>'}</div>`; }).join('');
+    const mover = guard(async (id, e) => { const c = d.leads.find((x) => x.id === id); if (!c || c.etapa === e) return; await nApi('/' + id, { method: 'PUT', body: { etapa: e } }); c.etapa = e; draw(); toast(`${c.nombre}: ${e}`); });
+    $('#kb').querySelectorAll('.kc').forEach((el) => (el.ondragstart = (ev) => ev.dataTransfer.setData('text/plain', el.dataset.k)));
+    $('#kb').querySelectorAll('.col').forEach((col) => { col.ondragover = (ev) => { ev.preventDefault(); col.classList.add('ov'); }; col.ondragleave = () => col.classList.remove('ov'); col.ondrop = (ev) => { ev.preventDefault(); col.classList.remove('ov'); mover(ev.dataTransfer.getData('text/plain'), col.dataset.e); }; });
+    $('#kb').querySelectorAll('.mv').forEach((sel) => (sel.onchange = () => mover(sel.dataset.k, sel.value)));
+  };
+  m.innerHTML = top(`Clientes · ${NEGS[NEG].n}`, `${d.leads.length} contactos. Arrastra la tarjeta o cambia la etapa en su selector.`, `<button class="btn" id="nn">+ Añadir a mano</button><button class="btn g" id="csv">Exportar (CSV)</button>`) +
+    `<input id="qq" placeholder="Buscar por nombre, teléfono, email o interés" style="max-width:420px;margin-bottom:14px"><div class="kb" id="kb"></div>`;
+  $('#qq').oninput = (e) => { q = e.target.value.toLowerCase().trim(); draw(); };
+  $('#nn').onclick = () => { const dm = modal(`<h3 style="margin-bottom:12px">Añadir cliente a mano</h3><form id="nf" class="fg" style="grid-template-columns:1fr"><label>Nombre<input name="nombre" required></label><label>Teléfono<input name="telefono" inputmode="tel"></label><label>Email<input name="email" type="email"></label><label>Origen<input name="origen" placeholder="WhatsApp, Meta, llamada…"></label><label>Interés<input name="interes" placeholder="Qué busca o qué vende"></label><div class="row" style="justify-content:flex-end"><button type="button" class="btn g" id="nc">Cancelar</button><button class="btn">Añadir</button></div></form>`);
+    $('#nc', dm).onclick = () => dm.remove(); $('#nf', dm).onsubmit = guard(async (e) => { e.preventDefault(); await nApi('', { method: 'POST', body: Object.fromEntries(new FormData(e.target)) }); dm.remove(); toast('Añadido'); route(); }); };
+  $('#csv').onclick = () => { const rows = [['Nombre', 'Teléfono', 'Email', 'Etapa', 'Origen', 'Interés', 'Última actividad', 'Notas'], ...d.leads.map((c) => [c.nombre, c.telefono, c.email, c.etapa, c.origen, c.interes, (c.updated || '').slice(0, 10), c.notas])];
+    const csv = '﻿' + rows.map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `clientes-${NEG}-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); };
+  draw();
+};
+V.ncliente = async (m, id) => {
+  const d = await nApi(); const c = d.leads.find((x) => x.id === id); m = shell('clientes');
+  if (!c) { m.innerHTML = top('Cliente') + '<div class="card mu">No encontrado.</div>'; return; }
+  m.innerHTML = top(esc(c.nombre), `${esc(c.telefono || '')}${c.email ? ' · ' + esc(c.email) : ''}${c.origen ? ' · ' + esc(c.origen) : ''}`, `<a class="btn g" href="#clientes">Volver</a>`) +
+    `<div class="two"><div class="card"><h3 style="margin-bottom:12px">Estado</h3><label>Etapa<select id="et">${d.etapas.map((e) => `<option${e === c.etapa ? ' selected' : ''}>${esc(e)}</option>`).join('')}</select></label>
+    <label style="margin-top:10px">Interés<input id="in" value="${esc(c.interes || '')}"></label><label style="margin-top:10px">Notas internas<textarea id="nt" rows="5">${esc(c.notas || '')}</textarea></label>
+    <div class="row" style="margin-top:12px"><button class="btn" id="sv">Guardar</button>${c.telefono ? `<a class="btn g" target="_blank" rel="noopener" href="${waLink(c.telefono)}">${IC.wa}WhatsApp</a><a class="btn g" href="tel:${esc(c.telefono)}">Llamar</a>` : ''}${c.email ? `<a class="btn g" href="mailto:${esc(c.email)}">Email</a>` : ''}<span style="flex:1"></span><button class="btn r s" id="del">Borrar</button></div></div>
+    <div class="card"><h3 style="margin-bottom:12px">Historial</h3>${(c.historial || []).map((h) => `<div class="li"><div><span style="color:#ddd">${esc(h.t)}</span></div><div class="r">${fdt(h.d)}</div></div>`).join('') || '<p class="mu">Sin movimientos.</p>'}</div></div>`;
+  const g = guard(async (msg = 'Guardado') => { await nApi('/' + id, { method: 'PUT', body: { etapa: $('#et').value, notas: $('#nt').value, interes: $('#in').value } }); toast(msg); route(); });
+  $('#sv').onclick = () => g(); $('#et').onchange = () => g('Etapa cambiada');
+  $('#del').onclick = guard(async () => { if (!confirm('¿Borrar este cliente del embudo?')) return; await nApi('/' + id, { method: 'DELETE' }); location.hash = '#clientes'; });
+};
+V.conexion = async (m) => {
+  const c = await nApi('/conexion'); m = shell('conexion');
+  m.innerHTML = top(`Entrada de leads · ${NEGS[NEG].n}`, 'Dirección privada a la que la web y los formularios mandan cada contacto nuevo.') +
+    `<div class="card sec"><p class="mu" style="margin-top:0">Los formularios de la web y el script de Google la usan para meter cada contacto en el embudo al momento. No la compartas.</p><div class="row"><input id="cu" readonly value="${esc(c.url)}" style="flex:1;min-width:240px"><button class="btn g" id="cc">${IC.copy}Copiar</button></div>
+    <p class="mu sm">Formato: POST con JSON {nombre, telefono, email, origen, interes, mensaje, ref}. Si el teléfono ya existe, se añade al historial de ese cliente en vez de duplicarlo.</p></div>`;
+  $('#cc').onclick = () => navigator.clipboard.writeText($('#cu').value).then(() => toast('Copiado'));
+};
+
 // ---------- router ----------
 async function route() {
   const [k, arg] = (location.hash.slice(1) || 'resumen').split('/');
-  const fn = V[k] || V.resumen;
+  const fn = NEG === 'garage' ? (V[k] || V.resumen) : ({ resumen: V.nresumen, clientes: V.nclientes, ncliente: V.ncliente, conexion: V.conexion }[k] || V.nresumen);
   try { await fn($('#mn'), arg); window.scrollTo(0, 0); } catch (e) { if (e.message !== 'Sesión caducada') { shell(k).innerHTML = `<div class="card">No se ha podido cargar: ${esc(e.message)}</div>`; } }
 }
 let polling = null;
