@@ -21,7 +21,7 @@ const db = () => store('platagarage');
 const media = () => store('platagarage-media');
 
 // ---------- datos ----------
-const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], clientes: [], portales: [] };
+const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [] };
 async function load(key) {
   const v = await db().get(key, { type: 'json' });
   if (v == null) { const d = structuredClone(DEFAULTS[key]); await db().setJSON(key, d); return d; }
@@ -121,7 +121,7 @@ const pubCars = (cars) => cars.filter((c) => !c.sold && !c.hidden);
 function cleanCar(b, old = {}) {
   const c = { ...old };
   const S = (k, n = 120) => { if (k in b) c[k] = clip(b[k], n); };
-  ['brand', 'model', 'version', 'fuel', 'trans', 'body', 'color', 'holder', 'status', 'etiqueta'].forEach((k) => S(k));
+  ['brand', 'model', 'version', 'fuel', 'trans', 'body', 'color', 'holder', 'status', 'etiqueta', 'owner'].forEach((k) => S(k));
   if ('desc' in b) c.desc = clip(b.desc, 8000);
   if ('comment' in b) c.comment = clip(b.comment, 3000);
   ['year', 'km', 'price', 'cv', 'doors', 'seats', 'monthly', 'term', 'reserve'].forEach((k) => { if (k in b) c[k] = num(b[k]); });
@@ -131,6 +131,12 @@ function cleanCar(b, old = {}) {
   if ('llegada' in b) c.llegada = /^\d{4}-\d{2}-\d{2}$/.test(b.llegada || '') ? b.llegada : undefined;
   if (!['disponible', 'preparacion', 'reservado'].includes(c.status)) c.status = 'disponible';
   return c;
+}
+// Si el coche es de Cristina o de Juan y no tiene titular para la señal, se asigna el suyo
+async function holderPorDueno(c) {
+  if (c.holder || !c.owner) return;
+  const N = (x) => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const h = (await load('holders')).find((x) => N(x.name).includes(N(c.owner))); if (h) c.holder = h.id;
 }
 function carErrors(c) {
   const e = [];
@@ -230,6 +236,23 @@ async function buildClientes() {
 // ---------- calendario iCal (suscripción desde Google o Apple Calendar) ----------
 const icalToken = () => sign('ical-v1').slice(0, 32);
 const ingestToken = () => sign('portales-v1').slice(0, 32);
+// Otros negocios en el mismo panel: Plata Marine y Rotulito (embudo propio para cada uno)
+const NEGS = {
+  marine: { nombre: 'Plata Marine', etapas: ['Sin respuesta', 'Conversación', 'Cualificado', 'Valoración enviada', 'Hoja enviada', 'Encargo firmado', 'Visita', 'Oferta', 'Cerrado', 'Descartado'] },
+  rotulito: { nombre: 'Rotulito', etapas: ['Nuevo', 'Contactado', 'Propuesta enviada', 'Cliente', 'Perdido'] },
+};
+const negToken = (n) => sign('lead-' + n + '-v1').slice(0, 32);
+async function addNegLead(neg, x) {
+  const key = 'leads-' + neg; const list = await load(key);
+  const ref = clip(x.ref, 160); if (ref && list.some((y) => (y.refs || []).includes(ref))) return false;
+  const tel = normPhone(x.telefono) || clip(x.telefono, 20); const k = pkey(tel); const email = clip(x.email, 200).toLowerCase();
+  const d = x.fecha && !isNaN(Date.parse(x.fecha)) ? new Date(x.fecha).toISOString() : new Date().toISOString();
+  const nota = [clip(x.origen, 40), clip(x.interes, 160), clip(x.mensaje, 1500)].filter(Boolean).join(' · ');
+  let it = list.find((y) => (k && y.key === k) || (!k && email && y.email === email));
+  if (it) { it.historial = [{ d, t: nota || 'Nuevo contacto' }, ...(it.historial || [])].slice(0, 100); it.updated = d; if (ref) it.refs = [...(it.refs || []), ref].slice(-50); if (!it.email && email) it.email = email; }
+  else { it = { id: uid('l'), key: k, nombre: clip(x.nombre, 80) || 'Sin nombre', telefono: tel, email, origen: clip(x.origen, 40), tipo: clip(x.tipo, 30), interes: clip(x.interes, 160), etapa: NEGS[neg].etapas[0], notas: '', created: d, updated: d, historial: [{ d, t: nota || 'Primer contacto' }], refs: ref ? [ref] : [] }; list.unshift(it); }
+  await save(key, list.slice(0, 5000)); return true;
+}
 function ical(bookings) {
   const e = (s) => String(s || '').replace(/[\\;,]/g, (c) => '\\' + c).replace(/\n/g, '\\n');
   const dt = (d, h, add = 0) => { const [H, M] = h.split(':').map(Number); const t = H * 60 + M + add; return `${d.replace(/-/g, '')}T${String(Math.floor(t / 60)).padStart(2, '0')}${String(t % 60).padStart(2, '0')}00`; };
@@ -360,6 +383,12 @@ async function api(r, req, M, ip, url, context) {
     const tok = r.slice(6).replace(/\.ics$/, '');
     if (!env('PG_ADMIN_PASSWORD') || tok.length !== 32 || !eqHash(tok, icalToken())) return new Response('No encontrado', { status: 404 });
     return new Response(ical(await load('bookings')), { headers: { 'content-type': 'text/calendar; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } });
+  }
+  if (r.startsWith('/lead/') && M === 'POST') {
+    const [, , neg, tok] = r.split('/'); if (!NEGS[neg] || !env('PG_ADMIN_PASSWORD') || (tok || '').length !== 32 || !eqHash(tok, negToken(neg))) return json({ error: 'No autorizado' }, 401);
+    const b = await req.json().catch(() => ({})); let n = 0;
+    for (const x of (Array.isArray(b) ? b : [b]).slice(0, 50)) if (await addNegLead(neg, x)) n++;
+    return json({ ok: true, nuevos: n });
   }
   if (r.startsWith('/portal/') && M === 'POST') {
     const tok = r.slice(8); if (!env('PG_ADMIN_PASSWORD') || tok.length !== 32 || !eqHash(tok, ingestToken())) return json({ error: 'No autorizado' }, 401);
@@ -509,6 +538,11 @@ async function hit(req, context) {
     const g = context?.geo; if (g?.city) inc('city', clip(g.city, 60)); if (g?.country?.code) inc('pais', clip(g.country.code, 4));
     if (b.n) inc('tot', 'nuevas');
   }
+  else if (b.e === 'cwv') {
+    const tpl = ['home', 'catalogo', 'ficha', 'landing', 'cita', 'otra'].includes(b.t) ? b.t : 'otra';
+    const B = { lcp: [1000, 1500, 2000, 2500, 3000, 4000, 6000], inp: [100, 200, 300, 500, 800], cls: [0.05, 0.1, 0.15, 0.25, 0.4] };
+    for (const m of ['lcp', 'inp', 'cls']) { const v = Number(b[m]); if (!Number.isFinite(v) || v < 0) continue; const i = B[m].findIndex((x) => v <= x); inc('cwv', `${tpl}|${m}|${i < 0 ? B[m].length : i}`); }
+  }
   else if (['wa', 'tel', 'pdf'].includes(b.e)) { inc('ev', b.e); if (b.c) inc('carev', `${clip(b.c, 120)}|${b.e}`); }
   await db().setJSON(k, st);
 }
@@ -531,6 +565,7 @@ async function adminApi(r, req, M, me, url) {
       tasacionesNuevas: t.filter((x) => x.status === 'pendiente').length, ultimasTasaciones: t.slice(0, 5),
       enviosPendientes: e.filter((x) => x.status === 'pendiente').length, mensajesSinLeer: m.filter((x) => !x.leido).length, alertasActivas: al.filter((x) => x.status === 'activa').length, busquedasPendientes: bu.filter((x) => x.status === 'pendiente').length,
       valorStock: cars.filter((c) => !c.sold).reduce((s, c) => s + (c.price || 0), 0),
+      porDueno: ['Cristina', 'Juan', ''].map((o) => { const l = cars.filter((c) => !c.sold && (c.owner || '') === o); return { o: o || 'Sin asignar', n: l.length, v: l.reduce((s, c) => s + (c.price || 0), 0) }; }).filter((x) => x.n),
     });
   }
 
@@ -541,7 +576,7 @@ async function adminApi(r, req, M, me, url) {
     if (M === 'POST' && !seg[1]) {
       const c = cleanCar(body, { id: uid('c'), featured: false, sold: false, images: [], features: [], status: 'disponible', created: today(), llegada: today() });
       const e = carErrors(c); if (e.length) return json({ error: 'Faltan datos: ' + e.join(', ') }, 400);
-      c.slug = uniqueSlug(cars, c); c.updated = today(); cars.unshift(c); await save('cars', cars); return json(c);
+      c.slug = uniqueSlug(cars, c); c.updated = today(); await holderPorDueno(c); cars.unshift(c); await save('cars', cars); return json(c);
     }
     const i = cars.findIndex((x) => x.id === seg[1]); if (i < 0) return json({ error: 'No existe' }, 404);
     if (M === 'DELETE') { const [old] = cars.splice(i, 1); await save('cars', cars); await dropMedia(old.images); return json({ ok: true }); }
@@ -556,6 +591,7 @@ async function adminApi(r, req, M, me, url) {
       if (ns !== old.slug) { c.oldSlugs = [...new Set([...(old.oldSlugs || []), old.slug])].slice(-10); c.slug = ns; }
       if (c.sold && !old.sold) c.soldAt = today();
       if ('buyer' in body) c.buyer = pkey(body.buyer) || undefined;
+      await holderPorDueno(c);
       // Historial de precios (sirve para justificar cualquier rebaja) y registro de quién cambia qué
       if (old.price !== c.price && old.price) c.priceHistory = [...(old.priceHistory || [{ d: old.created || today(), p: old.price }]), { d: today(), p: c.price }].slice(-30);
       const chg = []; if (old.price !== c.price) chg.push(`precio ${old.price} → ${c.price} €`); if (!old.sold && c.sold) chg.push('vendido'); if (old.sold && !c.sold) chg.push('vuelve a stock'); if (old.status !== c.status) chg.push(`estado: ${c.status}`); if (old.km !== c.km) chg.push(`km ${old.km} → ${c.km}`); if (!!old.hidden !== !!c.hidden) chg.push(c.hidden ? 'oculto' : 'visible'); if ((old.images || []).join() !== (c.images || []).join()) chg.push('fotos'); if (old.desc !== c.desc) chg.push('descripción');
@@ -629,6 +665,24 @@ async function adminApi(r, req, M, me, url) {
   }
 
   if (seg[0] === 'me') return json(me);
+  if (seg[0] === 'neg' && NEGS[seg[1]]) {
+    const neg = seg[1], key = 'leads-' + neg;
+    if (seg[2] === 'conexion' && M === 'GET') return json({ url: `${url.origin}${BASE}/api/lead/${neg}/${negToken(neg)}`, etapas: NEGS[neg].etapas });
+    const list = await load(key);
+    if (M === 'GET' && !seg[2]) return json({ etapas: NEGS[neg].etapas, nombre: NEGS[neg].nombre, leads: list });
+    if (M === 'POST' && !seg[2]) { if (!clip(body.nombre, 80) && !body.telefono) return json({ error: 'Pon al menos el nombre o el teléfono' }, 400); await addNegLead(neg, { ...body, origen: body.origen || 'Manual', fecha: new Date().toISOString() }); return json({ ok: true }); }
+    const i = list.findIndex((x) => x.id === seg[2]); if (i < 0) return json({ error: 'No existe' }, 404);
+    if (M === 'DELETE') { list.splice(i, 1); await save(key, list); return json({ ok: true }); }
+    if (M === 'PUT') {
+      const it = list[i]; const prev = it.etapa;
+      if ('etapa' in body && NEGS[neg].etapas.includes(body.etapa)) it.etapa = body.etapa;
+      ['notas', 'accion'].forEach((k) => { if (k in body) it[k] = clip(body[k], 4000); });
+      ['nombre', 'email', 'origen', 'tipo', 'interes'].forEach((k) => { if (k in body) it[k] = clip(body[k], 200); });
+      if ('telefono' in body) { it.telefono = normPhone(body.telefono) || clip(body.telefono, 20); it.key = pkey(it.telefono); }
+      if (prev !== it.etapa) it.historial = [{ d: new Date().toISOString(), t: `Etapa: ${prev} → ${it.etapa} (${me.name})` }, ...(it.historial || [])].slice(0, 100);
+      it.updated = new Date().toISOString(); await save(key, list); return json(it);
+    }
+  }
   if (seg[0] === 'ical' && M === 'GET') return json({ url: `${url.origin}${BASE}/api/ical/${icalToken()}.ics`, portales: `${url.origin}${BASE}/api/portal/${ingestToken()}` });
   if (seg[0] === 'clientes') {
     if (M === 'GET') return json(await buildClientes());

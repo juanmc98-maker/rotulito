@@ -12,6 +12,7 @@ const eur = (n) => (n == null ? '' : new Intl.NumberFormat('es-ES',{useGrouping:
 const kms = (n) => (n == null ? '' : new Intl.NumberFormat('es-ES',{useGrouping:'always'}).format(n) + ' km');
 const wa = (t) => `https://wa.me/${WA}?text=${encodeURIComponent(t)}`;
 // Netlify Image CDN: convierte a WebP/AVIF y ajusta el tamaño al vuelo
+export const srcset = (u, ws) => (!u || !u.startsWith('/') || process.env.PG_NO_CDN ? '' : ws.map((w) => `${im(u, w)} ${w}w`).join(', '));
 export const im = (u, w) => (!u || !u.startsWith('/') || process.env.PG_NO_CDN ? u : `/.netlify/images?url=${encodeURIComponent(u)}&w=${w}&q=72`);
 const carName = (c) => `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''}`;
 const fechaLarga = (iso) => (iso ? new Date(iso + 'T12:00:00Z').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '');
@@ -177,7 +178,7 @@ const cover = (c) => (c.images && c.images[0]) || `${B}/assets/logo.png`;
 export function card(c) {
   const tag = tagDe(c);
   return `<a class="card" href="${B}/vehiculos/${c.slug}" data-p="${c.price}" data-f="${esc(c.fuel)}" data-t="${esc(c.trans)}" data-y="${c.year}" data-k="${c.km}" data-m="${esc(c.brand)}" data-c="${esc(c.body)}" data-s="${c.created || ''}" data-e="${c.seats || ''}" data-x="${esc(normTxt([c.brand, c.model, c.version, c.color, c.body, c.etiqueta].join(' ')))}">
-<div class="ph"><img src="${esc(im(cover(c), 600))}" alt="${esc(carName(c) + ' ' + c.year)}" loading="lazy" width="400" height="300">${tag}<span class="fv" role="button" tabindex="0" data-fav="${c.slug}" aria-label="Guardar en favoritos" title="Guardar en favoritos">${heart}</span><span class="pr">${eur(c.price)}</span></div>
+<div class="ph"><img src="${esc(im(cover(c), 600))}" srcset="${esc(srcset(cover(c), [400, 600, 800]))}" sizes="(max-width:700px) 92vw, (max-width:980px) 46vw, 380px" alt="${esc(carName(c) + ' ' + c.year)}" loading="lazy" width="400" height="300">${tag}<span class="fv" role="button" tabindex="0" data-fav="${c.slug}" aria-label="Guardar en favoritos" title="Guardar en favoritos">${heart}</span><span class="pr">${eur(c.price)}</span></div>
 <div class="b"><div class="br">${esc(c.brand)}</div><div class="md"><b>${esc(c.model)}</b> <span>${esc(c.version || '')}</span></div>
 <div class="sp"><div>${ic.cal}${c.year}</div><div>${ic.gauge}${kms(c.km)}</div><div>${ic.fuel}${esc(c.fuel)}</div><div>${ic.gear}${esc(c.trans)}</div></div></div></a>`;
 }
@@ -245,7 +246,10 @@ function nlqTxt(o){const p=[];if(o.words&&o.words.length)p.push('«'+o.words.joi
 const TRACK_JS = `(()=>{try{const u=new URL(location.href),r=document.referrer?new URL(document.referrer).hostname:'';let s=u.searchParams.get('utm_source')||(u.searchParams.get('fbclid')?'facebook':'')||(u.searchParams.get('gclid')?'google-ads':'');
 if(!s&&r&&r!==location.hostname){s=/google/.test(r)?'google':/facebook|fb\\\\./.test(r)?'facebook':/instagram/.test(r)?'instagram':/bing/.test(r)?'bing':/wallapop/.test(r)?'wallapop':/coches\\\\.net/.test(r)?'coches.net':/milanuncios/.test(r)?'milanuncios':r.replace(/^www\\\\./,'')}
 const c=document.body.dataset.car||'',snd=o=>navigator.sendBeacon&&navigator.sendBeacon('${B}/api/hit',new Blob([JSON.stringify(o)],{type:'application/json'}));
-snd({e:'view',p:location.pathname,s,c,n:!r||r!==location.hostname?1:0});document.addEventListener('click',e=>{const a=e.target.closest('a');if(!a)return;const h=a.getAttribute('href')||'';if(h.startsWith('https://wa.me')){snd({e:'wa',c});try{pgConv('contact','wa')}catch(x){}}else if(h.startsWith('tel:'))snd({e:'tel',c});else if(a.id==='pdf')snd({e:'pdf',c})},true)}catch(x){}})();`;
+snd({e:'view',p:location.pathname,s,c,n:!r||r!==location.hostname?1:0});
+const pth=location.pathname.replace('${B}','');const t=pth==='/'?'home':pth.startsWith('/vehiculos/')&&pth.length>11?'ficha':pth.startsWith('/vehiculos')?'catalogo':pth.startsWith('/coches')?'landing':pth.startsWith('/cita')?'cita':'otra';
+let lcp=0,cls=0,inp=0;try{new PerformanceObserver(l=>{const e=l.getEntries();lcp=e[e.length-1].startTime}).observe({type:'largest-contentful-paint',buffered:true});new PerformanceObserver(l=>l.getEntries().forEach(e=>{if(!e.hadRecentInput)cls+=e.value})).observe({type:'layout-shift',buffered:true});new PerformanceObserver(l=>l.getEntries().forEach(e=>{if(e.interactionId&&e.duration>inp)inp=e.duration})).observe({type:'event',buffered:true,durationThreshold:16})}catch(x){}
+let sent=false;const fin=()=>{if(sent||!lcp)return;sent=true;snd({e:'cwv',t,lcp:Math.round(lcp),cls:+cls.toFixed(3),inp:Math.round(inp)})};addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')fin()});addEventListener('pagehide',fin);document.addEventListener('click',e=>{const a=e.target.closest('a');if(!a)return;const h=a.getAttribute('href')||'';if(h.startsWith('https://wa.me')){snd({e:'wa',c});try{pgConv('contact','wa')}catch(x){}}else if(h.startsWith('tel:'))snd({e:'tel',c});else if(a.id==='pdf')snd({e:'pdf',c})},true)}catch(x){}})();`;
 
 // Favoritos: se guardan solo en el navegador del visitante, a petición suya (no necesitan consentimiento)
 const FAV_JS = `(()=>{const K='pg_fav';const get=()=>{try{return JSON.parse(localStorage.getItem(K)||'[]')}catch(x){return[]}};const put=a=>{try{localStorage.setItem(K,JSON.stringify(a))}catch(x){}};
@@ -383,7 +387,7 @@ export function ficha({ car: c, cars, holders, qr = '', fichaUrl = '' }) {
   const waTxt = `Hola, me interesa el ${name} (${c.year}) de ${eur(c.price)}.`;
   const reservaBox = c.reserve > 0 && c.status === 'disponible' ? `<div class="box"><h3>${ic.key}Reserva este coche</h3><p class="mu" style="margin:0 0 12px;font-size:14px">Señal de <b style="color:#fff">${eur(c.reserve)}</b> que se descuenta del precio. Primero te confirmamos que sigue disponible y te explicamos las condiciones; después puedes pagarla por Bizum${holder?.accounts?.length ? ' o transferencia' : ''}.</p><a class="btn g" href="${B}/cita?coche=${c.slug}&motivo=${encodeURIComponent('Reservar este coche')}">Solicitar reserva</a></div>` : '';
 
-  const body = `<section class="fh" style="padding:0"><img class="bgi" src="${esc(im(imgs[0], 1600))}" alt="${esc(name)} ${c.year}" fetchpriority="high" width="1600" height="1200"><div class="w">
+  const body = `<section class="fh" style="padding:0"><img class="bgi" src="${esc(im(imgs[0], 1600))}" srcset="${esc(srcset(imgs[0], [640, 960, 1280, 1600]))}" sizes="100vw" alt="${esc(name)} ${c.year}" fetchpriority="high" width="1600" height="1200"><div class="w">
 <div class="cr"><a href="${B}/">Inicio</a> · <a href="${B}/vehiculos/">Vehículos</a> · ${esc(c.brand)} ${esc(c.model)}</div>${stt}
 <h1>${esc(c.brand)} ${esc(c.model)}${c.version ? `<span>${esc(c.version)}</span>` : ''}</h1>
 <div class="chips"><span>${ic.cal}${c.year}</span><span>${ic.gauge}${kms(c.km)}</span><span>${ic.fuel}${esc(c.fuel)}</span><span>${ic.gear}${esc(c.trans)}</span>${c.cv ? `<span>${c.cv} CV</span>` : ''}${etq ? `<span>${etq.startsWith('Sin') ? esc(etq) : 'Etiqueta ' + esc(etq)}</span>` : ''}</div>
@@ -428,7 +432,7 @@ const sb=document.getElementById('sb'),hero=document.querySelector('.fh');new In
 const links=[...document.querySelectorAll('.idx a')];const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id))}}),{rootMargin:'-40% 0px -55% 0px'});
 links.forEach(a=>{const s=document.querySelector(a.getAttribute('href'));if(s)io.observe(s)});
 ${FORM_JS}${SLOTS_JS}`;
-  return page({ title, desc, on: 'veh', body, head: `<style>${FICHA_CSS}</style>` + ld(ldCar) + ld(crumbs) + ld(ldFaq(fq)), script, car: c.slug, alert: true, path: `/vehiculos/${c.slug}`, image: imgs[0] });
+  return page({ title, desc, on: 'veh', body, head: `<link rel="preload" as="image" href="${esc(im(imgs[0], 1600))}" imagesrcset="${esc(srcset(imgs[0], [640, 960, 1280, 1600]))}" imagesizes="100vw" fetchpriority="high"><style>${FICHA_CSS}</style>` + ld(ldCar) + ld(crumbs) + ld(ldFaq(fq)), script, car: c.slug, alert: true, path: `/vehiculos/${c.slug}`, image: imgs[0] });
 }
 
 export function cita({ cars, coche, motivo }) {
