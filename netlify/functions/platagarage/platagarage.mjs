@@ -66,10 +66,12 @@ async function sessionUser(req) {
   if (Number(exp) < Date.now()) return null;
   const good = sign(`u.${id}.${ver}.${exp}`);
   if (good.length !== sig.length || !crypto.timingSafeEqual(Buffer.from(good), Buffer.from(sig))) return null;
-  if (id === 'admin') return { id: 'admin', name: 'Administrador', role: 'admin' };
+  if (id === 'admin') return { id: 'admin', name: 'Administrador', role: 'admin', negs: ['garage', 'marine', 'rotulito'] };
   const u = (await load('users')).find((x) => x.id === id);
   if (!u || String(u.ver || 0) !== ver || u.disabled) return null;
-  return { id: u.id, name: u.name, role: u.role || 'editor' };
+  // Negocios a los que puede entrar: el administrador a todos; el resto, a los que tenga marcados (por defecto solo Plata Garage)
+  const negs = u.role === 'admin' ? ['garage', 'marine', 'rotulito'] : (u.negs && u.negs.length ? u.negs : ['garage']);
+  return { id: u.id, name: u.name, role: u.role || 'editor', negs };
 }
 const cookie = (v, maxAge) => `pg_s=${v}; Path=${BASE}; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;
 const eqHash = (a, b) => { const x = crypto.createHash('sha256').update(String(a)).digest(), y = crypto.createHash('sha256').update(String(b)).digest(); return crypto.timingSafeEqual(x, y); };
@@ -665,6 +667,8 @@ async function adminApi(r, req, M, me, url) {
   }
 
   if (seg[0] === 'me') return json(me);
+  if (seg[0] === 'neg' && NEGS[seg[1]] && !(me.negs || []).includes(seg[1])) return json({ error: 'No tienes acceso a este negocio.' }, 403);
+  if (seg[0] !== 'neg' && seg[0] !== 'me' && !(me.negs || ['garage']).includes('garage')) return json({ error: 'No tienes acceso a Plata Garage.' }, 403);
   if (seg[0] === 'neg' && NEGS[seg[1]]) {
     const neg = seg[1], key = 'leads-' + neg;
     if (seg[2] === 'conexion' && M === 'GET') return json({ url: `${url.origin}${BASE}/api/lead/${neg}/${negToken(neg)}`, etapas: NEGS[neg].etapas });
@@ -702,12 +706,13 @@ async function adminApi(r, req, M, me, url) {
   if (seg[0] === 'users') {
     if (me.role !== 'admin') return json({ error: 'Solo un administrador puede gestionar usuarios.' }, 403);
     const users = await load('users');
-    const pub = (u) => ({ id: u.id, name: u.name, user: u.user, role: u.role, disabled: !!u.disabled, created: u.created });
+    const NG = ['garage', 'marine', 'rotulito']; const negsDe = (b) => (Array.isArray(b.negs) ? b.negs.filter((x) => NG.includes(x)) : ['garage']);
+    const pub = (u) => ({ id: u.id, name: u.name, user: u.user, role: u.role, negs: u.role === 'admin' ? NG : (u.negs || ['garage']), disabled: !!u.disabled, created: u.created });
     if (M === 'GET') return json(users.map(pub));
     if (M === 'POST' && !seg[1]) {
       const user = slugify(body.user || '').replace(/-/g, '.'); if (!user || users.some((x) => x.user === user) || user === 'admin') return json({ error: 'Usuario no válido o ya existe.' }, 400);
       if (!strong(body.password)) return json({ error: 'La contraseña debe tener al menos 12 caracteres, con letras y números.' }, 400);
-      const u = { id: uid('u'), name: clip(body.name, 60) || user, user, role: body.role === 'admin' ? 'admin' : 'editor', ver: 0, created: today(), ...hashPass(body.password) };
+      const u = { negs: negsDe(body), id: uid('u'), name: clip(body.name, 60) || user, user, role: body.role === 'admin' ? 'admin' : 'editor', ver: 0, created: today(), ...hashPass(body.password) };
       users.push(u); await save('users', users); return json(pub(u));
     }
     const i = users.findIndex((x) => x.id === seg[1]); if (i < 0) return json({ error: 'No existe' }, 404);
@@ -717,6 +722,7 @@ async function adminApi(r, req, M, me, url) {
       if ('password' in body) { if (!strong(body.password)) return json({ error: 'La contraseña debe tener al menos 12 caracteres, con letras y números.' }, 400); Object.assign(u, hashPass(body.password)); u.ver = (u.ver || 0) + 1; }
       if ('name' in body) u.name = clip(body.name, 60);
       if ('role' in body) u.role = body.role === 'admin' ? 'admin' : 'editor';
+      if ('negs' in body) u.negs = negsDe(body);
       if ('disabled' in body) { u.disabled = !!body.disabled; u.ver = (u.ver || 0) + 1; }
       await save('users', users); return json(pub(u));
     }
