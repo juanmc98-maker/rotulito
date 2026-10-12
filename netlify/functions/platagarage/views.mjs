@@ -113,7 +113,7 @@ function page({ title, desc, on = '', body, head = '', script = '' }) {
 <main>${body}</main>
 <footer><div class="w"><img src="${B}/assets/logo.png" alt="Plata Garage" width="92" height="36"><p>Plata Garage · Compraventa de vehículos de ocasión en Sabadell (Barcelona). Atendemos con cita previa.</p>
 <nav><a href="${B}/vehiculos/">Vehículos</a><a href="${B}/cita">Reservar cita</a><a href="${B}/contacto">Contacto y tasación</a><a href="${B}/blog/">Blog</a><a href="${B}/privacidad">Privacidad</a></nav>
-<p>La información de esta web es orientativa y no vinculante. Puede contener errores: confirma los datos del vehículo antes de decidir.</p></div></footer>
+<p>La información de esta web es orientativa y no vinculante. Puede contener errores: confirma los datos del vehículo antes de decidir.</p><p style="margin-top:18px;font-size:13px">Web por <a href="https://www.rotulito.com/" rel="noopener">rotulito.com</a></p></div></footer>
 <a class="wf" href="${wa('Hola, quería información sobre un coche.')}" rel="noopener" aria-label="Escribir por WhatsApp">${ic.wa}</a>
 ${script ? `<script>${script}</script>` : ''}</body></html>`;
 }

@@ -292,6 +292,38 @@ async function adminApi(r, req, M) {
     }
   }
 
+
+  if (seg[0] === 'import' && M === 'POST') {
+    // Importación única de datos desde el panel anterior (idempotente por srcId)
+    const out = {};
+    const keyOf = { bookings: 'bookings', envios: 'envios', tasaciones: 'tasaciones', mensajes: 'mensajes' };
+    for (const [k, store] of Object.entries(keyOf)) {
+      if (!Array.isArray(body[k])) continue;
+      const list = await load(store); let n = 0;
+      for (const it of body[k]) { if (!it.srcId || list.some((x) => x.srcId === it.srcId)) continue; list.push({ id: uid(), notas: '', ...it }); n++; }
+      list.sort((a, b) => String(b.created || '').localeCompare(String(a.created || '')));
+      await save(store, list); out[k] = n;
+    }
+    if (Array.isArray(body.posts)) {
+      const posts = await load('posts'); let n = 0;
+      for (const p of body.posts) {
+        if (!p.srcId || posts.some((x) => x.srcId === p.srcId)) continue;
+        let s = slugify(p.slug || p.title), i = 2; while (posts.some((x) => x.slug === s)) s = `${slugify(p.slug || p.title)}-${i++}`;
+        posts.push({ id: uid('p'), srcId: p.srcId, slug: s, title: clip(p.title, 160), excerpt: clip(p.excerpt, 300), cover: (p.cover || '').startsWith(BASE + '/') ? p.cover : '', tags: (p.tags || []).slice(0, 8), body: clip(p.body, 60000), published: !!p.published, publishedAt: p.publishedAt || '', created: p.created || today() }); n++;
+      }
+      await save('posts', posts); out.posts = n;
+    }
+    if (Array.isArray(body.cars)) {
+      const cars = await load('cars'); let up = 0, cr = 0;
+      for (const b of body.cars) {
+        let i = cars.findIndex((x) => (b.srcId && x.srcId === b.srcId) || (b.slug && x.slug === b.slug));
+        if (i >= 0) { cars[i] = { ...cleanCar(b, cars[i]), srcId: b.srcId || cars[i].srcId }; up++; }
+        else { const c = cleanCar(b, { id: uid('c'), images: [], features: [], created: b.created || today() }); c.srcId = b.srcId; c.slug = b.slug && !cars.some((x) => x.slug === b.slug) ? b.slug : uniqueSlug(cars, c); if (c.sold && !c.soldAt) c.soldAt = b.soldAt || today(); cars.push(c); cr++; }
+      }
+      await save('cars', cars); out.cars = { actualizados: up, creados: cr };
+    }
+    return json(out);
+  }
   if (seg[0] === 'upload' && M === 'POST') {
     const { name, type, data } = body; // data: base64 (ya reducida en el navegador)
     if (!/^image\/(jpeg|png|webp)$/.test(type || '')) return json({ error: 'Formato no admitido' }, 400);
