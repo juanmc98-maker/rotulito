@@ -115,6 +115,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 96px;color:var(--mu);font
 .al h3{margin:0 0 6px;font-size:18px}.al p{margin:0 0 12px;color:var(--mu);font-size:14px}.al .x{position:absolute;top:10px;right:12px;background:none;border:0;color:#aaa;font-size:22px;cursor:pointer}.al form{display:grid;gap:10px}.al input{padding:10px 14px;font-size:14px}.al .chk{font-size:12px;color:var(--mu)}
 .wz{max-width:720px}.wz .stp2{display:flex;gap:6px;margin-bottom:22px}.wz .stp2 i{flex:1;height:4px;border-radius:4px;background:#2a2a2a}.wz .stp2 i.on{background:var(--or)}.wz fieldset{border:0;padding:0;margin:0;display:none}.wz fieldset.on{display:grid;gap:14px}.wz legend{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;margin-bottom:14px}
 .ops{display:flex;flex-wrap:wrap;gap:8px}.ops label{display:block;cursor:pointer}.ops input{position:absolute;opacity:0;width:1px}.ops span{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:9px 16px;color:#ddd;font-size:14px}.ops input:checked+span{background:var(--or);border-color:var(--or);color:#000}.ops input:focus-visible+span{outline:2px solid #fff}
+.pkr{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}.pkv{display:flex;gap:12px;align-items:center}.pkv img{width:96px;height:72px;object-fit:cover;border-radius:10px}.pkv b{display:block}.pkv span{color:var(--mu);font-size:13px}@media(max-width:700px){.pkr{grid-template-columns:1fr}}
 .legal h2{font-size:22px;margin:28px 0 8px}.legal p,.legal li{color:#d6d6d6}
 @media(max-width:900px){.cg,.v3,.ic3{grid-template-columns:1fr}.al{bottom:84px}}
 .fl2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:22px 0}.fl2 div{display:flex;flex-wrap:wrap;gap:6px 14px;align-content:flex-start}.fl2 b{width:100%;color:#ddd;font-weight:600;margin-bottom:2px}.fl2 a{font-size:13px;text-decoration:none}.fl2 a:hover{color:#fff}
@@ -122,6 +123,11 @@ footer{border-top:1px solid var(--line);padding:44px 0 96px;color:var(--mu);font
 .qs{display:flex;gap:10px;margin:22px 0 0;max-width:760px}.qs input{flex:1;padding:14px 20px;font-size:16px}.chipl{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}.chipl a{border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:13px;color:#ddd;text-decoration:none}.chipl a:hover{border-color:var(--or);color:#fff}
 .lh p.lead{max-width:760px}
 @media(max-width:700px){.fl2{grid-template-columns:1fr}.qs{flex-direction:column}}
+.tag.rb{background:#ef4444;color:#fff}.tag.nw{background:#22c55e;color:#04210f}.card .pr s,.pz s{color:#bbb;font-weight:500;font-size:.6em;margin-right:12px}
+.fv{position:absolute;right:12px;top:12px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.55);display:grid;place-items:center;cursor:pointer;color:#fff;backdrop-filter:blur(6px)}.fv svg{width:18px;height:18px}.fv.on{color:#ef4444}.fv.on svg{fill:#ef4444}
+.hf{position:relative;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);color:#fff;text-decoration:none}.hf svg{width:18px;height:18px}.hf b{position:absolute;top:-4px;right:-4px;background:var(--or);color:#000;border-radius:999px;font-size:11px;min-width:18px;height:18px;display:none;place-items:center;padding:0 4px}.hf b.on{display:grid}
+.cmp{overflow-x:auto}.cmp table td,.cmp table th{padding:12px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:15px}.cmp th{color:var(--mu);font-weight:500;width:170px}.cmp img{border-radius:12px;aspect-ratio:4/3;object-fit:cover;width:100%;max-width:260px}
+.cb{position:fixed;left:16px;right:16px;bottom:16px;z-index:95;max-width:640px;margin:0 auto;background:#111;border:1px solid var(--line);border-radius:18px;padding:18px 20px;box-shadow:0 20px 50px rgba(0,0,0,.6);display:none}.cb.on{display:block}.cb p{margin:0 0 12px;font-size:14px;color:#ddd}.cb .row .btn{flex:1;padding:11px 16px}.cb a{color:var(--or)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}`;
 
 const LD_BIZ = { '@context': 'https://schema.org', '@type': ['AutoDealer', 'LocalBusiness'], '@id': '#negocio', name: 'Plata Garage', telephone: TEL, image: `${B}/assets/logo.png`, address: { '@type': 'PostalAddress', addressLocality: 'Sabadell', addressRegion: 'Barcelona', addressCountry: 'ES' }, openingHoursSpecification: [{ '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], opens: '09:30', closes: '19:30' }, { '@type': 'OpeningHoursSpecification', dayOfWeek: 'Saturday', opens: '10:00', closes: '14:00' }], description: 'Compraventa de vehículos de ocasión en Sabadell. Atención con cita previa.' };
@@ -133,6 +139,7 @@ const ld = (o) => `<script type="application/ld+json">${JSON.stringify(o).replac
 
 function page({ title, desc, on = '', body, head = '', script = '', car = '', alert = false, path = '', image = '', noindex = false }) {
   const canon = path ? `${CTX.site}${B}${path}` : '';
+  const ads = !!(CTX.gtag || CTX.pixel);
   const ogImg = abs(image || `${B}/assets/hero.jpg`);
   const meta = `<meta name="robots" content="${CTX.index && !noindex ? 'index,follow,max-image-preview:large' : 'noindex,nofollow'}">${canon ? `<link rel="canonical" href="${esc(canon)}">` : ''}<meta property="og:type" content="website"><meta property="og:site_name" content="Plata Garage"><meta property="og:locale" content="es_ES"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">${canon ? `<meta property="og:url" content="${esc(canon)}">` : ''}<meta property="og:image" content="${esc(ogImg)}"><meta name="twitter:card" content="summary_large_image">`;
   const n = (h, t, k) => `<a href="${B}${h}"${on === k ? ' class="on" aria-current="page"' : ''}>${t}</a>`;
@@ -140,23 +147,38 @@ function page({ title, desc, on = '', body, head = '', script = '', car = '', al
 ${meta}<title>${esc(title)}</title><meta name="description" content="${esc(desc)}">
 <meta name="theme-color" content="#050505"><link rel="icon" href="${B}/assets/logo.png"><link rel="preload" as="font" type="font/woff2" crossorigin href="${B}/assets/space-grotesk-latin.woff2"><style>${CSS}</style>${ld(ldBiz())}${head}</head><body${car ? ` data-car="${esc(car)}"` : ''}>
 <header><div class="w"><a class="lg" href="${B}/"><img src="${B}/assets/logo.png" alt="Plata Garage" width="103" height="40"></a><nav class="m" aria-label="Principal">${n('/', 'Inicio', 'home')}${n('/vehiculos/', 'Vehículos', 'veh')}${n('/cita', 'Reservar cita', 'cita')}${n('/blog/', 'Blog', 'blog')}${n('/contacto', 'Contacto', 'con')}</nav>
-<div class="hr"><a class="tel" href="tel:+34660493228">${ic.tel}${TEL}</a><a class="btn sm" href="${B}/cita">Reservar cita</a></div></div></header>
+<div class="hr"><a class="hf" href="${B}/favoritos" aria-label="Mis favoritos" title="Mis favoritos">${heart}<b id="fvn"></b></a><a class="tel" href="tel:+34660493228">${ic.tel}${TEL}</a><a class="btn sm" href="${B}/cita">Reservar cita</a></div></div></header>
 <main>${body}</main>
 <footer><div class="w"><img src="${B}/assets/logo.png" alt="Plata Garage" width="92" height="36"><p>Plata Garage · Compraventa de vehículos de ocasión en Sabadell (Barcelona). Atendemos con cita previa.</p>
-<nav><a href="${B}/vehiculos/">Vehículos</a><a href="${B}/cita">Reservar cita</a><a href="${B}/te-lo-buscamos">Te lo buscamos</a><a href="${B}/cuanto-vale-mi-coche">¿Cuánto vale mi coche?</a><a href="${B}/contacto">Contacto</a><a href="${B}/blog/">Blog</a><a href="${B}/aviso-legal">Aviso legal</a><a href="${B}/privacidad">Privacidad</a></nav>
+<nav><a href="${B}/vehiculos/">Vehículos</a><a href="${B}/cita">Reservar cita</a><a href="${B}/te-lo-buscamos">Te lo buscamos</a><a href="${B}/cuanto-vale-mi-coche">¿Cuánto vale mi coche?</a><a href="${B}/contacto">Contacto</a><a href="${B}/blog/">Blog</a><a href="${B}/aviso-legal">Aviso legal</a><a href="${B}/privacidad">Privacidad</a><a href="${B}/cookies">Cookies</a>${ads ? '<a href="#" id="ckc">Configurar cookies</a>' : ''}</nav>
 <div class="fl2"><div><b>Coches por zona</b>${ZONAS.map((z) => `<a href="${B}/coches-segunda-mano-${z.slug}">${esc(z.name)}</a>`).join('')}</div><div><b>Por tipo</b>${FOOT_TIPOS.map(([sl, t]) => `<a href="${B}/coches/${sl}">${t}</a>`).join('')}<a href="${B}/preguntas-frecuentes">Preguntas frecuentes</a></div></div>
 <p>La información de esta web es orientativa y no vinculante. Puede contener errores: confirma los datos del vehículo antes de decidir.</p><p style="margin-top:18px;font-size:13px">Web por <a href="https://www.rotulito.com/" rel="noopener">rotulito.com</a></p></div></footer>
 <a class="wf" href="${wa('Hola, quería información sobre un coche.')}" rel="noopener" aria-label="Escribir por WhatsApp">${ic.wa}</a>
-${alert ? ALERT_HTML : ''}<script>${TRACK_JS}${alert ? ALERT_JS : ''}${script || ''}</script></body></html>`;
+${alert ? ALERT_HTML : ''}${ads ? COOKIE_HTML : ''}<script>${TRACK_JS}${FAV_JS}${ads ? cookieJs() : 'window.pgConv=()=>{};'}${alert ? ALERT_JS : ''}${script || ''}</script></body></html>`;
 }
 
 const FOOT_TIPOS = [['automaticos', 'Automáticos'], ['diesel', 'Diésel'], ['gasolina', 'Gasolina'], ['suv', 'SUV'], ['familiares', 'Familiares'], ['compactos', 'Compactos'], ['menos-de-10000', 'Menos de 10.000 €'], ['menos-de-15000', 'Menos de 15.000 €']];
 const normTxt = (x) => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+// Rebaja: solo si el precio actual es más bajo que el más bajo de los 30 días anteriores a la bajada (regla de precios de referencia), y se muestra 30 días
+const DAY = 864e5;
+export function rebaja(c) {
+  const ph = (c.priceHistory || []).filter((x) => x && x.d && x.p); if (ph.length < 2) return null;
+  const last = ph[ph.length - 1]; if (last.p !== c.price) return null;
+  const t = Date.parse(last.d); if (Date.now() - t > 30 * DAY) return null;
+  const desde = t - 30 * DAY; const prev = ph.slice(0, -1);
+  const base = [...prev].reverse().find((x) => Date.parse(x.d) <= desde);
+  const ref = [...prev.filter((x) => Date.parse(x.d) > desde), ...(base ? [base] : [])].map((x) => x.p);
+  if (!ref.length) return null; const antes = Math.min(...ref);
+  return c.price < antes ? { antes } : null;
+}
+const nuevo = (c) => c.llegada && Date.now() - Date.parse(c.llegada) <= 15 * DAY;
+const tagDe = (c) => c.status === 'reservado' ? '<span class="tag r">Reservado</span>' : c.status === 'preparacion' ? '<span class="tag">Próximamente</span>' : rebaja(c) ? '<span class="tag rb">Rebajado</span>' : nuevo(c) ? '<span class="tag nw">Recién llegado</span>' : '';
+const heart = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>';
 const cover = (c) => (c.images && c.images[0]) || `${B}/assets/logo.png`;
 export function card(c) {
-  const tag = c.status === 'reservado' ? '<span class="tag r">Reservado</span>' : c.status === 'preparacion' ? '<span class="tag">Próximamente</span>' : '';
+  const tag = tagDe(c); const rb = rebaja(c);
   return `<a class="card" href="${B}/vehiculos/${c.slug}" data-p="${c.price}" data-f="${esc(c.fuel)}" data-t="${esc(c.trans)}" data-y="${c.year}" data-k="${c.km}" data-m="${esc(c.brand)}" data-c="${esc(c.body)}" data-s="${c.created || ''}" data-e="${c.seats || ''}" data-x="${esc(normTxt([c.brand, c.model, c.version, c.color, c.body, c.etiqueta].join(' ')))}">
-<div class="ph"><img src="${esc(im(cover(c), 600))}" alt="${esc(carName(c) + ' ' + c.year)}" loading="lazy" width="400" height="300">${tag}<span class="pr">${eur(c.price)}</span></div>
+<div class="ph"><img src="${esc(im(cover(c), 600))}" alt="${esc(carName(c) + ' ' + c.year)}" loading="lazy" width="400" height="300">${tag}<span class="fv" role="button" tabindex="0" data-fav="${c.slug}" aria-label="Guardar en favoritos" title="Guardar en favoritos">${heart}</span><span class="pr">${rb ? `<s>${eur(rb.antes)}</s> ` : ''}${eur(c.price)}</span></div>
 <div class="b"><div class="br">${esc(c.brand)}</div><div class="md"><b>${esc(c.model)}</b> <span>${esc(c.version || '')}</span></div>
 <div class="sp"><div>${ic.cal}${c.year}</div><div>${ic.gauge}${kms(c.km)}</div><div>${ic.fuel}${esc(c.fuel)}</div><div>${ic.gear}${esc(c.trans)}</div></div></div></a>`;
 }
@@ -171,7 +193,8 @@ const tel=f.telefono.value.replace(/[\\s().-]/g,'');if(!/^(\\+34|0034)?[6789]\\d
 if(f.fecha&&!f.fecha.value){m.textContent='Elige un día en el calendario.';m.className='msg err';return}
 if(f.hora&&!f.hora.value){m.textContent='Elige una hora.';m.className='msg err';return}
 if(f.email&&f.email.required&&!/^[^\\s@]+@[^\\s@]+\\.[a-z]{2,}$/i.test(f.email.value)){m.textContent='Escribe tu email.';m.className='msg err';return}
-b.disabled=true;try{const r=await fetch(f.dataset.api,{method:'POST',body:new FormData(f)});const j=await r.json();if(!r.ok)throw new Error(j.error||'Error');location.href='${B}/gracias?t='+encodeURIComponent(f.dataset.t)}catch(err){m.textContent=err.message;m.className='msg err';b.disabled=false}}));`;
+b.disabled=true;try{const r=await fetch(f.dataset.api,{method:'POST',body:new FormData(f)});const j=await r.json();if(!r.ok)throw new Error(j.error||'Error');try{pgConv('lead',f.dataset.t)}catch(x){}setTimeout(()=>location.href='${B}/gracias?t='+encodeURIComponent(f.dataset.t)+(j.ref?'&r='+j.ref+'&k='+j.k:''),250)}catch(err){m.textContent=err.message;m.className='msg err';b.disabled=false}}));`;
+const PICK_JS = `(()=>{const s=document.getElementById('pkc'),v=document.getElementById('pkv');if(!s)return;const d=()=>{const o=s.selectedOptions[0];v.innerHTML=o&&o.value?'<img alt="" src="'+o.dataset.i+'"><div><b>'+o.textContent.split(' · ')[0]+'</b><span>'+o.dataset.p+' · '+o.dataset.k+'</span></div>':''};s.onchange=d;d()})();`;
 const SLOTS_JS = `(()=>{const cd=document.getElementById('cd');if(!cd)return;const cm=document.getElementById('cm'),fd=document.getElementById('fecha'),hh=document.getElementById('hora'),sl=document.getElementById('slots'),bp=document.querySelector('.ch .cp'),bn=document.querySelector('.ch .cn');
 const MES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];const now=new Date();let y=now.getFullYear(),m=now.getMonth();const y0=y,m0=m;
 async function slots(d){hh.value='';sl.innerHTML='<span class="note">Cargando horas…</span>';const j=await fetch('${B}/api/slots?fecha='+d).then(r=>r.json()).catch(()=>({slots:[]}));
@@ -182,17 +205,19 @@ for(let i=0;i<first;i++){const e=document.createElement('button');e.type='button
 for(let d=1;d<=n;d++){const iso=mes+'-'+String(d).padStart(2,'0');const e=document.createElement('button');e.type='button';e.textContent=d;if(av.has(iso)){e.className='av'+(fd.value===iso?' sel':'');e.setAttribute('aria-label','Elegir el '+d+' de '+MES[m]);e.onclick=()=>{fd.value=iso;cd.querySelectorAll('.sel').forEach(z=>z.classList.remove('sel'));e.classList.add('sel');slots(iso)}}else{e.disabled=true}cd.appendChild(e)}}
 bp.onclick=()=>{m--;if(m<0){m=11;y--}draw()};bn.onclick=()=>{m++;if(m>11){m=0;y++}draw()};draw()})();`;
 
-function citaForm({ cars, coche = '', motivo = '' }) {
+function citaForm({ cars, coche = '', motivo = '', inFicha = false }) {
   const mot = ['Ver un coche en concreto', 'Reservar este coche', 'Tasar mi coche', 'Información sobre financiación', 'Otro motivo'];
-  return `<form class="f" data-api="${B}/api/cita" data-t="cita" novalidate>${hp()}<input type="hidden" name="fecha" id="fecha"><input type="hidden" name="hora" id="hora">
-<div class="cg"><div class="box" style="padding:24px;margin:0"><div class="ch"><span>${ic.cal}Elige una fecha</span><div><button type="button" class="cp" aria-label="Mes anterior">‹</button><b id="cm"></b><button type="button" class="cn" aria-label="Mes siguiente">›</button></div></div>
+  const sel = cars.find((c) => c.slug === coche);
+  const paso1 = sel ? `<input type="hidden" name="coche" value="${sel.slug}">${inFicha ? '' : `<div class="box pkv" style="padding:16px 20px;margin:0 0 24px"><img alt="" src="${esc(im(cover(sel), 200))}"><div><b>${esc(carName(sel))} (${sel.year})</b><span>${eur(sel.price)} · ${kms(sel.km)} · <a href="${B}/cita" style="color:var(--or)">cambiar</a></span></div></div>`}` : `<div class="box pk" style="padding:24px;margin:0 0 24px"><h3 style="margin:0 0 4px">1. ¿Qué coche quieres ver?</h3><p class="mu" style="margin:0 0 14px;font-size:14px">Así te lo tenemos preparado cuando llegues.</p>
+<div class="pkr"><select name="coche" id="pkc" aria-label="Coche que quieres ver"><option value="">Aún no lo sé / quiero ver varios</option>${cars.map((c) => `<option value="${c.slug}" data-i="${esc(im(cover(c), 200))}" data-p="${eur(c.price)}" data-k="${kms(c.km)}"${c.slug === coche ? ' selected' : ''}>${esc(carName(c))} (${c.year}) · ${eur(c.price)}</option>`).join('')}</select><div class="pkv" id="pkv"></div></div></div>`;
+  return `<form class="f" data-api="${B}/api/cita" data-t="cita" novalidate>${hp()}<input type="hidden" name="fecha" id="fecha"><input type="hidden" name="hora" id="hora">${paso1}
+<div class="cg"><div class="box" style="padding:24px;margin:0"><div class="ch"><span>${ic.cal}${sel ? 'Elige una fecha' : '2. Elige día y hora'}</span><div><button type="button" class="cp" aria-label="Mes anterior">‹</button><b id="cm"></b><button type="button" class="cn" aria-label="Mes siguiente">›</button></div></div>
 <div class="cw"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="cd" id="cd"></div>
 <div class="ct"><span class="note" style="display:block;margin-bottom:8px">Horas disponibles</span><div class="slots" id="slots"><span class="note">Elige primero un día.</span></div></div></div>
-<div class="box" style="padding:24px;margin:0;display:grid;gap:14px"><h3 style="margin:0">Tus datos</h3>
+<div class="box" style="padding:24px;margin:0;display:grid;gap:14px"><h3 style="margin:0">${sel ? 'Tus datos' : '3. Tus datos'}</h3>
 <div class="f2"><label>Nombre completo *<input name="nombre" required minlength="2" maxlength="80" autocomplete="name" placeholder="Juan Pérez"></label><label>Teléfono *<input name="telefono" required type="tel" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="600 000 000"></label></div>
 <label>Email *<input name="email" type="email" maxlength="200" autocomplete="email" required placeholder="tu@email.com"></label>
 <label>Motivo de la visita *<select name="motivo">${mot.map((m) => `<option${m === motivo ? ' selected' : ''}>${m}</option>`).join('')}</select></label>
-<label>¿Algún vehículo concreto? (opcional)<select name="coche"><option value="">— Ninguno en concreto —</option>${cars.map((c) => `<option value="${c.slug}"${c.slug === coche ? ' selected' : ''}>${esc(carName(c))} (${c.year})</option>`).join('')}</select></label>
 <label>Notas adicionales<textarea name="mensaje" maxlength="1000" placeholder="Cuéntanos cualquier detalle que debamos saber…"></textarea></label>${priv()}
 <div class="msg" role="alert"></div><button class="btn" type="submit">Confirmar reserva</button><p class="note" style="margin:0">Te confirmamos la cita por WhatsApp o por teléfono.</p></div></div></form>`;
 }
@@ -221,7 +246,25 @@ function nlqTxt(o){const p=[];if(o.words&&o.words.length)p.push('«'+o.words.joi
 const TRACK_JS = `(()=>{try{const u=new URL(location.href),r=document.referrer?new URL(document.referrer).hostname:'';let s=u.searchParams.get('utm_source')||(u.searchParams.get('fbclid')?'facebook':'')||(u.searchParams.get('gclid')?'google-ads':'');
 if(!s&&r&&r!==location.hostname){s=/google/.test(r)?'google':/facebook|fb\\\\./.test(r)?'facebook':/instagram/.test(r)?'instagram':/bing/.test(r)?'bing':/wallapop/.test(r)?'wallapop':/coches\\\\.net/.test(r)?'coches.net':/milanuncios/.test(r)?'milanuncios':r.replace(/^www\\\\./,'')}
 const c=document.body.dataset.car||'',snd=o=>navigator.sendBeacon&&navigator.sendBeacon('${B}/api/hit',new Blob([JSON.stringify(o)],{type:'application/json'}));
-snd({e:'view',p:location.pathname,s,c,n:!r||r!==location.hostname?1:0});document.addEventListener('click',e=>{const a=e.target.closest('a');if(!a)return;const h=a.getAttribute('href')||'';if(h.startsWith('https://wa.me'))snd({e:'wa',c});else if(h.startsWith('tel:'))snd({e:'tel',c});else if(a.id==='pdf')snd({e:'pdf',c})},true)}catch(x){}})();`;
+snd({e:'view',p:location.pathname,s,c,n:!r||r!==location.hostname?1:0});document.addEventListener('click',e=>{const a=e.target.closest('a');if(!a)return;const h=a.getAttribute('href')||'';if(h.startsWith('https://wa.me')){snd({e:'wa',c});try{pgConv('contact','wa')}catch(x){}}else if(h.startsWith('tel:'))snd({e:'tel',c});else if(a.id==='pdf')snd({e:'pdf',c})},true)}catch(x){}})();`;
+
+// Favoritos: se guardan solo en el navegador del visitante, a petición suya (no necesitan consentimiento)
+const FAV_JS = `(()=>{const K='pg_fav';const get=()=>{try{return JSON.parse(localStorage.getItem(K)||'[]')}catch(x){return[]}};const put=a=>{try{localStorage.setItem(K,JSON.stringify(a))}catch(x){}};
+const paint=()=>{const a=get();document.querySelectorAll('[data-fav]').forEach(e=>{const on=a.includes(e.dataset.fav);e.classList.toggle('on',on);e.setAttribute('aria-pressed',on)});const n=document.getElementById('fvn');if(n){n.textContent=a.length;n.classList.toggle('on',a.length>0)}};
+const tog=e=>{const b=e.target.closest('[data-fav]');if(!b)return;e.preventDefault();e.stopPropagation();let a=get();const s=b.dataset.fav;a=a.includes(s)?a.filter(x=>x!==s):[...a,s].slice(-30);put(a);paint();document.dispatchEvent(new Event('pgfav'))};
+document.addEventListener('click',tog,true);document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.fav)tog(e)},true);paint()})();`;
+
+// Cookies de publicidad (Google Ads / Meta): solo se cargan si el visitante acepta. Rechazar es igual de fácil que aceptar.
+const COOKIE_HTML = `<div class="cb" id="cb" role="dialog" aria-label="Cookies"><p>Usamos cookies propias necesarias y, solo si aceptas, cookies de Google y Meta para medir y mejorar nuestros anuncios. <a href="${B}/cookies">Más información</a>.</p><div class="row"><button class="btn g" id="ckn" type="button">Rechazar</button><button class="btn" id="cky" type="button">Aceptar</button></div></div>`;
+const cookieJs = () => `(()=>{const G=${JSON.stringify(CTX.gtag || '')},P=${JSON.stringify(CTX.pixel || '')},K='pg_ck';let st=null;try{st=localStorage.getItem(K)}catch(x){}
+const cb=document.getElementById('cb');window.pgConv=()=>{};
+const load=()=>{if(G){const s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+G;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments)};gtag('js',new Date());gtag('consent','default',{ad_storage:'granted',analytics_storage:'granted',ad_user_data:'granted',ad_personalization:'granted'});gtag('config',G)}
+if(P){!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init',P);fbq('track','PageView')}
+window.pgConv=(t,k)=>{try{if(window.gtag)gtag('event',t==='lead'?'generate_lead':'contact',{method:k});if(window.fbq)fbq('track',t==='lead'?'Lead':'Contact')}catch(x){}}};
+const set=v=>{try{localStorage.setItem(K,v)}catch(x){}cb.classList.remove('on');if(v==='si')load()};
+if(st==='si')load();else if(st!=='no')cb.classList.add('on');
+document.getElementById('cky').onclick=()=>set('si');document.getElementById('ckn').onclick=()=>set('no');
+const c=document.getElementById('ckc');if(c)c.onclick=e=>{e.preventDefault();cb.classList.add('on')}})();`;
 
 // Aviso de stock (alertas): ventana discreta, una vez por sesión
 const ALERT_HTML = `<div class="al" id="al" role="dialog" aria-label="Avisos de coches nuevos"><button class="x" aria-label="Cerrar">×</button><h3>¿No encuentras tu coche?</h3><p>Déjanos tu email y te avisamos cuando entre uno como el que buscas.</p>
@@ -311,7 +354,7 @@ const FICHA_CSS = `
 .lb button{position:absolute;background:rgba(255,255,255,.1);border:0;color:#fff;width:48px;height:48px;border-radius:50%;font-size:24px;cursor:pointer}.lb .x{top:18px;right:18px}.lb .p{left:18px;top:50%}.lb .n{right:18px;top:50%}.lb .c{position:absolute;bottom:18px;color:#bbb;font-size:14px}
 .sb{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(10,10,10,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:10px 16px;display:none;align-items:center;gap:10px;transform:translateY(100%);transition:transform .2s}.sb.on{transform:none}
 .sb b{font-family:'Space Grotesk',sans-serif;font-size:20px;flex:1}.sb .btn{padding:11px 18px}.sb a.wa{width:46px;height:46px;border-radius:50%;background:var(--wa);display:grid;place-items:center;flex:none}.sb a.wa svg{width:24px;height:24px;color:#fff}
-.pn{display:none}
+.pn{display:none}.bpf{display:grid;gap:10px;max-width:420px;margin-top:14px;background:rgba(10,10,10,.85);border:1px solid var(--line);border-radius:16px;padding:16px}.bpf[hidden]{display:none}.bpf .chk{font-size:12px;color:var(--mu)}
 @media(max-width:980px){.fl{grid-template-columns:1fr;gap:0}.idx{position:sticky;top:68px;z-index:30;display:flex;overflow-x:auto;gap:6px;border:0;padding:10px 0;background:rgba(5,5,5,.94);margin:0 -18px;padding-left:18px}.idx a{white-space:nowrap;border:1px solid var(--line);border-radius:999px;padding:6px 14px}.idx a.on{border-color:var(--or)}.idx a.on:before{display:none}
 .alt,.alt.r,.vis{grid-template-columns:1fr}.alt.r .ai{order:0}.hl{grid-template-columns:1fr 1fr}.big{grid-template-columns:1fr 1fr}.big b{font-size:21px;overflow-wrap:anywhere}.dt{grid-template-columns:1fr}.ph6{grid-template-columns:1fr 1fr}.sb{display:flex}.wf{display:none}.fh{min-height:76vh}}
 @media(max-width:560px){.hl{grid-template-columns:1fr}}
@@ -332,6 +375,7 @@ export function ficha({ car: c, cars, holders, qr = '', fichaUrl = '' }) {
   const okIc = I('<path d="M20 6L9 17l-5-5"/>');
   const stt = c.status === 'reservado' ? '<span class="st re">Reservado</span>' : c.status === 'preparacion' ? '<span class="st pr">Próximamente</span>' : '<span class="st ok">Disponible</span>';
   const secs = [['coche', 'El coche'], feats.length >= 3 ? ['destacado', 'Lo destacado'] : null, c.comment ? ['opinion', 'Cómo lo vemos'] : null, feats.length ? ['equipamiento', 'Equipamiento'] : null, ['ficha', 'Ficha técnica'], imgs.length > 1 ? ['fotos', 'Fotos'] : null, ['dudas', 'Dudas'], ['visita', 'Verlo en persona']].filter(Boolean);
+  const rbj = rebaja(c);
   const fq = [[`¿Puedo ver y probar el ${name}?`, `Sí. Pide cita en esta página eligiendo día y hora y te lo tenemos preparado en Sabadell. Atendemos de lunes a viernes de 9:30 a 19:30 y los sábados de 10:00 a 14:00.`], [`¿El ${c.brand} ${c.model} tiene garantía?`, 'Sí, garantía de 12 meses. Según la antigüedad del coche, se puede ampliar con coste adicional.'], ...(c.reserve > 0 && c.status === 'disponible' ? [['¿Puedo reservarlo?', `Sí, con una señal de ${eur(c.reserve)} que se descuenta del precio. Primero te confirmamos que sigue disponible y te explicamos las condiciones.`]] : []), ['¿Me lo podéis llevar a casa?', 'Sí, es posible. Pide presupuesto del envío con tu código postal aquí abajo, sin compromiso.'], ['¿Puedo financiarlo?', 'Consúltanos y te explicamos las opciones y condiciones antes de decidir.']];
   const title = (() => { const full = `${name} ${c.year} de segunda mano en Sabadell | Plata Garage`; if (full.length <= 70) return full; const s = `${c.brand} ${c.model} ${c.year} de segunda mano en Sabadell | Plata Garage`; return s.length <= 70 ? s : `${c.brand} ${c.model} ${c.year} en Sabadell | Plata Garage`; })();
   const desc = `${name} ${c.year}, ${kms(c.km)}, ${c.fuel.toLowerCase()}, ${c.trans.toLowerCase()}. ${eur(c.price)}. Garantía de 12 meses en Sabadell. Pide cita.`.slice(0, 158);
@@ -345,9 +389,10 @@ export function ficha({ car: c, cars, holders, qr = '', fichaUrl = '' }) {
 <div class="cr"><a href="${B}/">Inicio</a> · <a href="${B}/vehiculos/">Vehículos</a> · ${esc(c.brand)} ${esc(c.model)}</div>${stt}
 <h1>${esc(c.brand)} ${esc(c.model)}${c.version ? `<span>${esc(c.version)}</span>` : ''}</h1>
 <div class="chips"><span>${ic.cal}${c.year}</span><span>${ic.gauge}${kms(c.km)}</span><span>${ic.fuel}${esc(c.fuel)}</span><span>${ic.gear}${esc(c.trans)}</span>${c.cv ? `<span>${c.cv} CV</span>` : ''}${etq ? `<span>${etq.startsWith('Sin') ? esc(etq) : 'Etiqueta ' + esc(etq)}</span>` : ''}</div>
-<div class="pz">${eur(c.price)}</div>
+<div class="pz">${rbj ? `<s>${eur(rbj.antes)}</s>` : ''}${eur(c.price)}</div>${rbj ? `<p class="note" style="margin:-14px 0 18px">Rebajado. Precio anterior: el más bajo de los 30 días previos a la rebaja.</p>` : ''}
 <div class="row"><a class="btn" href="#visita">${ic.cal}Pedir cita para verlo</a><a class="btn g" href="${wa(waTxt)}" rel="noopener">${ic.wa}WhatsApp</a><a class="btn g" href="#ficha">Ver los datos</a></div>
-<a class="pdf" href="#" id="pdf">Descargar ficha (PDF)</a></div></section>
+<a class="pdf" href="#" id="pdf">Descargar ficha (PDF)</a> · <a class="pdf" href="#" data-fav="${c.slug}">Guardar en favoritos</a> · <a class="pdf" href="#bp" id="bpl">Avísame si baja de precio</a>
+<form id="bp" class="bpf" novalidate hidden>${hp()}<input type="hidden" name="coche" value="${c.slug}"><input name="email" type="email" required maxlength="200" placeholder="Tu email"><label class="chk"><input type="checkbox" name="consent" value="si"><span>Quiero que me aviséis por email si baja de precio este coche. Me puedo dar de baja cuando quiera. <a href="${B}/privacidad" target="_blank">Privacidad</a></span></label><div class="msg" role="alert"></div><button class="btn sm" type="submit">Avisarme</button></form></div></section>
 <div class="w fl"><nav class="idx" aria-label="En esta página">${secs.map(([id, t], i) => `<a href="#${id}"${i ? '' : ' class="on"'}>${t}</a>`).join('')}</nav><div>
 <section class="fs" id="coche"><div class="ey">El coche</div><h2>${esc(name)}</h2>
 <div class="alt">${ph(1) || ph(0)}<div class="desc" style="white-space:pre-line">${esc(paras[0] || '')}</div></div>
@@ -362,8 +407,9 @@ ${feats.length ? `<section class="fs" id="equipamiento"><div class="ey">Equipami
 <div class="pn" style="display:none;gap:16px;align-items:center"><div style="width:96px">${qr}</div><div>Plata Garage · Sabadell · ${TEL}<br>Fotos, cita y más datos: ${esc(fichaUrl)}</div></div></section>
 ${imgs.length > 1 ? `<section class="fs" id="fotos"><div class="ey">Fotos</div><h2>Todas las fotos (${imgs.length})</h2><div class="ph6">${imgs.map((u, i) => `<button type="button" data-i="${i}" aria-label="Ver foto ${i + 1} en grande"><img src="${esc(im(u, 500))}" alt="${esc(name)} ${c.year} – foto ${i + 1}" loading="lazy" width="400" height="300"></button>`).join('')}</div></section>` : ''}
 <section class="fs" id="dudas">${faqHtml(fq, 'Dudas sobre este coche')}</section>
-<section class="fs" id="visita"><div class="ey">Verlo en persona</div><h2>Reserva tu visita para este coche</h2>${citaForm({ cars, coche: c.slug })}
+<section class="fs" id="visita"><div class="ey">Verlo en persona</div><h2>Reserva tu visita para este coche</h2>${citaForm({ cars, coche: c.slug, inFicha: true })}
 <div class="v3"><div class="box"><h3>${ic.chat}¿Prefieres preguntar?</h3><a class="btn" href="${wa(waTxt)}" rel="noopener">${ic.wa}Preguntar por WhatsApp</a><a class="tx" href="tel:+34660493228">${ic.tel} ${TEL}</a><p class="note">Garantía de 12 meses. Financiación: consúltanos condiciones.</p></div>${reservaBox}
+<div class="box"><h3>${ic.key}¿Tienes coche para entregar?</h3><p class="mu" style="margin:0 0 12px;font-size:14px">Te lo valoramos sin compromiso y te decimos cuánto te quedaría por pagar por el ${esc(c.brand)} ${esc(c.model)}.</p><a class="btn g" href="${B}/cuanto-vale-mi-coche?coche=${c.slug}">Valorar mi coche</a></div>
 <div class="box"><h3>${ic.truck}Te lo llevamos a casa</h3><p class="mu" style="margin:0 0 12px;font-size:14px">Dinos tu código postal y te pasamos presupuesto del envío, sin compromiso.</p>
 <form class="f" data-api="${B}/api/envio" data-t="envio" novalidate>${hp()}<input type="hidden" name="coche" value="${c.slug}"><label>Código postal *<input name="cp" required inputmode="numeric" pattern="\\d{5}" maxlength="5"></label>${contactFields()}${priv()}<div class="msg" role="alert"></div><button class="btn g" type="submit">Pedir presupuesto de envío</button></form></div></div></section></div></div>
 ${sim.length ? `<section id="similares" style="padding:40px 0 90px"><div class="w"><h2 style="font-size:32px;margin-bottom:28px">También te puede interesar</h2><div class="grid">${sim.map(card).join('')}</div></div></section>` : ''}
@@ -377,6 +423,9 @@ lb.querySelector('.x').onclick=()=>lb.classList.remove('on');lb.querySelector('.
 lb.onclick=e=>{if(e.target===lb)lb.classList.remove('on')};document.addEventListener('keydown',e=>{if(!lb.classList.contains('on'))return;if(e.key==='Escape')lb.classList.remove('on');if(e.key==='ArrowLeft')show(k-1);if(e.key==='ArrowRight')show(k+1)});
 let sx=0;lb.addEventListener('touchstart',e=>sx=e.touches[0].clientX,{passive:true});lb.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-sx;if(Math.abs(d)>40)show(k+(d<0?1:-1))});
 document.getElementById('pdf').onclick=e=>{e.preventDefault();window.print()};
+(()=>{const f=document.getElementById('bp');document.getElementById('bpl').onclick=e=>{e.preventDefault();f.hidden=!f.hidden;f.t.value=Date.now();if(!f.hidden)f.email.focus()};
+f.onsubmit=async e=>{e.preventDefault();const m=f.querySelector('.msg');m.className='msg';if(!f.consent.checked){m.textContent='Marca la casilla para que podamos avisarte.';m.className='msg err';return}
+const r=await fetch('${B}/api/alerta',{method:'POST',body:new FormData(f)});const j=await r.json().catch(()=>({}));if(!r.ok){m.textContent=j.error||'Error';m.className='msg err';return}f.innerHTML='<p class="msg ok" style="display:block">Hecho. Te avisaremos si baja de precio.</p>'}})();
 const sb=document.getElementById('sb'),hero=document.querySelector('.fh');new IntersectionObserver(([e])=>sb.classList.toggle('on',!e.isIntersecting)).observe(hero);
 const links=[...document.querySelectorAll('.idx a')];const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id))}}),{rootMargin:'-40% 0px -55% 0px'});
 links.forEach(a=>{const s=document.querySelector(a.getAttribute('href'));if(s)io.observe(s)});
@@ -387,7 +436,7 @@ ${FORM_JS}${SLOTS_JS}`;
 export function cita({ cars, coche, motivo }) {
   const body = `<section style="padding-top:56px"><div class="w"><div class="pill">${ic.cal}Agenda</div><h1 class="s">Reserva tu visita<br><span class="gr">en menos de un minuto.</span></h1>
 <p class="lead" style="max-width:640px">Elige el día y la hora que mejor te vengan. Te recibimos en Sabadell, te enseñamos los coches que te interesen y resolvemos todas tus dudas.</p>${INFO3}${citaForm({ cars, coche, motivo })}</div></section>`;
-  return page({ title: 'Pedir cita para ver un coche en Sabadell | Plata Garage', desc: 'Pide cita para ver un coche en Plata Garage (Sabadell). Elige día y hora y te lo tenemos preparado.', on: 'cita', body, script: FORM_JS + SLOTS_JS, path: '/cita', noindex: !!(coche || motivo) });
+  return page({ title: 'Pedir cita para ver un coche en Sabadell | Plata Garage', desc: 'Pide cita para ver un coche en Plata Garage (Sabadell). Elige día y hora y te lo tenemos preparado.', on: 'cita', body, script: FORM_JS + SLOTS_JS + PICK_JS, path: '/cita', noindex: !!(coche || motivo) });
 }
 
 export function contacto() {
@@ -402,9 +451,28 @@ export function contacto() {
   return page({ title: 'Contacto y tasación | Plata Garage', desc: 'Contacta con Plata Garage en Sabadell o pide la tasación de tu coche.', on: 'con', body, script: FORM_JS, path: '/contacto' });
 }
 
-export function gracias(t) {
+export function gracias(t, { bk = null, car = null, cars = [] } = {}) {
   const txt = { cita: 'Hemos recibido tu solicitud de cita. Te la confirmamos en breve por WhatsApp o por teléfono.', envio: 'Hemos recibido tu solicitud. Te pasamos el presupuesto del envío lo antes posible.', tasacion: 'Hemos recibido los datos de tu coche. Te enviamos una valoración orientativa en 24 horas laborables.', busqueda: 'Hemos recibido lo que buscas. Te escribimos en cuanto tengamos opciones que encajen.', mensaje: 'Hemos recibido tu mensaje. Te respondemos lo antes posible.' }[t] || 'Hemos recibido tu solicitud.';
-  return page({ noindex: true, title: 'Gracias | Plata Garage', desc: 'Solicitud recibida', body: `<section><div class="w"><div class="cta"><h2>¡Gracias!</h2><p class="lead" style="max-width:560px;margin:18px auto 0">${txt}</p><div class="row"><a class="btn" href="${B}/vehiculos/">Ver más coches</a><a class="btn g" href="${wa('Hola, acabo de enviar una solicitud desde la web.')}">Escribir por WhatsApp</a></div></div></div></section>` });
+  if (!bk) return page({ noindex: true, title: 'Gracias | Plata Garage', desc: 'Solicitud recibida', body: `<section><div class="w"><div class="cta"><h2>¡Gracias!</h2><p class="lead" style="max-width:560px;margin:18px auto 0">${txt}</p><div class="row"><a class="btn" href="${B}/vehiculos/">Ver más coches</a><a class="btn g" href="${wa('Hola, acabo de enviar una solicitud desde la web.')}">Escribir por WhatsApp</a></div></div></div></section>` });
+  // Resumen de la cita con lo que el cliente necesita: cuándo, qué coche, añadir al calendario y seguir mirando
+  const dia = new Date(bk.fecha + 'T12:00:00Z').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+  const nm = car ? `${carName(car)} (${car.year})` : '';
+  const [H, Mi] = bk.hora.split(':').map(Number); const pad = (n) => String(n).padStart(2, '0'); const end = H * 60 + Mi + 30;
+  const d0 = bk.fecha.replace(/-/g, '') + 'T' + pad(H) + pad(Mi) + '00', d1 = bk.fecha.replace(/-/g, '') + 'T' + pad(Math.floor(end / 60)) + pad(end % 60) + '00';
+  const tit = `Cita en Plata Garage${nm ? ' · ' + nm : ''}`, det = `Cita en Plata Garage (Sabadell). Si necesitas cambiarla: WhatsApp ${TEL}.`;
+  const gcal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(tit)}&dates=${d0}/${d1}&ctz=Europe/Madrid&details=${encodeURIComponent(det)}&location=Sabadell`;
+  const ics = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Plata Garage//Cita//ES', 'BEGIN:VEVENT', `UID:${bk.id}@platagarage`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`, `DTSTART;TZID=Europe/Madrid:${d0}`, `DTEND;TZID=Europe/Madrid:${d1}`, `SUMMARY:${tit}`, `DESCRIPTION:${det}`, 'LOCATION:Sabadell', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n'));
+  const waTxt = `Hola, soy ${bk.nombre}. Acabo de pedir cita para el ${dia} a las ${bk.hora}${nm ? ' para ver el ' + nm : ''}.`;
+  const sim = car ? cars.filter((x) => x.slug !== car.slug).sort((a, b) => Math.abs(a.price - car.price) - Math.abs(b.price - car.price)).slice(0, 3) : cars.filter((x) => x.featured).slice(0, 3);
+  const body = `<section style="padding-top:56px"><div class="w"><div class="gx">
+<div><div class="pill">${I('<path d="M20 6L9 17l-5-5"/>')}Solicitud recibida</div><h1 class="s">¡Gracias, ${esc(bk.nombre.split(' ')[0])}! <span class="gr">Tu cita está pedida.</span></h1>
+<p class="lead">Te la confirmamos en breve por WhatsApp o por teléfono. Si te surge algo, avísanos y la cambiamos sin problema.</p>
+<div class="box gsum"><div class="gd"><span class="mu">Día</span><b>${esc(dia[0].toUpperCase() + dia.slice(1))}</b></div><div class="gd"><span class="mu">Hora</span><b>${esc(bk.hora)}</b></div><div class="gd"><span class="mu">Dónde</span><b>Sabadell</b><span class="note" style="margin:0">Te pasamos la ubicación al confirmar</span></div><div class="gd"><span class="mu">Duración</span><b>30 min, sin prisas</b></div></div>
+<div class="row" style="margin:18px 0 8px"><a class="btn" href="${gcal}" target="_blank" rel="noopener">${ic.cal}Añadir a Google Calendar</a><a class="btn g" href="${ics}" download="cita-plata-garage.ics">Añadir a otro calendario</a><a class="btn g" href="${wa(waTxt)}" rel="noopener">${ic.wa}Escribirnos</a></div></div>
+${car ? `<a class="card" href="${B}/vehiculos/${car.slug}"><div class="ph"><img src="${esc(im(cover(car), 700))}" alt="${esc(nm)}" width="400" height="300"><span class="pr">${eur(car.price)}</span></div><div class="b"><div class="br">El coche que vas a ver</div><div class="md"><b>${esc(car.brand)} ${esc(car.model)}</b> <span>${esc(car.version || '')}</span></div><div class="sp"><div>${ic.cal}${car.year}</div><div>${ic.gauge}${kms(car.km)}</div><div>${ic.fuel}${esc(car.fuel)}</div><div>${ic.gear}${esc(car.trans)}</div></div></div></a>` : ''}</div>
+<div class="box" style="margin-top:28px"><h3>${ic.key}¿Vas a entregar tu coche?</h3><p class="mu" style="margin:0 0 12px;font-size:14px">Si quieres dejar el tuyo como parte del pago, pídenos la valoración antes de venir y lo hablamos en la visita.</p><a class="btn g sm" style="width:auto" href="${B}/cuanto-vale-mi-coche${car ? '?coche=' + car.slug : ''}">Valorar mi coche</a></div>
+${sim.length ? `<h2 style="font-size:28px;margin:48px 0 22px">${car ? 'Ya que vienes, échales un ojo' : 'Coches destacados'}</h2><div class="grid">${sim.map(card).join('')}</div>` : ''}</div></section>`;
+  return page({ noindex: true, title: 'Cita pedida | Plata Garage', desc: 'Solicitud de cita recibida', body, head: '<style>.gx{display:grid;grid-template-columns:1.3fr 1fr;gap:36px;align-items:start}.gsum{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:24px 0 0}.gd{display:grid;gap:2px}.gd b{font-size:18px;font-family:\'Space Grotesk\',sans-serif}@media(max-width:900px){.gx{grid-template-columns:1fr}}</style>' });
 }
 
 const TITULARES = `<ul><li><b>Cristina Plata Galán</b> · NIF 48271238B · C/ Tetuán 92, 08203 Sabadell (Barcelona)</li><li><b>Juan Morante Cruz</b> · NIF 77123920K · C/ Tetuán 92, 08203 Sabadell (Barcelona)</li></ul>`;
@@ -418,7 +486,7 @@ export function privacidad() {
 <h2>4. Conservación</h2><p>Mientras dure la gestión de tu solicitud y, después, durante los plazos legales aplicables. Si no llega a haber operación, borramos los datos como máximo a los 12 meses. Los avisos de coches nuevos, hasta que te des de baja.</p>
 <h2>5. Destinatarios</h2><p>No cedemos tus datos a terceros salvo obligación legal. Usamos proveedores que actúan como encargados del tratamiento: Netlify (alojamiento de la web y de los datos, y envío de los avisos internos por correo) y Google (correo electrónico). Si nos escribes por WhatsApp, se aplican también las condiciones de WhatsApp (Meta).</p>
 <h2>6. Tus derechos</h2><p>Puedes pedir acceso, rectificación, supresión, oposición, limitación y portabilidad, y retirar tu consentimiento en cualquier momento, escribiendo a info@platagarage.com. Si crees que no hemos atendido bien tu petición, puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).</p>
-<h2>7. Cookies</h2><p>Esta web no instala cookies de publicidad ni de analítica. Solo el panel interno de gestión usa una cookie técnica de sesión, necesaria para entrar.</p></div></section>`;
+<h2>7. Cookies</h2><p>${CTX.gtag || CTX.pixel ? 'Solo si lo aceptas, usamos cookies de Google y Meta para medir nuestros anuncios.' : 'Esta web no instala cookies de publicidad ni de analítica.'} Los favoritos y tu elección sobre cookies se guardan solo en tu navegador. Tienes el detalle en la <a href="${B}/cookies">política de cookies</a>.</p></div></section>`;
   return page({ title: 'Política de privacidad | Plata Garage', desc: 'Política de privacidad de Plata Garage', body, path: '/privacidad' });
 }
 
@@ -450,12 +518,13 @@ ${contactFields()}${priv()}<div class="msg" role="alert"></div><button class="bt
   return page({ title: 'Te buscamos coche en Sabadell | Plata Garage', desc: 'Dinos qué coche de segunda mano buscas y tu presupuesto y te lo buscamos. Sin compromiso.', body, script: FORM_JS, path: '/te-lo-buscamos' });
 }
 
-export function cuantoVale() {
+export function cuantoVale({ car } = {}) {
   const y = new Date().getFullYear();
   const body = `<section style="padding-top:56px"><div class="w"><div class="pill">${I('<path d="M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L2 12V2h10l8.6 8.6a2 2 0 010 2.8z"/><circle cx="7" cy="7" r="1.5"/>')}Tasación gratuita</div><h1 class="s">¿Cuánto vale <span class="gr">mi coche?</span></h1>
+${car ? `<div class="box" style="max-width:720px;display:flex;gap:14px;align-items:center"><img src="${esc(im(cover(car), 200))}" alt="" width="96" height="72" style="border-radius:10px;object-fit:cover"><div><b>Para entregarlo como parte del pago del ${esc(carName(car))} (${car.year})</b><div class="mu" style="font-size:14px">${eur(car.price)} · Te diremos cuánto te quedaría por pagar.</div></div></div>` : ''}
 <p class="lead" style="max-width:640px">Responde 4 preguntas rápidas y te damos una valoración orientativa, hecha por una persona y no por un algoritmo, en 24 horas laborables. Sin compromiso de venta.</p>
 <div class="box wz" style="padding:28px"><div class="stp2"><i class="on"></i><i></i><i></i><i></i></div>
-<form class="f" data-api="${B}/api/tasacion" data-t="tasacion" novalidate id="wz">${hp()}
+<form class="f" data-api="${B}/api/tasacion" data-t="tasacion" novalidate id="wz">${hp()}${car ? `<input type="hidden" name="coche" value="${car.slug}">` : ''}
 <fieldset class="on"><legend>1. ¿Qué coche es?</legend><div class="f2"><label>Marca *<input name="marca" required maxlength="40" placeholder="Seat"></label><label>Modelo *<input name="modelo" required maxlength="60" placeholder="León 1.5 TSI"></label></div>
 <div class="f2"><label>Año de matriculación *<input name="anio" required inputmode="numeric" maxlength="4" placeholder="${y - 8}"></label><label>Kilómetros *<input name="km" required inputmode="numeric" maxlength="7" placeholder="120000"></label></div></fieldset>
 <fieldset><legend>2. Motor y cambio</legend><span class="note">Combustible</span>${opts('combustible', ['Gasolina', 'Diésel', 'Híbrido', 'Eléctrico', 'GLP'])}<span class="note">Cambio</span>${opts('cambio', ['Manual', 'Automático'])}</fieldset>
@@ -557,4 +626,37 @@ export function faqPage({ cars }) {
   const body = `<section style="padding-top:56px"><div class="w"><div class="pill">${ic.chat}Dudas</div><h1 class="s">Preguntas <span class="gr">frecuentes</span></h1><p class="lead" style="max-width:640px">Lo que más nos preguntáis antes de venir. Si te queda alguna duda, escríbenos por <a href="${wa('Hola, tengo una duda.')}" style="color:var(--or)">WhatsApp</a>.</p>
 ${faqHtml(FAQ, '')}<div class="row" style="margin-top:28px"><a class="btn" href="${B}/vehiculos/">Ver los ${cars.length} coches en stock</a><a class="btn g" href="${B}/cita">Pedir cita</a></div></div></section>`;
   return page({ title: 'Preguntas frecuentes | Plata Garage', desc: 'Cita previa, garantía de 12 meses, financiación, reserva, tasación de tu coche y envío a domicilio: resolvemos tus dudas.', body, path: '/preguntas-frecuentes', head: ld(ldFaq(FAQ)) });
+}
+
+// ---------- favoritos y comparador (todo dentro de la web) ----------
+export function favoritos({ cars }) {
+  const body = `<section style="padding-top:56px"><div class="w"><div class="pill">${heart}Favoritos</div><h1 class="s">Tus coches <span class="gr">guardados</span></h1>
+<p class="lead" style="max-width:640px">Pulsa el corazón de cualquier coche para guardarlo aquí. Marca hasta 3 para compararlos lado a lado.</p>
+<div class="row" style="margin-bottom:22px"><a class="btn" id="cmpb" href="#">Comparar seleccionados (0)</a><a class="btn g" href="${B}/vehiculos/">Seguir mirando</a></div>
+<div class="grid" id="g">${cars.map((c) => `<div class="fwrap" data-s="${c.slug}" style="display:none">${card(c)}<label class="chk" style="margin-top:10px;font-size:14px"><input type="checkbox" data-cmp="${c.slug}">Comparar</label></div>`).join('')}</div>
+<p class="mu" id="z" style="display:none">Todavía no has guardado ningún coche. <a href="${B}/vehiculos/" style="color:var(--or)">Mira el stock</a> y pulsa el corazón en los que te gusten.</p></div></section>`;
+  const script = `(()=>{const get=()=>{try{return JSON.parse(localStorage.getItem('pg_fav')||'[]')}catch(x){return[]}};const draw=()=>{const a=get();let n=0;document.querySelectorAll('.fwrap').forEach(e=>{const on=a.includes(e.dataset.s);e.style.display=on?'':'none';if(on)n++});document.getElementById('z').style.display=n?'none':''};
+draw();document.addEventListener('pgfav',draw);const b=document.getElementById('cmpb');const upd=()=>{const s=[...document.querySelectorAll('[data-cmp]:checked')].map(x=>x.dataset.cmp);b.textContent='Comparar seleccionados ('+s.length+')';b.href=s.length>1?'${B}/comparar?c='+s.join(','):'#'};
+document.querySelectorAll('[data-cmp]').forEach(x=>x.onchange=()=>{const s=document.querySelectorAll('[data-cmp]:checked');if(s.length>3){x.checked=false;return}upd()});b.onclick=e=>{if(b.getAttribute('href')==='#'){e.preventDefault();alertMsg()}};function alertMsg(){b.textContent='Marca 2 o 3 coches para comparar'}})();`;
+  return page({ title: 'Mis favoritos | Plata Garage', desc: 'Tus coches guardados en Plata Garage.', body, script, noindex: true });
+}
+
+export function comparar({ cars }) {
+  const rows = [['Precio', (c) => eur(c.price)], ['Año', (c) => c.year], ['Kilómetros', (c) => kms(c.km)], ['Combustible', (c) => esc(c.fuel)], ['Cambio', (c) => esc(c.trans)], ['Potencia', (c) => (c.cv ? c.cv + ' CV' : '—')], ['Carrocería', (c) => esc(c.body || '—')], ['Plazas', (c) => c.seats || '—'], ['Puertas', (c) => c.doors || '—'], ['Color', (c) => esc(c.color || '—')], ['Etiqueta DGT', (c) => esc(etiquetaDe(c) || '—')], ['Garantía', () => '12 meses'], ['Equipamiento', (c) => (c.features || []).slice(0, 8).map(esc).join('<br>') || '—']];
+  const body = `<section style="padding-top:56px"><div class="w"><div class="crumb" style="padding:0 0 18px"><a href="${B}/favoritos">${ic.back}Volver a favoritos</a></div><h1 class="s">Comparar <span class="gr">coches</span></h1>
+${cars.length < 2 ? `<p class="lead">Elige al menos 2 coches en <a href="${B}/favoritos" style="color:var(--or)">tus favoritos</a> para compararlos.</p>` : `<div class="cmp" style="margin-top:28px"><table><thead><tr><th></th>${cars.map((c) => `<td><a href="${B}/vehiculos/${c.slug}"><img src="${esc(im(cover(c), 500))}" alt="${esc(carName(c))}" loading="lazy"></a><b style="display:block;margin-top:8px">${esc(c.brand)} ${esc(c.model)}</b><span class="mu" style="font-size:13px">${esc(c.version || '')}</span></td>`).join('')}</tr></thead>
+<tbody>${rows.map(([k, f]) => `<tr><th>${k}</th>${cars.map((c) => `<td>${f(c)}</td>`).join('')}</tr>`).join('')}<tr><th></th>${cars.map((c) => `<td><a class="btn sm" href="${B}/cita?coche=${c.slug}">Pedir cita</a></td>`).join('')}</tr></tbody></table></div>
+<p class="note" style="margin-top:16px">Datos orientativos y no vinculantes; pueden contener errores. Confírmalos con nosotros antes de decidir.</p>`}</div></section>`;
+  return page({ title: 'Comparar coches | Plata Garage', desc: 'Compara coches de Plata Garage lado a lado.', body, noindex: true });
+}
+
+export function cookies() {
+  const ads = !!(CTX.gtag || CTX.pixel);
+  const body = `<section style="padding-top:56px"><div class="w post legal"><h1 class="s">Política de cookies</h1><p class="note">Última actualización: octubre de 2026.</p>
+<h2>1. Qué usamos</h2><ul><li><b>Técnicas y necesarias</b> (sin consentimiento, art. 22.2 LSSI): guardar en tu navegador los coches que marcas como favoritos y tu elección sobre las cookies, y la cookie de sesión del panel interno de gestión.</li>
+<li><b>Medición propia sin cookies:</b> contamos visitas de forma agregada sin instalar cookies ni guardar datos que te identifiquen.</li>
+${ads ? `<li><b>Publicidad (solo si aceptas):</b> ${CTX.gtag ? 'Google Ads / Google Analytics (Google Ireland Ltd.)' : ''}${CTX.gtag && CTX.pixel ? ' y ' : ''}${CTX.pixel ? 'Meta Pixel (Meta Platforms Ireland Ltd.)' : ''}, para medir qué anuncios funcionan y mostrar anuncios relevantes. Pueden implicar transferencias internacionales con las garantías de sus proveedores.</li>` : '<li><b>Publicidad:</b> ahora mismo no usamos cookies de publicidad. Si las activamos, te pediremos permiso antes.</li>'}</ul>
+<h2>2. Cómo cambiar tu elección</h2><p>${ads ? 'Puedes aceptar o rechazar cuando quieras desde "Configurar cookies", al pie de cada página. Rechazarlas no impide usar la web.' : 'No hace falta: no instalamos cookies que requieran consentimiento.'} También puedes borrar las cookies desde la configuración de tu navegador.</p>
+<h2>3. Más información</h2><p>Consulta nuestra <a href="${B}/privacidad">política de privacidad</a> o escríbenos a info@platagarage.com.</p></div></section>`;
+  return page({ title: 'Política de cookies | Plata Garage', desc: 'Política de cookies de Plata Garage', body, path: '/cookies' });
 }

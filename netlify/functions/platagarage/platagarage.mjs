@@ -128,6 +128,7 @@ function cleanCar(b, old = {}) {
   if ('features' in b) c.features = (Array.isArray(b.features) ? b.features : String(b.features).split('\n')).map((x) => clip(x, 120)).filter(Boolean).slice(0, 80);
   if ('images' in b) c.images = (b.images || []).filter((u) => typeof u === 'string' && u.startsWith(BASE + '/')).slice(0, 40);
   ['featured', 'sold', 'hidden'].forEach((k) => { if (k in b) c[k] = !!b[k]; });
+  if ('llegada' in b) c.llegada = /^\d{4}-\d{2}-\d{2}$/.test(b.llegada || '') ? b.llegada : undefined;
   if (!['disponible', 'preparacion', 'reservado'].includes(c.status)) c.status = 'disponible';
   return c;
 }
@@ -243,6 +244,21 @@ self.addEventListener('fetch', () => {});
 self.addEventListener('notificationclick', (e) => { e.notification.close(); e.waitUntil(self.clients.matchAll({ type: 'window' }).then((cs) => (cs[0] ? cs[0].focus() : self.clients.openWindow('/platagarage/admin#resumen')))); });
 `;
 
+// Aviso de bajada de precio a quien lo pidió en la ficha (con su consentimiento y baja en un clic)
+async function avisarBajada(c, origin) {
+  if (!env('PG_SMTP_USER') || !env('PG_SMTP_PASS')) return;
+  const list = await load('alertas'); const fichaUrl = `${origin}${BASE}/vehiculos/${c.slug}`; let n = 0;
+  const eurf = (v) => new Intl.NumberFormat('es-ES', { useGrouping: 'always' }).format(v) + ' €';
+  for (const a of list.filter((x) => x.coche === c.slug && x.status === 'activa' && (x.ultimoAviso || x.precio || Infinity) > c.price)) {
+    const baja = `${origin}${BASE}/api/baja?id=${a.id}&k=${sign('baja|' + a.id).slice(0, 22)}`;
+    const nm = `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''} (${c.year})`;
+    const ok = await sendMail({ to: a.email, subject: `Ha bajado de precio: ${nm} · Plata Garage`, text: `Hola,\n\nNos pediste que te avisáramos si bajaba de precio el ${nm}. Ahora está a ${eurf(c.price)}.\n\nFotos, datos y cita: ${fichaUrl}\n\nUn saludo,\nPlata Garage · 660 49 32 28\n\nSi no quieres más avisos: ${baja}`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111"><p>Hola,</p><p>Nos pediste que te avisáramos si bajaba de precio el <b>${hesc(nm)}</b>. Ahora está a <b>${eurf(c.price)}</b>.</p><p><a href="${fichaUrl}" style="display:inline-block;background:#f76806;color:#000;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px">Ver el coche</a></p><p>Un saludo,<br>Plata Garage · 660 49 32 28</p><p style="font-size:12px;color:#777">Recibes este correo porque lo pediste en www.platagarage.com. <a href="${baja}" style="color:#777">Darme de baja</a>.</p></div>` }).catch(() => false);
+    if (ok) { a.ultimoAviso = c.price; a.avisadoEl = today(); n++; }
+  }
+  if (n) await save('alertas', list);
+}
+
 // ---------- router ----------
 export default async (req, context) => {
   const url = new URL(req.url);
@@ -270,7 +286,7 @@ export default async (req, context) => {
 
     // ---- web pública ----
     const site = (env('PG_SITE_URL') || url.origin).replace(/\/+$/, '');
-    V.setCtx({ site, index: INDEX() });
+    V.setCtx({ site, index: INDEX(), gtag: clip(env('PG_GTAG_ID'), 20), pixel: clip(env('PG_META_PIXEL'), 20) });
     const cars = await load('cars');
     if (sub === '/robots.txt') return text(`User-agent: *\n${INDEX() ? `Allow: /\nDisallow: ${BASE}/admin\nDisallow: ${BASE}/api/\nDisallow: ${BASE}/gracias\n` : 'Disallow: /\n'}\nSitemap: ${site}${BASE}/sitemap.xml\n`, 'text/plain');
     if (sub === '/sitemap.xml') return text(sitemap(site, pubCars(cars), (await load('posts')).filter((x) => x.published)), 'application/xml');
@@ -303,8 +319,15 @@ export default async (req, context) => {
     if (sub === '/privacidad') return html(V.privacidad());
     if (sub === '/aviso-legal') return html(V.avisoLegal());
     if (sub === '/te-lo-buscamos') return html(V.teLoBuscamos({ cars: pubCars(cars) }));
-    if (sub === '/cuanto-vale-mi-coche') return html(V.cuantoVale());
-    if (sub === '/gracias') return html(V.gracias(url.searchParams.get('t') || ''));
+    if (sub === '/cuanto-vale-mi-coche') return html(V.cuantoVale({ car: pubCars(cars).find((c) => c.slug === url.searchParams.get('coche')) }));
+    if (sub === '/favoritos') return html(V.favoritos({ cars: pubCars(cars) }), 200, { 'x-robots-tag': 'noindex' });
+    if (sub === '/comparar') { const sl = (url.searchParams.get('c') || '').split(',').slice(0, 3); return html(V.comparar({ cars: sl.map((x) => pubCars(cars).find((c) => c.slug === x)).filter(Boolean) }), 200, { 'x-robots-tag': 'noindex' }); }
+    if (sub === '/cookies') return html(V.cookies());
+    if (sub === '/gracias') {
+      const ref = clip(url.searchParams.get('r'), 40), k = clip(url.searchParams.get('k'), 16);
+      let bk = null; if (ref && k.length === 16 && eqHash(k, sign('ref|' + ref).slice(0, 16))) bk = (await load('bookings')).find((x) => x.id === ref) || null;
+      return html(V.gracias(url.searchParams.get('t') || '', { bk, car: bk?.coche ? cars.find((c) => c.slug === bk.coche) : null, cars: pubCars(cars) }), 200, { 'cache-control': 'no-store' });
+    }
     if (sub === '/blog') return html(V.blogList({ posts: (await load('posts')).filter((x) => x.published) }));
     if (sub.startsWith('/blog/')) {
       const post = (await load('posts')).find((x) => x.slug === sub.slice(6) && x.published);
@@ -336,6 +359,12 @@ async function api(r, req, M, ip, url, context) {
     if (!env('PG_ADMIN_PASSWORD') || tok.length !== 32 || !eqHash(tok, icalToken())) return new Response('No encontrado', { status: 404 });
     return new Response(ical(await load('bookings')), { headers: { 'content-type': 'text/calendar; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } });
   }
+  if (r === '/baja' && M === 'GET') {
+    const id = clip(url.searchParams.get('id'), 40), k = clip(url.searchParams.get('k'), 64);
+    const list = await load('alertas'); const a = list.find((x) => x.id === id);
+    if (a && k.length === 22 && eqHash(k, sign('baja|' + id).slice(0, 22))) { list.filter((x) => x.email === a.email).forEach((x) => (x.status = 'baja')); await save('alertas', list); }
+    return html(V.notFound('Listo: te hemos dado de baja y no te enviaremos más avisos.'), 200, { 'x-robots-tag': 'noindex' });
+  }
   if (r === '/alerta' && M === 'POST') {
     const f = await readForm(req);
     if (f.web || !Number(f.t) || Date.now() - Number(f.t) < 2500) return json({ ok: true });
@@ -343,8 +372,9 @@ async function api(r, req, M, ip, url, context) {
     if (f.consent !== 'si') return json({ error: 'Marca la casilla para que podamos avisarte.' }, 400);
     if (await rateLimited(ip, 'alerta', 5)) return json({ error: 'Demasiadas solicitudes. Prueba más tarde.' }, 429);
     const list = await load('alertas');
-    const it = { id: uid('a'), email, busca: clip(f.busca, 120), max: num(f.max), created: new Date().toISOString(), status: 'activa', origen: clip(f.origen, 120) };
-    const i = list.findIndex((x) => x.email === email); if (i >= 0) list[i] = { ...list[i], ...it, id: list[i].id }; else list.unshift(it);
+    const coche = clip(f.coche, 120); const car = coche ? (await load('cars')).find((x) => x.slug === coche && !x.sold) : null;
+    const it = { id: uid('a'), email, busca: car ? `Bajada de precio: ${car.brand} ${car.model} (${car.year})` : clip(f.busca, 120), max: num(f.max), created: new Date().toISOString(), status: 'activa', origen: clip(f.origen, 120), ...(car ? { coche: car.slug, tipo: 'precio', precio: car.price } : {}) };
+    const i = list.findIndex((x) => x.email === email && (x.coche || '') === (it.coche || '')); if (i >= 0) list[i] = { ...list[i], ...it, id: list[i].id }; else list.unshift(it);
     await save('alertas', list); await notify('alerta', it, url.origin).catch(() => {}); return json({ ok: true });
   }
 
@@ -354,7 +384,7 @@ async function api(r, req, M, ip, url, context) {
     if (chk.spam) return json({ ok: true }); // no damos pistas al bot
     if (chk.error) return json({ error: chk.error }, 400);
     if (await rateLimited(ip, 'form', 8)) return json({ error: 'Has enviado demasiadas solicitudes. Escríbenos por WhatsApp.' }, 429);
-    const base = { id: uid(), ...chk.data, created: new Date().toISOString(), status: 'pendiente', notas: '' };
+    const base = { id: uid(), ...chk.data, created: new Date().toISOString(), status: 'pendiente', notas: '' }; const out = { ok: true };
     const cars = await load('cars');
     const carRef = (slug) => { const c = cars.find((x) => x.slug === slug); return c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' ') } : {}; };
     if (r === '/cita') {
@@ -364,9 +394,10 @@ async function api(r, req, M, ip, url, context) {
       const list = await load('bookings');
       list.unshift({ ...base, tipo: motivo === 'Reservar este coche' ? 'reserva' : 'cita', fecha, hora, motivo, mensaje: clip(f.mensaje, 1000), ...carRef(f.coche) });
       await save('bookings', list);
+      out.ref = base.id; out.k = sign('ref|' + base.id).slice(0, 16);
     } else if (r === '/tasacion') {
       const list = await load('tasaciones');
-      list.unshift({ ...base, marca: clip(f.marca, 40), modelo: clip(f.modelo, 60), anio: num(f.anio), km: num(f.km), combustible: clip(f.combustible, 20), cambio: clip(f.cambio, 20), estado: clip(f.estado, 40), itv: clip(f.itv, 20), notas_cliente: clip(f.notas, 1500) });
+      list.unshift({ ...base, ...(f.coche ? { parteDePago: true, ...carRef(f.coche) } : {}), marca: clip(f.marca, 40), modelo: clip(f.modelo, 60), anio: num(f.anio), km: num(f.km), combustible: clip(f.combustible, 20), cambio: clip(f.cambio, 20), estado: clip(f.estado, 40), itv: clip(f.itv, 20), notas_cliente: clip(f.notas, 1500) });
       await save('tasaciones', list);
     } else if (r === '/envio') {
       const cp = clip(f.cp, 5); if (!/^\d{5}$/.test(cp)) return json({ error: 'Escribe un código postal de 5 cifras.' }, 400);
@@ -382,9 +413,9 @@ async function api(r, req, M, ip, url, context) {
       list.unshift({ ...base, asunto: clip(f.asunto, 120), mensaje: clip(f.mensaje, 3000), leido: false });
       await save('mensajes', list);
     }
-    await notify(r.slice(1), { ...base, ...f, web: undefined, t: undefined, privacidad: undefined }, url.origin).catch(() => {});
+    await notify(r.slice(1), { ...base, ...f, ...carRef(f.coche || ''), ...(r === '/tasacion' && f.coche ? { motivo: 'Lo entregaría como parte de pago' } : {}), web: undefined, t: undefined, privacidad: undefined }, url.origin).catch(() => {});
     await bump('ev', 'form-' + r.slice(1)).catch(() => {});
-    return json({ ok: true });
+    return json(out);
   }
 
   // Login: usuarios del panel o, de emergencia, la contraseña maestra de Netlify (usuario "admin")
@@ -422,15 +453,29 @@ async function sendMail({ to, subject, html: body, text: txt, replyTo }) {
 const hesc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 async function notify(tipo, d, origin) {
   if (!origin) return;
-  const rows = Object.entries(d).filter(([k, v]) => v != null && v !== '' && LABEL[k] && k !== 'coche');
+  // Mismo formato que el aviso del panel anterior: tarjeta oscura con logo, tabla de datos, notas y botón al backoffice
+  const diaL = d.fecha ? new Date(d.fecha + 'T12:00:00Z').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
+  const F = [['Cliente', d.nombre], ['Email', d.email], ['Teléfono', d.telefono], ['Día', diaL], ['Hora', d.hora], ['Motivo', d.motivo], ['Coche de interés', d.cocheNombre], ['Código postal', d.cp], ['Asunto', d.asunto], ['Su coche', [d.marca, d.modelo, d.anio].filter(Boolean).join(' ')], ['Kilómetros', d.km], ['Combustible', d.combustible], ['Cambio', d.cambio], ['Estado', d.estado], ['ITV', d.itv], ['Presupuesto', d.presupuesto ? d.presupuesto + ' €' : ''], ['Busca', d.busca], ['Máximo', d.max ? d.max + ' €' : '']].filter(([, v]) => v != null && v !== '');
+  const notas = d.mensaje || d.notas || '';
   const panel = `${origin}${BASE}/admin`;
-  const mailHtml = `<div style="background:#050505;padding:24px;font-family:Arial,sans-serif;color:#f5f5f5"><div style="max-width:560px;margin:0 auto;background:#141414;border:1px solid #2a2a2a;border-radius:16px;padding:24px"><img src="${origin}${BASE}/assets/logo.png" alt="Plata Garage" height="34" style="display:block;margin-bottom:18px"><h2 style="margin:0 0 16px;font-size:20px;color:#fff">${hesc(TIT[tipo] || 'Aviso')}</h2><table style="width:100%;border-collapse:collapse;font-size:14px">${rows.map(([k, v]) => `<tr><td style="padding:8px 0;border-bottom:1px solid #2a2a2a;color:#a1a1a1;width:38%">${LABEL[k]}</td><td style="padding:8px 0;border-bottom:1px solid #2a2a2a;color:#fff">${hesc(v)}</td></tr>`).join('')}</table>${d.telefono ? `<p style="margin:18px 0 0"><a href="https://wa.me/${String(d.telefono).replace(/\D/g, '').replace(/^(\d{9})$/, '34$1')}" style="color:#25d366">Escribirle por WhatsApp</a></p>` : ''}<p style="margin:20px 0 0"><a href="${panel}" style="display:inline-block;background:#f76806;color:#000;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px">Gestionar en el backoffice</a></p></div></div>`;
-  const txt = rows.map(([k, v]) => `${LABEL[k]}: ${v}`).join('\n') + `\n\nPanel: ${panel}`;
-  const subject = `${TIT[tipo] || 'Aviso'}${d.nombre ? ' · ' + d.nombre : ''} · Plata Garage`;
+  const H1 = { cita: d.tipo === 'reserva' || d.motivo === 'Reservar este coche' ? 'Nueva solicitud de reserva' : 'Nueva cita reservada', tasacion: 'Nueva solicitud de tasación', envio: 'Nueva solicitud de envío', mensaje: 'Nuevo mensaje', busqueda: 'Nueva petición "Te lo buscamos"', alerta: 'Nueva alerta de stock' }[tipo] || 'Nuevo aviso';
+  const td = 'padding:8px 0;color:#6b6b6b;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;width:42%', tv = 'padding:8px 0;color:#f5f5f5;font-size:15px;font-weight:600';
+  const mailHtml = `<div style="margin:0;padding:0;background:#050505;color:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#050505;padding:24px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#0d0d0d;border:1px solid #262626;border-radius:16px;overflow:hidden">
+<tr><td style="padding:24px 32px;text-align:center;border-bottom:1px solid #262626"><img src="${origin}${BASE}/assets/logo.png" alt="Plata Garage" height="36" style="height:36px;width:auto;display:inline-block"></td></tr>
+<tr><td style="padding:32px;color:#f5f5f5;font-size:15px;line-height:1.55"><h1 style="margin:0 0 16px;font-size:24px;line-height:1.2;color:#f5f5f5;font-weight:700">${hesc(H1)}</h1>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 20px;border:1px solid #262626;border-radius:12px;background:#050505"><tr><td style="padding:18px 20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${F.map(([k, v]) => `<tr><td style="${td}">${k}</td><td style="${tv}">${k === 'Teléfono' ? `<a href="https://wa.me/${String(v).replace(/\D/g, '').replace(/^(\d{9})$/, '34$1')}" style="color:#f5f5f5;text-decoration:none">${hesc(v)}</a>` : hesc(v)}</td></tr>`).join('')}</table></td></tr></table>
+${notas ? `<p style="margin:0 0 14px;color:#a1a1a1">Notas: ${hesc(notas)}</p>` : ''}
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 4px"><tr><td><a href="${panel}" style="display:inline-block;background:#f76806;color:#000;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:9999px;font-size:14px">Gestionar en el backoffice</a></td></tr></table></td></tr>
+<tr><td style="padding:20px 32px;border-top:1px solid #262626;background:#050505;text-align:center;font-size:12px;color:#6b6b6b"><p style="margin:0 0 6px">Plata Garage · Sabadell</p><p style="margin:0"><a href="tel:+34660493228" style="color:#a1a1a1;text-decoration:none">+34 660 49 32 28</a> &nbsp;·&nbsp; <a href="mailto:info@platagarage.com" style="color:#a1a1a1;text-decoration:none">info@platagarage.com</a></p></td></tr>
+</table></td></tr></table></div>`;
+  const txt = F.map(([k, v]) => `${k}: ${v}`).join('\n') + (notas ? `\nNotas: ${notas}` : '') + `\n\nGestionar en el backoffice: ${panel}`;
+  const tit = { cita: H1.startsWith('Nueva solicitud de reserva') ? 'Nueva reserva' : 'Nueva cita', tasacion: 'Nueva tasación', envio: 'Nuevo envío', mensaje: 'Nuevo mensaje', busqueda: 'Te lo buscamos', alerta: 'Nueva alerta' }[tipo] || 'Aviso';
+  const subject = `${tit} — ${d.nombre || d.email || ''}${diaL ? ` (${diaL} ${d.hora || ''})` : d.cocheNombre ? ` (${d.cocheNombre})` : ''}`.trim();
   if (await sendMail({ subject, html: mailHtml, text: txt, replyTo: d.email || undefined }).catch((e) => { console.error('smtp', e.message); return false; })) return;
 
-  const lines = Object.entries(d).filter(([k, v]) => v != null && v !== '' && !['id', 'status', 'notas', 'tipo'].includes(k)).map(([k, v]) => `${k}: ${v}`).join('\n');
-  const body = new URLSearchParams({ 'form-name': 'avisos', asunto: `${TIT[tipo] || 'Aviso'} · Plata Garage`, tipo, nombre: d.nombre || d.email || '', telefono: d.telefono || '', detalle: lines, panel: `${origin}${BASE}/admin` });
+  const lines = txt;
+  const body = new URLSearchParams({ 'form-name': 'avisos', asunto: subject, tipo, nombre: d.nombre || d.email || '', telefono: d.telefono || '', detalle: lines, panel: `${origin}${BASE}/admin` });
   await fetch(`${origin}${BASE}/assets/avisos.html`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body });
 }
 // Medición propia sin cookies ni datos personales: contadores por día
@@ -480,7 +525,7 @@ async function adminApi(r, req, M, me, url) {
     if (M === 'GET' && !seg[1]) return json(cars);
     if (M === 'GET') { const c = cars.find((x) => x.id === seg[1]); return c ? json(c) : json({ error: 'No existe' }, 404); }
     if (M === 'POST' && !seg[1]) {
-      const c = cleanCar(body, { id: uid('c'), featured: false, sold: false, images: [], features: [], status: 'disponible', created: today() });
+      const c = cleanCar(body, { id: uid('c'), featured: false, sold: false, images: [], features: [], status: 'disponible', created: today(), llegada: today() });
       const e = carErrors(c); if (e.length) return json({ error: 'Faltan datos: ' + e.join(', ') }, 400);
       c.slug = uniqueSlug(cars, c); c.updated = today(); cars.unshift(c); await save('cars', cars); return json(c);
     }
@@ -502,6 +547,7 @@ async function adminApi(r, req, M, me, url) {
       const chg = []; if (old.price !== c.price) chg.push(`precio ${old.price} → ${c.price} €`); if (!old.sold && c.sold) chg.push('vendido'); if (old.sold && !c.sold) chg.push('vuelve a stock'); if (old.status !== c.status) chg.push(`estado: ${c.status}`); if (old.km !== c.km) chg.push(`km ${old.km} → ${c.km}`); if (!!old.hidden !== !!c.hidden) chg.push(c.hidden ? 'oculto' : 'visible'); if ((old.images || []).join() !== (c.images || []).join()) chg.push('fotos'); if (old.desc !== c.desc) chg.push('descripción');
       if (chg.length) c.log = [...(old.log || []), { d: new Date().toISOString(), by: me.name, t: chg.join(', ') }].slice(-60);
       c.updated = today(); cars[i] = c; await save('cars', cars);
+      if (!c.sold && !c.hidden && old.price && c.price < old.price) await avisarBajada(c, url.origin).catch((e) => console.error('bajada', e.message));
       await dropMedia((old.images || []).filter((u) => !(c.images || []).includes(u)));
       return json(c);
     }
