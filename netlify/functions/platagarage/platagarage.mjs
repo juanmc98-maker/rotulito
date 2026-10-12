@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import seed from './seed.mjs';
 import * as V from './views.mjs';
 import QRCode from 'qrcode';
+import * as SEO from './seo.mjs';
 
 export const config = {
   path: ['/platagarage', '/platagarage/*'],
@@ -11,6 +12,8 @@ export const config = {
 };
 
 const BASE = '/platagarage';
+// Hasta la migración al dominio definitivo la web no se indexa (PG_INDEX=1 la abre a Google)
+const INDEX = () => env('PG_INDEX') === '1';
 const TZ = 'Europe/Madrid';
 const env = (k) => (globalThis.Netlify?.env?.get?.(k)) ?? process.env[k];
 const store = (name) => (globalThis.__pgGetStore || nfGetStore)({ name, consistency: 'strong' });
@@ -18,7 +21,7 @@ const db = () => store('platagarage');
 const media = () => store('platagarage-media');
 
 // ---------- datos ----------
-const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [] };
+const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], clientes: [] };
 async function load(key) {
   const v = await db().get(key, { type: 'json' });
   if (v == null) { const d = structuredClone(DEFAULTS[key]); await db().setJSON(key, d); return d; }
@@ -29,7 +32,8 @@ const uid = (p = '') => p + Date.now().toString(36) + crypto.randomBytes(3).toSt
 
 // ---------- utilidades ----------
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex', ...headers } });
-const html = (body, status = 200, extra = {}) => new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=0, must-revalidate', 'x-robots-tag': 'noindex, nofollow', 'x-content-type-options': 'nosniff', 'referrer-policy': 'strict-origin-when-cross-origin', ...extra } });
+const html = (body, status = 200, extra = {}) => new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=0, must-revalidate', 'x-robots-tag': INDEX() ? 'index, follow' : 'noindex, nofollow', 'x-content-type-options': 'nosniff', 'referrer-policy': 'strict-origin-when-cross-origin', ...extra } });
+const text = (body, type) => new Response(body, { headers: { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'public, max-age=300' } });
 const redirect = (to, status = 301) => new Response(null, { status, headers: { location: to, 'cache-control': 'no-store' } });
 export const slugify = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\+/g, ' plus ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 const clip = (v, n) => String(v ?? '').trim().slice(0, n);
@@ -142,6 +146,103 @@ function uniqueSlug(cars, c) {
   return s;
 }
 
+// ---------- SEO: sitemap y llms.txt ----------
+const xesc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+function sitemap(site, cars, posts) {
+  const u = (path, lastmod, img = []) => `<url><loc>${xesc(site + BASE + path)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ''}${img.slice(0, 10).map((i) => `<image:image><image:loc>${xesc(i.startsWith('http') ? i : site + i)}</image:loc></image:image>`).join('')}</url>`;
+  const newest = cars.map((c) => c.updated || c.created || '').sort().pop() || today();
+  const rows = [u('/', newest), u('/vehiculos/', newest), u('/cita'), u('/te-lo-buscamos'), u('/cuanto-vale-mi-coche'), u('/preguntas-frecuentes'), u('/contacto'), u('/blog/')];
+  cars.forEach((c) => rows.push(u(`/vehiculos/${c.slug}`, c.updated || c.created, c.images || [])));
+  SEO.tiposConStock(cars).forEach((t) => rows.push(u(`/coches/${t.slug}`, newest)));
+  SEO.marcas(cars).forEach((m) => rows.push(u(`/coches/${m.slug}`, newest)));
+  SEO.ZONAS.forEach((z) => rows.push(u(`/coches-segunda-mano-${z.slug}`, newest)));
+  posts.forEach((p) => rows.push(u(`/blog/${p.slug}`, p.updated || p.publishedAt)));
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${rows.join('\n')}\n</urlset>`;
+}
+function llms(site, cars) {
+  const S = site + BASE;
+  const eur = (n) => new Intl.NumberFormat('es-ES', { useGrouping: 'always' }).format(n) + ' €';
+  return `# Plata Garage
+
+> Compraventa de coches de segunda mano en Sabadell (Barcelona, Vallès Occidental). Todos los coches tienen garantía de 12 meses. Atención con cita previa: lunes a viernes de 9:30 a 19:30 y sábados de 10:00 a 14:00. Teléfono y WhatsApp: +34 660 49 32 28.
+
+Atendemos a clientes de Sabadell, Terrassa, Sant Cugat, Barberà del Vallès, Cerdanyola, Ripollet, Sant Quirze, Castellar, Rubí, Barcelona y el resto del Vallès. Si el cliente no puede venir, se presupuesta el envío del coche a domicilio.
+
+## Páginas principales
+- [Coches en stock](${S}/vehiculos/): catálogo actualizado con precio, kilómetros, año y fotos
+- [Pedir cita](${S}/cita): elegir día y hora para ver un coche
+- [Te lo buscamos](${S}/te-lo-buscamos): encargo de un coche concreto según presupuesto
+- [¿Cuánto vale mi coche?](${S}/cuanto-vale-mi-coche): valoración orientativa gratuita en 24 h laborables
+- [Preguntas frecuentes](${S}/preguntas-frecuentes)
+
+## Coches en stock (${cars.length})
+${cars.map((c) => `- [${c.brand} ${c.model}${c.version ? ' ' + c.version : ''} (${c.year})](${S}/vehiculos/${c.slug}): ${eur(c.price)}, ${new Intl.NumberFormat('es-ES', { useGrouping: 'always' }).format(c.km)} km, ${c.fuel}, ${c.trans}`).join('\n')}
+
+Los datos son orientativos y no vinculantes; confírmalos con Plata Garage antes de decidir.
+`;
+}
+
+// ---------- clientes (embudo) ----------
+// Agrupa todas las solicitudes por teléfono y calcula la etapa del embudo de forma automática
+const ETAPAS = ['nuevo', 'contactado', 'cita', 'visitado', 'reserva', 'vendido', 'perdido'];
+const pkey = (t) => String(t || '').replace(/\D/g, '').slice(-9);
+async function buildClientes() {
+  const [b, t, e, m, bu, al, cars, cl] = await Promise.all(['bookings', 'tasaciones', 'envios', 'mensajes', 'busquedas', 'alertas', 'cars', 'clientes'].map(load));
+  const map = new Map();
+  const add = (x, tipo, resumen) => {
+    const k = pkey(x.telefono); if (!k) return;
+    if (!map.has(k)) map.set(k, { key: k, nombre: x.nombre, telefono: x.telefono, email: x.email || '', leads: [] });
+    const c = map.get(k); if (x.email && !c.email) c.email = x.email; if (x.nombre && (!c.nombre || (x.created || '') > (c.last || ''))) c.nombre = x.nombre;
+    c.leads.push({ tipo, id: x.id, created: x.created || '', status: x.status, resumen, fecha: x.fecha, hora: x.hora, coche: x.coche, cocheNombre: x.cocheNombre, motivo: x.motivo, btipo: x.tipo });
+    if ((x.created || '') > (c.last || '')) c.last = x.created || '';
+  };
+  b.forEach((x) => add(x, 'cita', `${x.tipo === 'reserva' ? 'Reserva' : 'Cita'} ${x.fecha || ''} ${x.hora || ''} · ${x.cocheNombre || x.motivo || ''}`));
+  t.forEach((x) => add(x, 'tasacion', `Tasación: ${x.marca || ''} ${x.modelo || ''} ${x.anio || ''}`));
+  e.forEach((x) => add(x, 'envio', `Envío a ${x.cp || ''} · ${x.cocheNombre || ''}`));
+  m.forEach((x) => add(x, 'mensaje', `Mensaje: ${(x.asunto || x.mensaje || '').slice(0, 80)}`));
+  bu.forEach((x) => add(x, 'busqueda', `Busca: ${[x.marca, x.modelo].filter(Boolean).join(' ') || 'cualquiera'} hasta ${x.presupuesto || '?'} €`));
+  const td = today(); const r = (s) => ETAPAS.indexOf(s);
+  const out = [...map.values()].map((c) => {
+    c.leads.sort((a, z) => z.created.localeCompare(a.created));
+    const st = cl.find((x) => x.key === c.key) || {};
+    const bought = cars.filter((x) => x.buyer === c.key);
+    const cit = c.leads.filter((l) => l.tipo === 'cita');
+    let auto = 'nuevo';
+    if (c.leads.some((l) => l.status && l.status !== 'pendiente')) auto = 'contactado';
+    if (cit.some((l) => l.status !== 'cancelada' && l.fecha >= td)) auto = 'cita';
+    if (cit.some((l) => l.status === 'completada')) auto = 'visitado';
+    if (cit.some((l) => l.btipo === 'reserva' && l.status === 'confirmada')) auto = 'reserva';
+    if (bought.some((x) => x.sold)) auto = 'vendido';
+    else if (bought.some((x) => x.status === 'reservado')) auto = r(auto) < r('reserva') ? 'reserva' : auto;
+    // La etapa puesta a mano manda, salvo que después pase algo que haga avanzar al cliente
+    let etapa = auto;
+    if (st.etapa) { const newer = (c.last || '') > (st.at || ''); etapa = st.etapa === 'perdido' ? (newer ? auto : 'perdido') : (r(auto) > r(st.etapa) && auto !== 'perdido' ? auto : st.etapa); }
+    // Sin movimiento en 45 días y sin venta → se archiva sola como perdido
+    const lastAct = [c.last, st.at].filter(Boolean).sort().pop() || '';
+    if (!['vendido', 'perdido'].includes(etapa) && !cit.some((l) => l.fecha >= td) && lastAct && addDays(td, -45) > lastAct.slice(0, 10)) etapa = 'perdido';
+    return { ...c, etapa, auto, manual: st.etapa || '', notas: st.notas || '', compras: bought.map((x) => ({ id: x.id, slug: x.slug, nombre: `${x.brand} ${x.model} (${x.year})`, sold: x.sold, soldAt: x.soldAt })), alerta: al.some((a) => a.email && a.email === c.email && a.status === 'activa') };
+  });
+  return out.sort((a, z) => (z.last || '').localeCompare(a.last || ''));
+}
+
+// ---------- calendario iCal (suscripción desde Google o Apple Calendar) ----------
+const icalToken = () => sign('ical-v1').slice(0, 32);
+function ical(bookings) {
+  const e = (s) => String(s || '').replace(/[\\;,]/g, (c) => '\\' + c).replace(/\n/g, '\\n');
+  const dt = (d, h, add = 0) => { const [H, M] = h.split(':').map(Number); const t = H * 60 + M + add; return `${d.replace(/-/g, '')}T${String(Math.floor(t / 60)).padStart(2, '0')}${String(t % 60).padStart(2, '0')}00`; };
+  const ev = bookings.filter((b) => b.fecha && b.hora && b.status !== 'cancelada').map((b) => ['BEGIN:VEVENT', `UID:${b.id}@platagarage`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`, `DTSTART;TZID=Europe/Madrid:${dt(b.fecha, b.hora)}`, `DTEND;TZID=Europe/Madrid:${dt(b.fecha, b.hora, 30)}`,
+    `SUMMARY:${e(`${b.tipo === 'reserva' ? 'Reserva' : 'Cita'}: ${b.nombre}${b.cocheNombre ? ' · ' + b.cocheNombre : ''}`)}`, `DESCRIPTION:${e(`Tel. ${b.telefono}${b.email ? ' · ' + b.email : ''}\nMotivo: ${b.motivo || ''}${b.mensaje ? '\nNotas: ' + b.mensaje : ''}\nEstado: ${b.status}`)}`, `STATUS:${b.status === 'confirmada' || b.status === 'completada' ? 'CONFIRMED' : 'TENTATIVE'}`, 'END:VEVENT'].join('\r\n'));
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Plata Garage//Citas//ES', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Citas Plata Garage', 'X-WR-TIMEZONE:Europe/Madrid', 'REFRESH-INTERVAL;VALUE=DURATION:PT15M', 'X-PUBLISHED-TTL:PT15M',
+    'BEGIN:VTIMEZONE', 'TZID:Europe/Madrid', 'BEGIN:STANDARD', 'DTSTART:19701025T030000', 'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU', 'TZOFFSETFROM:+0200', 'TZOFFSETTO:+0100', 'END:STANDARD', 'BEGIN:DAYLIGHT', 'DTSTART:19700329T020000', 'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU', 'TZOFFSETFROM:+0100', 'TZOFFSETTO:+0200', 'END:DAYLIGHT', 'END:VTIMEZONE', ...ev, 'END:VCALENDAR'].join('\r\n');
+}
+
+const SW_JS = `// Panel instalable: siempre carga la versión más reciente (sin guardar datos de clientes en el móvil)
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener('fetch', () => {});
+self.addEventListener('notificationclick', (e) => { e.notification.close(); e.waitUntil(self.clients.matchAll({ type: 'window' }).then((cs) => (cs[0] ? cs[0].focus() : self.clients.openWindow('/platagarage/admin#resumen')))); });
+`;
+
 // ---------- router ----------
 export default async (req, context) => {
   const url = new URL(req.url);
@@ -161,15 +262,32 @@ export default async (req, context) => {
     }
 
     // ---- API ----
-    if (sub.startsWith('/api/')) return await api(sub.slice(4), req, M, ip, url);
+    if (sub.startsWith('/api/')) return await api(sub.slice(4), req, M, ip, url, context);
 
     // ---- panel ----
     if (sub === '/admin') return html(V.adminShell(), 200, { 'cache-control': 'no-store' });
+    if (sub === '/admin-sw.js') return new Response(SW_JS, { headers: { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' } });
 
     // ---- web pública ----
+    const site = (env('PG_SITE_URL') || url.origin).replace(/\/+$/, '');
+    V.setCtx({ site, index: INDEX() });
     const cars = await load('cars');
+    if (sub === '/robots.txt') return text(`User-agent: *\n${INDEX() ? `Allow: /\nDisallow: ${BASE}/admin\nDisallow: ${BASE}/api/\nDisallow: ${BASE}/gracias\n` : 'Disallow: /\n'}\nSitemap: ${site}${BASE}/sitemap.xml\n`, 'text/plain');
+    if (sub === '/sitemap.xml') return text(sitemap(site, pubCars(cars), (await load('posts')).filter((x) => x.published)), 'application/xml');
+    if (sub === '/llms.txt') return text(llms(site, pubCars(cars)), 'text/plain');
     if (sub === '/') return html(V.home({ cars: pubCars(cars), sched: await load('schedule') }));
     if (sub === '/vehiculos') return html(V.catalog({ cars: pubCars(cars), q: Object.fromEntries(url.searchParams) }));
+    if (sub === '/preguntas-frecuentes') return html(V.faqPage({ cars: pubCars(cars) }));
+    if (sub.startsWith('/coches-segunda-mano-')) {
+      const z = SEO.ZONAS.find((x) => x.slug === sub.slice(21));
+      if (!z) return redirect(`${BASE}/vehiculos/`);
+      return html(V.zona({ z, cars: pubCars(cars) }));
+    }
+    if (sub.startsWith('/coches/')) {
+      const l = SEO.landing(sub.slice(8), pubCars(cars));
+      if (!l) return redirect(`${BASE}/vehiculos/`);
+      return html(V.landingPage({ l, cars: pubCars(cars) }), 200, l.cars.length ? {} : { 'x-robots-tag': 'noindex, follow' });
+    }
     if (sub.startsWith('/vehiculos/')) {
       const slug = sub.slice(11).replace(/\.html$/, '');
       if (sub.endsWith('.html')) return redirect(`${BASE}/vehiculos/${slug}`);
@@ -202,7 +320,7 @@ export default async (req, context) => {
 const sub500 = (p) => (p.includes('/api/') ? json({ error: 'Error interno. Inténtalo de nuevo.' }, 500) : html(V.notFound('Ha habido un error. Prueba de nuevo en un momento.'), 500));
 
 // ---------- API ----------
-async function api(r, req, M, ip, url) {
+async function api(r, req, M, ip, url, context) {
   // Públicas
   if (r === '/slots' && M === 'GET') return json({ slots: await freeSlots(url.searchParams.get('fecha') || '') });
   if (r === '/dias' && M === 'GET') {
@@ -212,7 +330,12 @@ async function api(r, req, M, ip, url) {
     for (let d = 1; d <= n; d++) { const iso = `${mes}-${String(d).padStart(2, '0')}`; const sl = await freeSlots(iso, pre); if (sl.length) dias.push(iso); }
     return json({ dias });
   }
-  if (r === '/hit' && M === 'POST') { await hit(req, ip).catch(() => {}); return new Response(null, { status: 204 }); }
+  if (r === '/hit' && M === 'POST') { await hit(req, context).catch(() => {}); return new Response(null, { status: 204 }); }
+  if (r.startsWith('/ical/') && M === 'GET') {
+    const tok = r.slice(6).replace(/\.ics$/, '');
+    if (!env('PG_ADMIN_PASSWORD') || tok.length !== 32 || !eqHash(tok, icalToken())) return new Response('No encontrado', { status: 404 });
+    return new Response(ical(await load('bookings')), { headers: { 'content-type': 'text/calendar; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } });
+  }
   if (r === '/alerta' && M === 'POST') {
     const f = await readForm(req);
     if (f.web || !Number(f.t) || Date.now() - Number(f.t) < 2500) return json({ ok: true });
@@ -222,7 +345,7 @@ async function api(r, req, M, ip, url) {
     const list = await load('alertas');
     const it = { id: uid('a'), email, busca: clip(f.busca, 120), max: num(f.max), created: new Date().toISOString(), status: 'activa', origen: clip(f.origen, 120) };
     const i = list.findIndex((x) => x.email === email); if (i >= 0) list[i] = { ...list[i], ...it, id: list[i].id }; else list.unshift(it);
-    await save('alertas', list); await notify('alerta', it).catch(() => {}); return json({ ok: true });
+    await save('alertas', list); await notify('alerta', it, url.origin).catch(() => {}); return json({ ok: true });
   }
 
   if (['/cita', '/tasacion', '/envio', '/mensaje', '/busqueda'].includes(r) && M === 'POST') {
@@ -287,8 +410,25 @@ async function api(r, req, M, ip, url) {
 
 // Aviso por correo: se envía a Netlify Forms (formulario "avisos"), que manda el email a la dirección configurada
 const TIT = { cita: 'Nueva cita', tasacion: 'Nueva tasación', envio: 'Nueva solicitud de envío', mensaje: 'Nuevo mensaje', busqueda: 'Nueva petición "Te lo buscamos"', alerta: 'Nueva alerta de stock' };
+// Con PG_SMTP_USER y PG_SMTP_PASS (contraseña de aplicación de Gmail) el aviso sale directamente por correo; si no, por Netlify Forms
+const LABEL = { nombre: 'Nombre', telefono: 'Teléfono', email: 'Email', fecha: 'Fecha', hora: 'Hora', motivo: 'Motivo', coche: 'Coche (enlace)', cocheNombre: 'Coche', mensaje: 'Mensaje', asunto: 'Asunto', marca: 'Marca', modelo: 'Modelo', anio: 'Año', km: 'Km', combustible: 'Combustible', cambio: 'Cambio', estado: 'Estado', itv: 'ITV', notas: 'Notas', cp: 'Código postal', presupuesto: 'Presupuesto', busca: 'Busca', max: 'Máximo', origen: 'Desde la página', created: 'Recibido' };
+async function sendMail({ to, subject, html: body, text: txt, replyTo }) {
+  const user = env('PG_SMTP_USER'), pass = env('PG_SMTP_PASS'); if (!user || !pass) return false;
+  const { default: nm } = await import('nodemailer');
+  const tr = nm.createTransport({ host: 'smtp.gmail.com', port: 465, secure: true, auth: { user, pass } });
+  await tr.sendMail({ from: `"Plata Garage" <${user}>`, to: to || env('PG_NOTIFY_TO') || user, subject, html: body, text: txt, replyTo });
+  return true;
+}
+const hesc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 async function notify(tipo, d, origin) {
   if (!origin) return;
+  const rows = Object.entries(d).filter(([k, v]) => v != null && v !== '' && LABEL[k] && k !== 'coche');
+  const panel = `${origin}${BASE}/admin`;
+  const mailHtml = `<div style="background:#050505;padding:24px;font-family:Arial,sans-serif;color:#f5f5f5"><div style="max-width:560px;margin:0 auto;background:#141414;border:1px solid #2a2a2a;border-radius:16px;padding:24px"><img src="${origin}${BASE}/assets/logo.png" alt="Plata Garage" height="34" style="display:block;margin-bottom:18px"><h2 style="margin:0 0 16px;font-size:20px;color:#fff">${hesc(TIT[tipo] || 'Aviso')}</h2><table style="width:100%;border-collapse:collapse;font-size:14px">${rows.map(([k, v]) => `<tr><td style="padding:8px 0;border-bottom:1px solid #2a2a2a;color:#a1a1a1;width:38%">${LABEL[k]}</td><td style="padding:8px 0;border-bottom:1px solid #2a2a2a;color:#fff">${hesc(v)}</td></tr>`).join('')}</table>${d.telefono ? `<p style="margin:18px 0 0"><a href="https://wa.me/${String(d.telefono).replace(/\D/g, '').replace(/^(\d{9})$/, '34$1')}" style="color:#25d366">Escribirle por WhatsApp</a></p>` : ''}<p style="margin:20px 0 0"><a href="${panel}" style="display:inline-block;background:#f76806;color:#000;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px">Gestionar en el backoffice</a></p></div></div>`;
+  const txt = rows.map(([k, v]) => `${LABEL[k]}: ${v}`).join('\n') + `\n\nPanel: ${panel}`;
+  const subject = `${TIT[tipo] || 'Aviso'}${d.nombre ? ' · ' + d.nombre : ''} · Plata Garage`;
+  if (await sendMail({ subject, html: mailHtml, text: txt, replyTo: d.email || undefined }).catch((e) => { console.error('smtp', e.message); return false; })) return;
+
   const lines = Object.entries(d).filter(([k, v]) => v != null && v !== '' && !['id', 'status', 'notas', 'tipo'].includes(k)).map(([k, v]) => `${k}: ${v}`).join('\n');
   const body = new URLSearchParams({ 'form-name': 'avisos', asunto: `${TIT[tipo] || 'Aviso'} · Plata Garage`, tipo, nombre: d.nombre || d.email || '', telefono: d.telefono || '', detalle: lines, panel: `${origin}${BASE}/admin` });
   await fetch(`${origin}${BASE}/assets/avisos.html`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body });
@@ -299,12 +439,17 @@ async function bump(group, key, n = 1) {
   const k = `stats/${today()}`; const st = (await db().get(k, { type: 'json' })) || {};
   st[group] = st[group] || {}; st[group][key] = (st[group][key] || 0) + n; await db().setJSON(k, st);
 }
-async function hit(req, ip) {
+async function hit(req, context) {
   if (BOT.test(req.headers.get('user-agent') || '')) return;
   const b = await req.json().catch(() => ({}));
   const k = `stats/${today()}`; const st = (await db().get(k, { type: 'json' })) || {};
   const inc = (g, key) => { if (!key) return; st[g] = st[g] || {}; st[g][key] = (st[g][key] || 0) + 1; };
-  if (b.e === 'view') { inc('pv', clip(b.p, 120)); inc('src', clip(b.s, 60) || 'directo'); if (b.c) inc('car', clip(b.c, 120)); inc('tot', 'visitas'); }
+  if (b.e === 'view') {
+    inc('pv', clip(b.p, 120)); inc('src', clip(b.s, 60) || 'directo'); if (b.c) inc('car', clip(b.c, 120)); inc('tot', 'visitas');
+    const ua = req.headers.get('user-agent') || ''; inc('dev', /iPad|Tablet/i.test(ua) ? 'tablet' : /Mobi|Android|iPhone/i.test(ua) ? 'móvil' : 'ordenador');
+    const g = context?.geo; if (g?.city) inc('city', clip(g.city, 60)); if (g?.country?.code) inc('pais', clip(g.country.code, 4));
+    if (b.n) inc('tot', 'nuevas');
+  }
   else if (['wa', 'tel', 'pdf'].includes(b.e)) { inc('ev', b.e); if (b.c) inc('carev', `${clip(b.c, 120)}|${b.e}`); }
   await db().setJSON(k, st);
 }
@@ -322,6 +467,8 @@ async function adminApi(r, req, M, me, url) {
       destacados: cars.filter((c) => c.featured && !c.sold).length,
       citasPendientes: b.filter((x) => x.status === 'pendiente').length,
       proximasCitas: b.filter((x) => x.fecha >= td && x.status !== 'cancelada').sort((a, z) => (a.fecha + a.hora).localeCompare(z.fecha + z.hora)).slice(0, 6),
+      ultimasReservas: [...b].sort((a, z) => String(z.created || '').localeCompare(String(a.created || ''))).slice(0, 5),
+      manana: b.filter((x) => x.fecha === addDays(td, 1) && x.status !== 'cancelada').sort((a, z) => a.hora.localeCompare(z.hora)),
       tasacionesNuevas: t.filter((x) => x.status === 'pendiente').length, ultimasTasaciones: t.slice(0, 5),
       enviosPendientes: e.filter((x) => x.status === 'pendiente').length, mensajesSinLeer: m.filter((x) => !x.leido).length, alertasActivas: al.filter((x) => x.status === 'activa').length, busquedasPendientes: bu.filter((x) => x.status === 'pendiente').length,
       valorStock: cars.filter((c) => !c.sold).reduce((s, c) => s + (c.price || 0), 0),
@@ -339,12 +486,21 @@ async function adminApi(r, req, M, me, url) {
     }
     const i = cars.findIndex((x) => x.id === seg[1]); if (i < 0) return json({ error: 'No existe' }, 404);
     if (M === 'DELETE') { const [old] = cars.splice(i, 1); await save('cars', cars); await dropMedia(old.images); return json({ ok: true }); }
+    if (M === 'POST' && seg[2] === 'duplicar') {
+      const o = cars[i]; const c = { ...structuredClone(o), id: uid('c'), images: [], sold: false, soldAt: undefined, buyer: undefined, featured: false, hidden: true, status: 'preparacion', created: today(), updated: today(), oldSlugs: [], priceHistory: [], log: [{ d: new Date().toISOString(), by: me.name, t: `Creado como copia del ${o.brand} ${o.model}` }], srcId: undefined };
+      c.slug = uniqueSlug(cars, c); cars.unshift(c); await save('cars', cars); return json(c);
+    }
     if (M === 'PUT') {
       const old = cars[i]; const c = cleanCar(body, old);
       const e = carErrors(c); if (e.length) return json({ error: 'Faltan datos: ' + e.join(', ') }, 400);
       const ns = uniqueSlug(cars, c);
       if (ns !== old.slug) { c.oldSlugs = [...new Set([...(old.oldSlugs || []), old.slug])].slice(-10); c.slug = ns; }
       if (c.sold && !old.sold) c.soldAt = today();
+      if ('buyer' in body) c.buyer = pkey(body.buyer) || undefined;
+      // Historial de precios (sirve para justificar cualquier rebaja) y registro de quién cambia qué
+      if (old.price !== c.price && old.price) c.priceHistory = [...(old.priceHistory || [{ d: old.created || today(), p: old.price }]), { d: today(), p: c.price }].slice(-30);
+      const chg = []; if (old.price !== c.price) chg.push(`precio ${old.price} → ${c.price} €`); if (!old.sold && c.sold) chg.push('vendido'); if (old.sold && !c.sold) chg.push('vuelve a stock'); if (old.status !== c.status) chg.push(`estado: ${c.status}`); if (old.km !== c.km) chg.push(`km ${old.km} → ${c.km}`); if (!!old.hidden !== !!c.hidden) chg.push(c.hidden ? 'oculto' : 'visible'); if ((old.images || []).join() !== (c.images || []).join()) chg.push('fotos'); if (old.desc !== c.desc) chg.push('descripción');
+      if (chg.length) c.log = [...(old.log || []), { d: new Date().toISOString(), by: me.name, t: chg.join(', ') }].slice(-60);
       c.updated = today(); cars[i] = c; await save('cars', cars);
       await dropMedia((old.images || []).filter((u) => !(c.images || []).includes(u)));
       return json(c);
@@ -413,6 +569,17 @@ async function adminApi(r, req, M, me, url) {
   }
 
   if (seg[0] === 'me') return json(me);
+  if (seg[0] === 'ical' && M === 'GET') return json({ url: `${url.origin}${BASE}/api/ical/${icalToken()}.ics` });
+  if (seg[0] === 'clientes') {
+    if (M === 'GET') return json(await buildClientes());
+    if (M === 'PUT' && seg[1]) {
+      const cl = await load('clientes'); const k = pkey(seg[1]); if (!k) return json({ error: 'Cliente no válido' }, 400);
+      let it = cl.find((x) => x.key === k); if (!it) { it = { key: k }; cl.push(it); }
+      if ('etapa' in body) { if (body.etapa && !ETAPAS.includes(body.etapa)) return json({ error: 'Etapa no válida' }, 400); it.etapa = body.etapa || ''; it.at = new Date().toISOString(); it.by = me.name; }
+      if ('notas' in body) it.notas = clip(body.notas, 4000);
+      await save('clientes', cl); return json({ ok: true });
+    }
+  }
   if (seg[0] === 'stats' && M === 'GET') {
     const dias = Math.min(Math.max(Number(url.searchParams.get('dias')) || 30, 1), 365); const out = [];
     for (let i = dias - 1; i >= 0; i--) { const d = addDays(today(), -i); out.push({ d, ...((await db().get(`stats/${d}`, { type: 'json' })) || {}) }); }
