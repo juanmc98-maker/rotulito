@@ -1,0 +1,15 @@
+# Copia de pruebas de Plata Garage en Netlify (rotulito.com sigue en GitHub Pages)
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[redirects]]
+  from = "/"
+  to = "/platagarage/"
+  status = 302
+  force = true
