@@ -20,6 +20,10 @@ const IC = {
   valoraciones: svg('<path d="M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L2 12V2h10l8.6 8.6a2 2 0 010 2.8z"/><circle cx="7" cy="7" r="1.5"/>'),
   envios: svg('<path d="M1 3h15v13H1zM16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>'),
   mensajes: svg('<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>'),
+  analiticas: svg('<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>'),
+  busquedas: svg('<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/>'),
+  alertas: svg('<path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/>'),
+  usuarios: svg('<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"/>'),
   blog: svg('<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/>'),
   web: svg('<path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>'),
   out: svg('<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>'),
@@ -41,17 +45,17 @@ const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { if (
 
 // ---------- login ----------
 function showLogin() {
-  $('#app').innerHTML = `<div class="login"><form class="card" id="lf"><img src="${B}/assets/logo.png" alt="Plata Garage"><h2>Backoffice</h2><label style="text-align:left">Contraseña<input type="password" name="password" autocomplete="current-password" required autofocus></label><button class="btn" style="justify-content:center">Entrar</button><p class="mu sm" id="le"></p></form></div>`;
+  $('#app').innerHTML = `<div class="login"><form class="card" id="lf"><img src="${B}/assets/logo.png" alt="Plata Garage"><h2>Backoffice</h2><label style="text-align:left">Usuario<input name="user" autocomplete="username" required autofocus autocapitalize="none"></label><label style="text-align:left">Contraseña<input type="password" name="password" autocomplete="current-password" required></label><button class="btn" style="justify-content:center">Entrar</button><p class="mu sm" id="le"></p></form></div>`;
   $('#lf').onsubmit = async (e) => {
     e.preventDefault(); const b = e.target.querySelector('button'); b.disabled = true;
-    const r = await fetch(API + '/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: e.target.password.value }) });
+    const r = await fetch(API + '/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user: e.target.user.value.trim(), password: e.target.password.value }) });
     const j = await r.json().catch(() => ({})); b.disabled = false;
     if (r.ok) { location.hash = '#resumen'; boot(); } else $('#le').textContent = j.error || 'No se pudo entrar';
   };
 }
 
 // ---------- layout ----------
-const NAV = [['resumen', 'Resumen'], ['coches', 'Coches'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['horarios', 'Horarios'], ['valoraciones', 'Valoraciones'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog']];
+const NAV = [['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['coches', 'Coches'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['horarios', 'Horarios'], ['valoraciones', 'Valoraciones'], ['busquedas', 'Te lo buscamos'], ['alertas', 'Alertas'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog'], ['usuarios', 'Usuarios']];
 let badges = {};
 function shell(active) {
   if (!$('.lay')) {
@@ -73,11 +77,11 @@ const V = {};
 
 V.resumen = async (m) => {
   const s = await api('/admin/summary');
-  badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer };
+  badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes };
   m = shell('resumen');
   const k = (n, t, h) => `<a class="card" href="#${h}"><span>${t}</span><b>${n}</b></a>`;
   m.innerHTML = top('Resumen', 'Estado general de la actividad reciente.') +
-    `<div class="kp">${k(s.enStock, 'Coches en stock', 'coches')}${k(s.vendidos, 'Coches vendidos', 'coches/vendidos')}${k(s.citasPendientes, 'Citas pendientes', 'reservas')}${k(s.tasacionesNuevas, 'Valoraciones nuevas', 'valoraciones')}${k(s.enviosPendientes, 'Envíos pendientes', 'envios')}${k(s.mensajesSinLeer, 'Mensajes sin leer', 'mensajes')}${k(s.destacados, 'Destacados activos', 'coches')}${k(eur(s.valorStock), 'Valor del stock', 'coches')}</div>
+    `<div class="kp">${k(s.enStock, 'Coches en stock', 'coches')}${k(s.vendidos, 'Coches vendidos', 'coches/vendidos')}${k(s.citasPendientes, 'Citas pendientes', 'reservas')}${k(s.tasacionesNuevas, 'Valoraciones nuevas', 'valoraciones')}${k(s.enviosPendientes, 'Envíos pendientes', 'envios')}${k(s.mensajesSinLeer, 'Mensajes sin leer', 'mensajes')}${k(s.busquedasPendientes || 0, 'Te lo buscamos (nuevas)', 'busquedas')}${k(s.alertasActivas || 0, 'Alertas de stock activas', 'alertas')}${k(s.destacados, 'Destacados activos', 'coches')}${k(eur(s.valorStock), 'Valor del stock', 'coches')}</div>
     <div class="two"><div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3>Próximas citas</h3><a href="#reservas" class="sm" style="color:var(--or)">Ver todas</a></div>${s.proximasCitas.length ? `<table>${s.proximasCitas.map((b) => `<tr><td><b>${esc(b.nombre)}</b><br><span class="mu sm">${esc(b.cocheNombre || b.motivo)}</span></td><td>${fdate(b.fecha)} · ${b.hora}</td><td>${badge(b.status)}</td></tr>`).join('')}</table>` : '<p class="mu">No hay citas próximas.</p>'}</div>
     <div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h3>Últimas tasaciones</h3><a href="#valoraciones" class="sm" style="color:var(--or)">Ver todas</a></div>${s.ultimasTasaciones.length ? `<table>${s.ultimasTasaciones.map((t) => `<tr><td><b>${esc(t.marca)} ${esc(t.modelo)}</b><br><span class="mu sm">${esc(t.nombre)}</span></td><td>${fdate(t.created)}</td><td>${badge(t.status)}</td></tr>`).join('')}</table>` : '<p class="mu">Aún no hay tasaciones.</p>'}</div></div>`;
 };
@@ -105,12 +109,12 @@ V.coches = async (m, arg) => {
 function shrink(file, max = 1600) {
   return new Promise((ok, ko) => {
     const img = new Image(); const u = URL.createObjectURL(file);
-    img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); ok(c.toDataURL('image/jpeg', 0.84).split(',')[1]); };
+    img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); const w = c.toDataURL('image/webp', 0.85); ok(w.startsWith('data:image/webp') ? { type: 'image/webp', data: w.split(',')[1] } : { type: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.84).split(',')[1] }); };
     img.onerror = () => ko(new Error('No se pudo leer ' + file.name)); img.src = u;
   });
 }
 async function upload(files, onEach) {
-  for (const f of files) { if (!/^image\//.test(f.type)) continue; const data = await shrink(f); const r = await api('/admin/upload', { method: 'POST', body: { name: f.name, type: 'image/jpeg', data } }); onEach(r.url); }
+  for (const f of files) { if (!/^image\//.test(f.type)) continue; const im = await shrink(f); const r = await api('/admin/upload', { method: 'POST', body: { name: f.name, type: im.type, data: im.data } }); onEach(r.url); }
 }
 
 V.coche = async (m, id) => {
@@ -206,6 +210,56 @@ V.envios = inbox({ key: 'envios', path: 'envios', title: 'Solicitudes de envío'
 V.mensajes = inbox({ key: 'mensajes', path: 'mensajes', title: 'Mensajes', sub: (l) => `${l.length} mensajes recibidos.`, states: ['pendiente', 'respondido'],
   body: (x) => bx('Asunto', esc(x.asunto || '—')) + bx('Mensaje', `<span style="white-space:pre-line">${esc(x.mensaje)}</span>`) });
 
+V.busquedas = inbox({ key: 'busquedas', path: 'busquedas', title: 'Te lo buscamos', sub: (l) => `${l.length} peticiones de coche a la carta.`, states: ['pendiente', 'buscando', 'propuesto', 'cerrada'],
+  body: (x) => bx('Busca', `<b>${esc([x.marca, x.modelo].filter(Boolean).join(' ') || 'Cualquiera')}</b>`) + bx('Presupuesto', `<b>${eur(x.presupuesto)}</b>`) + bx('Km máx.', nf(x.kmMax)) + bx('Año desde', x.anioDesde || '—') + bx('Combustible / cambio', esc([x.combustible, x.cambio].filter(Boolean).join(' · ') || '—')) + (x.comentario ? bx('Comentario', esc(x.comentario)) : '') });
+
+V.alertas = async (m) => {
+  const list = await api('/admin/alertas'); m = shell('alertas');
+  m.innerHTML = top('Alertas de stock', `${list.filter((x) => x.status === 'activa').length} personas esperan aviso de coches nuevos.`) +
+    `<div class="card sec mu sm">Cuando entre un coche que encaje, escríbeles por email (botón) y marca la alerta como "avisado". Si alguien pide la baja, márcala como "baja" o bórrala.</div>
+    <div class="tw"><table><thead><tr><th>Email</th><th>Busca</th><th>Máx.</th><th class="hide-m">Desde</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>${list.map((a) => `<tr data-id="${a.id}"><td>${esc(a.email)}</td><td>${esc(a.busca || '—')}</td><td>${eur(a.max)}</td><td class="hide-m">${fdate(a.created)}</td>
+    <td><select data-s style="width:auto;padding:5px 10px">${['activa', 'avisado', 'baja'].map((s) => `<option${s === a.status ? ' selected' : ''}>${s}</option>`).join('')}</select></td><td><div class="acts"><a class="btn g s" href="mailto:${esc(a.email)}?subject=${encodeURIComponent('Ha entrado un coche que te puede interesar · Plata Garage')}">Email</a><button class="btn r s" data-del>Borrar</button></div></td></tr>`).join('') || '<tr><td colspan="6" class="mu">Aún no hay alertas.</td></tr>'}</tbody></table></div>`;
+  m.querySelectorAll('tr[data-id]').forEach((tr) => {
+    tr.querySelector('[data-s]').onchange = guard(async (e) => { await api('/admin/alertas/' + tr.dataset.id, { method: 'PUT', body: { status: e.target.value } }); toast('Guardado'); });
+    tr.querySelector('[data-del]').onclick = guard(async () => { if (!confirm('¿Borrar esta alerta?')) return; await api('/admin/alertas/' + tr.dataset.id, { method: 'DELETE' }); route(); });
+  });
+};
+
+V.analiticas = async (m, arg) => {
+  const dias = +arg || 30; const st = await api('/admin/stats?dias=' + dias); const cars = await api('/admin/cars'); m = shell('analiticas');
+  const sum = (g) => { const o = {}; st.forEach((d) => Object.entries(d[g] || {}).forEach(([k, v]) => (o[k] = (o[k] || 0) + v))); return Object.entries(o).sort((a, b) => b[1] - a[1]); };
+  const tot = st.reduce((a, d) => a + ((d.tot || {}).visitas || 0), 0); const ev = Object.fromEntries(sum('ev'));
+  const forms = Object.entries(ev).filter(([k]) => k.startsWith('form-')).reduce((a, [, v]) => a + v, 0);
+  const max = Math.max(1, ...st.map((d) => (d.tot || {}).visitas || 0));
+  const nm = (slug) => { const c = cars.find((x) => x.slug === slug); return c ? `${c.brand} ${c.model} ${c.version || ''} (${c.year})` : slug; };
+  const tbl = (rows, h1, h2, f = (x) => esc(x)) => `<table>${rows.slice(0, 10).map(([k, v]) => `<tr><td>${f(k)}</td><td style="text-align:right"><b>${v}</b></td></tr>`).join('') || `<tr><td class="mu">Sin datos todavía.</td></tr>`}</table>`;
+  m.innerHTML = top('Analíticas', 'Visitas y contactos de la web, sin cookies ni datos personales.', `<div class="filt" style="margin:0">${[7, 30, 90].map((d) => `<button data-d="${d}" class="${d === dias ? 'on' : ''}">${d} días</button>`).join('')}</div>`) +
+  `<div class="kp"><div class="card"><span>Visitas</span><b>${nf(tot)}</b></div><div class="card"><span>Clics a WhatsApp</span><b>${ev.wa || 0}</b></div><div class="card"><span>Clics a teléfono</span><b>${ev.tel || 0}</b></div><div class="card"><span>Formularios enviados</span><b>${forms}</b></div></div>
+  <div class="card sec"><h3 style="margin-bottom:14px">Visitas por día</h3><div style="display:flex;align-items:flex-end;gap:3px;height:140px">${st.map((d) => { const v = (d.tot || {}).visitas || 0; return `<div title="${fdate(d.d)}: ${v}" style="flex:1;background:var(--or);opacity:${v ? 1 : .15};height:${Math.max(2, v / max * 100)}%;border-radius:3px 3px 0 0"></div>`; }).join('')}</div></div>
+  <div class="two"><div class="card"><h3 style="margin-bottom:10px">Coches más vistos</h3>${tbl(sum('car'), 'Coche', 'Visitas', nm)}</div><div class="card"><h3 style="margin-bottom:10px">De dónde llegan</h3>${tbl(sum('src'))}</div></div>
+  <div class="two" style="margin-top:16px"><div class="card"><h3 style="margin-bottom:10px">Páginas más vistas</h3>${tbl(sum('pv'))}</div><div class="card"><h3 style="margin-bottom:10px">Formularios por tipo</h3>${tbl(Object.entries(ev).filter(([k]) => k.startsWith('form-')).map(([k, v]) => [k.slice(5), v]))}</div></div>`;
+  m.querySelectorAll('[data-d]').forEach((b) => (b.onclick = () => (location.hash = '#analiticas/' + b.dataset.d)));
+};
+
+V.usuarios = async (m) => {
+  let us; try { us = await api('/admin/users'); } catch (e) { m = shell('usuarios'); m.innerHTML = top('Usuarios') + `<div class="card mu">${esc(e.message)}</div>`; return; }
+  m = shell('usuarios');
+  m.innerHTML = top('Usuarios', 'Cada persona entra con su propio usuario y contraseña.') +
+  `<div class="card sec"><h3 style="margin-bottom:12px">Nuevo usuario</h3><form id="uf" class="fg"><label>Nombre<input name="name" required placeholder="Cristina"></label><label>Usuario<input name="user" required placeholder="cristina" autocapitalize="none"></label><label>Rol<select name="role"><option value="editor">Editor (todo menos usuarios)</option><option value="admin">Administrador</option></select></label>
+  <label class="s2">Contraseña (mín. 12, con letras y números)<input name="password" type="password" required minlength="12" autocomplete="new-password"></label><div style="align-self:end"><button class="btn">Crear usuario</button></div></form></div>
+  <div class="tw"><table><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>${us.map((u) => `<tr data-id="${u.id}"><td><b>${esc(u.name)}</b></td><td>${esc(u.user)}</td><td>${u.role === 'admin' ? 'Administrador' : 'Editor'}</td><td>${u.disabled ? '<span class="bg r">Desactivado</span>' : '<span class="bg ok">Activo</span>'}</td>
+  <td><div class="acts"><button class="btn g s" data-a="pw">Cambiar contraseña</button><button class="btn g s" data-a="dis">${u.disabled ? 'Activar' : 'Desactivar'}</button><button class="btn r s" data-a="del">Borrar</button></div></td></tr>`).join('') || '<tr><td colspan="5" class="mu">Todavía no hay usuarios: crea uno para Cristina y otro para ti.</td></tr>'}</tbody></table></div>
+  <p class="mu sm" style="margin-top:12px">Al cambiar la contraseña o desactivar a alguien, se cierran sus sesiones abiertas. La contraseña maestra de Netlify (usuario "admin") queda solo para emergencias.</p>`;
+  $('#uf').onsubmit = guard(async (e) => { e.preventDefault(); await api('/admin/users', { method: 'POST', body: Object.fromEntries(new FormData(e.target)) }); toast('Usuario creado'); route(); });
+  m.querySelectorAll('[data-a]').forEach((b) => (b.onclick = guard(async () => {
+    const id = b.closest('tr').dataset.id, u = us.find((x) => x.id === id), a = b.dataset.a;
+    if (a === 'pw') { const pw = prompt('Nueva contraseña para ' + u.name + ' (mín. 12, con letras y números):'); if (!pw) return; await api('/admin/users/' + id, { method: 'PUT', body: { password: pw } }); toast('Contraseña cambiada'); }
+    if (a === 'dis') await api('/admin/users/' + id, { method: 'PUT', body: { disabled: !u.disabled } });
+    if (a === 'del') { if (!confirm('¿Borrar el usuario ' + u.name + '?')) return; await api('/admin/users/' + id, { method: 'DELETE' }); }
+    route();
+  })));
+};
+
 V.horarios = async (m) => {
   const s = await api('/admin/schedule'); m = shell('horarios');
   const save = guard(async (msg = 'Horario guardado') => { Object.assign(s, await api('/admin/schedule', { method: 'PUT', body: s })); toast(msg); draw(); });
@@ -259,7 +313,7 @@ async function route() {
   try { await fn($('#mn'), arg); window.scrollTo(0, 0); } catch (e) { if (e.message !== 'Sesión caducada') { shell(k).innerHTML = `<div class="card">No se ha podido cargar: ${esc(e.message)}</div>`; } }
 }
 async function boot() {
-  try { const s = await api('/admin/summary'); badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer }; route(); } catch (e) { /* login ya mostrado */ }
+  try { const s = await api('/admin/summary'); badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes }; route(); } catch (e) { /* login ya mostrado */ }
 }
 
 window.addEventListener('hashchange', () => $('.lay') && route());
