@@ -64,6 +64,7 @@ const NAV = [['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes',
 let badges = {};
 // Negocio activo: Plata Garage (panel completo), Plata Marine y Rotulito (embudo de clientes)
 const NEGS = { garage: { n: 'Plata Garage', logo: B + '/assets/logo.png', dark: true }, marine: { n: 'Plata Marine', logo: '/img/plata-marine-logo.png' }, rotulito: { n: 'Rotulito', logo: '/assets/rotulito-logo.svg' } };
+let MIS = ['garage'];
 let NEG = 'garage'; try { NEG = localStorage.getItem('pg_neg') || 'garage'; if (!NEGS[NEG]) NEG = 'garage'; } catch (e) { /* sin almacenamiento */ }
 const NAV_OTRO = [['resumen', 'Resumen'], ['clientes', 'Clientes'], ['conexion', 'Entrada de leads']];
 const logoTag = (n = NEG) => `<span class="nlg${NEGS[n].dark ? '' : ' w'}"><img src="${NEGS[n].logo}" alt="${NEGS[n].n}"></span>`;
@@ -75,7 +76,7 @@ function shell(active) {
   }
   const ml = $('#mlg'); if (ml) ml.innerHTML = logoTag();
   $('#sb').innerHTML = `<div class="sbh"><a class="lg" href="#resumen" id="slg">${logoTag()}</a><button class="rb mo" id="sx" aria-label="Cerrar menú">${IC.x}</button></div>
-    <div class="negs">${Object.keys(NEGS).map((k) => `<button data-neg="${k}" class="${k === NEG ? 'on' : ''}" title="${NEGS[k].n}">${NEGS[k].n}</button>`).join('')}</div><small class="sbl">Backoffice</small>` +
+    <div class="negs"${MIS.length < 2 ? ' style="display:none"' : ''}>${MIS.map((k) => `<button data-neg="${k}" class="${k === NEG ? 'on' : ''}" title="${NEGS[k].n}">${NEGS[k].n}</button>`).join('')}</div><small class="sbl">Backoffice</small>` +
     (NEG === 'garage' ? NAV : NAV_OTRO).map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') +
     `<div class="sp"></div><a href="${NEG === 'marine' ? 'https://www.platamarine.com/' : NEG === 'rotulito' ? 'https://www.rotulito.com/' : B + '/'}" target="_blank" rel="noopener">${IC.web}Ver web pública</a><a href="#" id="lo">${IC.out}Cerrar sesión</a>`;
   $('#sx').onclick = () => $('#sb').classList.remove('open');
@@ -376,12 +377,13 @@ V.usuarios = async (m) => {
   let us; try { us = await api('/admin/users'); } catch (e) { m = shell('usuarios'); m.innerHTML = top('Usuarios') + `<div class="card mu">${esc(e.message)}</div>`; return; }
   m = shell('usuarios');
   m.innerHTML = top('Usuarios', 'Cada persona entra con su propio usuario y contraseña.') +
-  `<div class="card sec"><h3 style="margin-bottom:12px">Nuevo usuario</h3><form id="uf" class="fg"><label>Nombre<input name="name" required placeholder="Cristina"></label><label>Usuario<input name="user" required placeholder="cristina" autocapitalize="none"></label><label>Rol<select name="role"><option value="editor">Editor (todo menos usuarios)</option><option value="admin">Administrador</option></select></label>
+  `<div class="card sec"><h3 style="margin-bottom:12px">Nuevo usuario</h3><form id="uf" class="fg"><label>Nombre<input name="name" required placeholder="Cristina"></label><label>Usuario<input name="user" required placeholder="cristina" autocapitalize="none"></label><label>Rol<select name="role"><option value="editor">Editor (todo menos usuarios)</option><option value="admin">Administrador (todos los negocios)</option></select></label>
+  <div class="s3"><span class="mu sm">Negocios a los que entra</span><div class="row" style="margin-top:6px"><label class="chk"><input type="checkbox" name="n_garage" checked>Plata Garage</label><label class="chk"><input type="checkbox" name="n_marine">Plata Marine</label><label class="chk"><input type="checkbox" name="n_rotulito">Rotulito</label></div></div>
   <label class="s2">Contraseña (mín. 12, con letras y números)<input name="password" type="password" required minlength="12" autocomplete="new-password"></label><div style="align-self:end"><button class="btn">Crear usuario</button></div></form></div>
-  <div class="tw"><table><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>${us.map((u) => `<tr data-id="${u.id}"><td><b>${esc(u.name)}</b></td><td>${esc(u.user)}</td><td>${u.role === 'admin' ? 'Administrador' : 'Editor'}</td><td>${u.disabled ? '<span class="bg r">Desactivado</span>' : '<span class="bg ok">Activo</span>'}</td>
+  <div class="tw"><table><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>${us.map((u) => `<tr data-id="${u.id}"><td><b>${esc(u.name)}</b></td><td>${esc(u.user)}</td><td>${u.role === 'admin' ? 'Administrador' : 'Editor'}<br><span class="mu sm">${(u.negs || []).map((n) => NEGS[n]?.n || n).join(', ')}</span></td><td>${u.disabled ? '<span class="bg r">Desactivado</span>' : '<span class="bg ok">Activo</span>'}</td>
   <td><div class="acts"><button class="btn g s" data-a="pw">Cambiar contraseña</button><button class="btn g s" data-a="dis">${u.disabled ? 'Activar' : 'Desactivar'}</button><button class="btn r s" data-a="del">Borrar</button></div></td></tr>`).join('') || '<tr><td colspan="5" class="mu">Todavía no hay usuarios: crea uno para Cristina y otro para ti.</td></tr>'}</tbody></table></div>
   <p class="mu sm" style="margin-top:12px">Al cambiar la contraseña o desactivar a alguien, se cierran sus sesiones abiertas. La contraseña maestra de Netlify (usuario "admin") queda solo para emergencias.</p>`;
-  $('#uf').onsubmit = guard(async (e) => { e.preventDefault(); await api('/admin/users', { method: 'POST', body: Object.fromEntries(new FormData(e.target)) }); toast('Usuario creado'); route(); });
+  $('#uf').onsubmit = guard(async (e) => { e.preventDefault(); const f = e.target; const b = Object.fromEntries(new FormData(f)); b.negs = ['garage', 'marine', 'rotulito'].filter((n) => f['n_' + n].checked); await api('/admin/users', { method: 'POST', body: b }); toast('Usuario creado'); route(); });
   m.querySelectorAll('[data-a]').forEach((b) => (b.onclick = guard(async () => {
     const id = b.closest('tr').dataset.id, u = us.find((x) => x.id === id), a = b.dataset.a;
     if (a === 'pw') { const pw = prompt('Nueva contraseña para ' + u.name + ' (mín. 12, con letras y números):'); if (!pw) return; await api('/admin/users/' + id, { method: 'PUT', body: { password: pw } }); toast('Contraseña cambiada'); }
@@ -538,6 +540,8 @@ async function route() {
 }
 let polling = null;
 async function boot() {
+  try { const me = await api('/admin/me'); MIS = me.negs || ['garage']; if (!MIS.includes(NEG)) { NEG = MIS[0]; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } } } catch (e) { return; }
+  if (NEG !== 'garage') { route(); return; }
   try { const s = await api('/admin/summary'); badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes }; route(); if (!polling) { poll(); polling = setInterval(poll, 60000); } } catch (e) { /* login ya mostrado */ }
 }
 let swReg = null;
