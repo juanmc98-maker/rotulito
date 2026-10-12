@@ -261,6 +261,20 @@ async function route() {
 async function boot() {
   try { const s = await api('/admin/summary'); badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer }; route(); } catch (e) { /* login ya mostrado */ }
 }
+
+// Importación única desde el panel anterior (se retira tras la migración)
+window.addEventListener('message', async (e) => {
+  if (e.origin !== 'https://www.platagarage.com' || !e.data || e.data.type !== 'pg-import') return;
+  try {
+    const p = e.data.payload || {};
+    for (const post of p.posts || []) {
+      if (post.coverData) { try { const r = await api('/admin/upload', { method: 'POST', body: { name: post.coverName || 'portada', type: 'image/jpeg', data: post.coverData } }); post.cover = r.url; } catch (x) {} delete post.coverData; }
+    }
+    const r = await api('/admin/import', { method: 'POST', body: p });
+    e.source.postMessage({ type: 'pg-import-ok', r }, e.origin);
+    route();
+  } catch (err) { e.source.postMessage({ type: 'pg-import-err', error: err.message }, e.origin); }
+});
 window.addEventListener('hashchange', () => $('.lay') && route());
 boot();
 })();
