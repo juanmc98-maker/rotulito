@@ -83,6 +83,7 @@ let MIS = ['garage'];
 let QUIEN_YO = ''; // quién ha entrado (se muestra en el menú)
 let PRIMERA = true; // primera carga de la app
 let NEG = 'garage'; try { NEG = localStorage.getItem('pg_neg') || 'garage'; if (!NEGS[NEG]) NEG = 'garage'; } catch (e) { /* sin almacenamiento */ }
+{ const qn = new URLSearchParams(location.search).get('neg'); if (qn && NEGS[qn]) { NEG = qn; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } history.replaceState(null, '', location.pathname + location.hash); } }
 // Cada negocio con sus colores (Plata Garage: oscuro y naranja; Plata Marine y Rotulito: los de su web)
 const tema = () => { document.documentElement.dataset.neg = NEG; const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = NEG === 'garage' ? '#050505' : '#ffffff'; };
 tema();
@@ -99,10 +100,11 @@ function shell(active) {
   $('#sb').innerHTML = `<div class="sbh"><a class="lg" href="#" id="slg">${logoTag()}</a><button class="rb mo" id="sx" aria-label="Cerrar menú">${IC.x}</button></div>
     <div class="negs"${MIS.length < 2 ? ' style="display:none"' : ''}>${MIS.map((k) => `<button data-neg="${k}" class="${k === NEG ? 'on' : ''}" title="${NEGS[k].n}">${NEGS[k].n}</button>`).join('')}</div><small class="sbl">Backoffice</small>` +
     (NEG === 'garage' ? NAV : NAV_OTRO).map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') +
-    `<div class="sp"></div><a href="${NEG === 'marine' ? 'https://www.platamarine.com/' : NEG === 'rotulito' ? 'https://www.rotulito.com/' : B + '/'}" target="_blank" rel="noopener">${IC.web}Ver web pública</a><small class="mu" style="display:block;font-size:12px;margin:10px 6px 2px">Has entrado como <b>${esc(QUIEN_YO)}</b></small><a href="#" id="lo">${IC.out}Cambiar de persona</a>`;
+    `<div class="sp"></div><a href="${NEG === 'marine' ? 'https://www.platamarine.com/' : NEG === 'rotulito' ? 'https://www.rotulito.com/' : B + '/'}" target="_blank" rel="noopener">${IC.web}Ver web pública</a><small class="mu" style="display:block;font-size:12px;margin:10px 6px 2px">Has entrado como <b>${esc(QUIEN_YO)}</b></small><a href="#" id="pushon">${IC.alertas}<span id="pusht">Avisos en este móvil</span></a><a href="#" id="lo">${IC.out}Cambiar de persona</a>`;
   $('#sx').onclick = () => $('#sb').classList.remove('open');
   $('#sb').querySelectorAll('[data-neg]').forEach((b) => (b.onclick = () => { NEG = b.dataset.neg; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } $('#sb').classList.remove('open'); goHome(); }));
   $('#slg').onclick = (e) => { e.preventDefault(); $('#sb').classList.remove('open'); goHome(); };
+  $('#pushon').onclick = (e) => { e.preventDefault(); activarPush(); }; pushEstado();
   $('#lo').onclick = guard(async (e) => { e.preventDefault(); await fetch(API + '/logout'); history.replaceState(null, '', location.pathname); showLogin(); });
   $('#sb').classList.remove('open');
   return $('#mn');
@@ -804,6 +806,24 @@ async function boot() {
   try { const s = await api('/admin/summary'); badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes }; route(); if (!polling) { poll(); polling = setInterval(poll, 60000); } } catch (e) { /* login ya mostrado */ }
 }
 let swReg = null;
+// Avisos push: llegan al móvil aunque la app esté cerrada (en iPhone, con la app añadida a la pantalla de inicio)
+const b64u = (t) => { const p = '='.repeat((4 - (t.length % 4)) % 4); const r = atob((t + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(r, (c) => c.charCodeAt(0)); };
+async function pushEstado() {
+  const el = $('#pusht'); if (!el) return;
+  try { const r = swReg || (await navigator.serviceWorker.ready); const s = r && r.pushManager && (await r.pushManager.getSubscription()); el.textContent = s && Notification.permission === 'granted' ? 'Avisos activados ✓' : 'Activar avisos en este móvil'; } catch (e) { el.textContent = 'Activar avisos en este móvil'; }
+}
+async function activarPush() {
+  const ios = /iPhone|iPad/.test(navigator.userAgent), inst = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return toast(ios && !inst ? 'En el iPhone: Compartir → "Añadir a pantalla de inicio" y abre la app desde ese icono' : 'Este navegador no admite avisos', true);
+  try {
+    if ((await Notification.requestPermission()) !== 'granted') return toast('Has bloqueado los avisos: actívalos en Ajustes → Notificaciones', true);
+    const r = swReg || (await navigator.serviceWorker.ready);
+    let s = await r.pushManager.getSubscription();
+    if (!s) { const { key } = await api('/admin/push'); s = await r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(key) }); }
+    await api('/admin/push', { method: 'POST', body: { sub: s.toJSON() } });
+    toast('Avisos activados. Te acaba de llegar uno de prueba'); pushEstado();
+  } catch (e) { toast('No se han podido activar: ' + (e.message || e), true); }
+}
 if ('serviceWorker' in navigator) navigator.serviceWorker.register(B + '/admin-sw.js', { scope: B + '/admin' }).then((r) => (swReg = r)).catch(() => {});
 
 window.addEventListener('hashchange', () => $('.lay') && route());
