@@ -743,7 +743,8 @@ function cocheDe(c, cars) {
 }
 // Respuesta rápida de WhatsApp de Cristina y Juan (la misma que tienen guardada en WhatsApp Business); el saludo va según la hora de Madrid (hasta las 12:30, buenos días)
 const saludo = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('es-ES', { hour: 'numeric', minute: 'numeric', hourCycle: 'h23', timeZone: 'Europe/Madrid' }).formatToParts(new Date()).map((x) => [x.type, Number(x.value)])); return p.hour * 60 + p.minute < 12 * 60 + 30 ? 'Buenos días' : 'Buenas tardes'; }; // corte a las 12:30
-const msgWa = (quien, car) => `${saludo()}, Soy ${quien} de Plata Garage. He recibido un mensaje interesado en este vehículo${car ? `\n${WEB}/vehiculos/${car.slug}` : ''}`;
+const nom1 = (n) => { const w = String(n || '').trim().split(/\s+/)[0] || ''; return /^(sin|cliente|\*+)$/i.test(w) || /[\d@*]/.test(w) || w.length < 2 ? '' : w[0].toUpperCase() + w.slice(1).toLowerCase(); };
+const msgWa = (quien, car, nombre) => `${saludo()}${nom1(nombre) ? ' ' + nom1(nombre) : ''}, soy ${quien} de Plata Garage. He recibido un mensaje interesado en este vehículo${car ? `\n${WEB}/vehiculos/${car.slug}` : ''}`;
 V.leads = async (m) => {
   const [all, cars] = await Promise.all([api('/admin/clientes'), api('/admin/cars')]); m = shell('leads');
   const nuevos = all.filter((c) => c.etapa === 'nuevo');
@@ -753,16 +754,16 @@ V.leads = async (m) => {
   const resto = all.filter((c) => !nuevos.includes(c) && !pend.includes(c) && !hoy.includes(c) && ![...POST_PG, 'perdido'].includes(c.etapa)).slice(0, 20);
   badges.leads = nuevos.length || ''; 
   const card = (c) => { const car = cocheDe(c, cars); const own = car?.owner || ''; const l = c.leads[0] || {};
-    const bt = (q) => `<a class="btn s${own && own !== q ? ' g' : (!own && q !== 'Cristina' ? ' g' : '')}" target="_blank" rel="noopener" data-k="${c.key}" data-q="${q}" href="${waLink(c.telefono, msgWa(q, car))}">${IC.wa}Soy ${q}</a>`;
+    const bt = (q) => `<a class="btn s${own && own !== q ? ' g' : (!own && q !== 'Cristina' ? ' g' : '')}" target="_blank" rel="noopener" data-k="${c.key}" data-q="${q}" href="${waLink(c.telefono, msgWa(q, car, c.nombre))}">${IC.wa}Soy ${q}</a>`;
     return `<div class="card sec ld"><div class="hd"><div><b>${esc(c.nombre)}</b>${c.telefono ? ` <a href="tel:${esc(c.telefono)}" style="color:var(--mu);font-weight:500;margin-left:6px;text-decoration:none">${esc(c.telefono)}</a>` : ''}<span>${fdt(c.last)}</span></div>${badge(etq(c.etapa).toLowerCase())}</div>
       ${hoyAv(c).length ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Hoy te toca:</b> ${esc(hoyAv(c).join(' · '))}</p>` : ''}<p>${esc(l.resumen || '')}</p>${car ? `<p class="mu sm">Coche: <a href="${WEB}/vehiculos/${car.slug}" target="_blank" rel="noopener" style="color:var(--or)">${esc(car.brand)} ${esc(car.model)}</a> · ${car.year || '—'} · <b style="color:var(--tx)">${car.price ? eur(car.price) : '—'}</b>${own ? ' · de ' + esc(own) : ''}</p>` : ''}
-      <div class="row">${bt('Cristina')}${bt('Juan')}<a class="btn s g" href="#cliente/${c.key}">Ver ficha</a><select class="s" data-mv="${c.key}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsPG('')}</select><button class="btn r s" data-del="${c.key}">Eliminar</button></div></div>`; };
+      <div class="row">${own === 'Cristina' || own === 'Juan' ? bt(own) : bt('Cristina') + bt('Juan')}<a class="btn s g" href="#cliente/${c.key}">Ver ficha</a><select class="s" data-mv="${c.key}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsPG('')}</select><button class="btn r s" data-del="${c.key}">Eliminar</button></div></div>`; };
   const sec = (t, l, vacio) => `<h3 class="lh">${t} <span>${l.length}</span></h3>${l.length ? l.map(card).join('') : `<p class="mu">${vacio}</p>`}`;
   m.innerHTML = top('Leads', 'Los nuevos arriba. Al pulsar "Soy Cristina" o "Soy Juan" se abre WhatsApp con el mensaje escrito y el lead pasa a contactado.', `<a class="btn g" href="#clientes">Embudo completo</a>`) +
     sec('Nuevos sin contestar', nuevos, 'No hay leads nuevos.') + sec('Hoy te toca seguimiento', hoy, 'Nada pendiente de seguimiento hoy.') + sec('Pendientes', pend, 'Nada pendiente.') + sec('En marcha', resto, 'Nada en marcha.');
   m.querySelectorAll('[data-mv]').forEach((el) => (el.onchange = guard(async () => { const c = all.find((x) => x.key === el.dataset.mv); if (!c || !el.value) return; if (!(await moverPG(c, el.value))) { el.value = ''; return; } route(); })));
   m.querySelectorAll('[data-del]').forEach((b) => (b.onclick = guard(async () => { const c = all.find((x) => x.key === b.dataset.del); if (!c || !confirm(`¿Quitar a ${c.nombre} de la lista? Si vuelve a escribir, aparecerá otra vez.`)) return; await api('/admin/clientes/' + c.key, { method: 'DELETE' }); toast(`${c.nombre}: eliminado`); route(); })));
-  m.querySelectorAll('a[data-k]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.k); if (c) a.href = waLink(c.telefono, msgWa(a.dataset.q, cocheDe(c, cars))); if (c && c.etapa === 'nuevo') api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: 'contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
+  m.querySelectorAll('a[data-k]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.k); if (c) a.href = waLink(c.telefono, msgWa(a.dataset.q, cocheDe(c, cars), c.nombre)); if (c && c.etapa === 'nuevo') api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: 'contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
 };
 let CARS_C = [];
 V.cliente = async (m, key) => {
