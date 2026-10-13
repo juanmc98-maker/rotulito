@@ -549,7 +549,7 @@ function tablero(el, cols, items, o) {
 const pestanas = (base, tabs, on) => `<div class="filt">${tabs.map(([k, t]) => `<a href="#${base}/${k}" class="tb${k === on ? ' on' : ''}">${t}</a>`).join('')}</div>`;
 const avisosCard = (lista) => (lista.length ? `<div class="card sec hl"><h3 style="margin-bottom:6px">Avisos (${lista.length})</h3>${lista.slice(0, 30).map(([c, a, href]) => `<a class="li" href="${href}" style="text-decoration:none"><div><b>${esc(c.nombre)}</b><span>${a.map(esc).join(' · ')}</span></div><div class="r">›</div></a>`).join('')}</div>` : '');
 // Barras simples para el análisis
-const barras = (rows, tot) => (rows.length ? rows.map(([t, v, extra = '']) => `<div class="br"><div class="bt"><span>${esc(t)}</span><b>${v}${extra}</b></div><div class="bb"><i style="width:${tot ? Math.max(2, Math.round(v / tot * 100)) : 0}%"></i></div></div>`).join('') : '<p class="mu">Sin datos todavía.</p>');
+const barras = (rows, tot) => (rows.length ? rows.map(([t, v, extra = '', href]) => { const tag = href ? 'a' : 'div'; return `<${tag} class="br${href ? ' brl' : ''}"${href ? ` href="${href}" title="Ver quiénes son"` : ''}><div class="bt"><span>${esc(t)}${href ? ' <small class="mu">›</small>' : ''}</span><b>${v}${extra}</b></div><div class="bb"><i style="width:${tot ? Math.max(2, Math.round(v / tot * 100)) : 0}%"></i></div></${tag}>`; }).join('') : '<p class="mu">Sin datos todavía.</p>');
 const pct = (a, b) => (b ? Math.round(a / b * 100) + ' %' : '—');
 const masIva = (n) => `${eur(n)} <span class="iva">+IVA</span>`;
 const enPeriodo = (iso, dias) => iso && Date.now() - Date.parse(iso) <= dias * DIA;
@@ -659,16 +659,18 @@ V.leads = async (m) => {
   const [all, cars] = await Promise.all([api('/admin/clientes'), api('/admin/cars')]); m = shell('leads');
   const nuevos = all.filter((c) => c.etapa === 'nuevo');
   const pend = all.filter((c) => c.etapa !== 'nuevo' && ![...POST_PG, 'perdido'].includes(c.etapa) && c.leads.some((l) => l.status === 'pendiente' && l.tipo !== 'portal'));
-  const resto = all.filter((c) => !nuevos.includes(c) && !pend.includes(c) && ![...POST_PG, 'perdido'].includes(c.etapa)).slice(0, 20);
+  const hoyAv = (c) => (c.etapa === 'perdido' ? [] : avisos(c, 'garage', etq));
+  const hoy = all.filter((c) => c.etapa !== 'nuevo' && hoyAv(c).length).sort((a, b) => diasDesde(b.desde) - diasDesde(a.desde));
+  const resto = all.filter((c) => !nuevos.includes(c) && !pend.includes(c) && !hoy.includes(c) && ![...POST_PG, 'perdido'].includes(c.etapa)).slice(0, 20);
   badges.leads = nuevos.length || ''; 
   const card = (c) => { const car = cocheDe(c, cars); const own = car?.owner || ''; const l = c.leads[0] || {};
     const bt = (q) => `<a class="btn s${own && own !== q ? ' g' : (!own && q !== 'Cristina' ? ' g' : '')}" target="_blank" rel="noopener" data-k="${c.key}" data-q="${q}" href="${waLink(c.telefono, msgWa(q, car))}">${IC.wa}Soy ${q}</a>`;
     return `<div class="card sec ld"><div class="hd"><div><b>${esc(c.nombre)}</b>${c.telefono ? ` <a href="tel:${esc(c.telefono)}" style="color:var(--mu);font-weight:500;margin-left:6px;text-decoration:none">${esc(c.telefono)}</a>` : ''}<span>${fdt(c.last)}</span></div>${badge(etq(c.etapa).toLowerCase())}</div>
-      <p>${esc(l.resumen || '')}</p>${car ? `<p class="mu sm">Coche: <a href="${WEB}/vehiculos/${car.slug}" target="_blank" rel="noopener" style="color:var(--or)">${esc(car.brand)} ${esc(car.model)}</a> · ${car.year || '—'} · <b style="color:var(--tx)">${car.price ? eur(car.price) : '—'}</b>${own ? ' · de ' + esc(own) : ''}</p>` : ''}
+      ${hoyAv(c).length ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Hoy te toca:</b> ${esc(hoyAv(c).join(' · '))}</p>` : ''}<p>${esc(l.resumen || '')}</p>${car ? `<p class="mu sm">Coche: <a href="${WEB}/vehiculos/${car.slug}" target="_blank" rel="noopener" style="color:var(--or)">${esc(car.brand)} ${esc(car.model)}</a> · ${car.year || '—'} · <b style="color:var(--tx)">${car.price ? eur(car.price) : '—'}</b>${own ? ' · de ' + esc(own) : ''}</p>` : ''}
       <div class="row">${bt('Cristina')}${bt('Juan')}<a class="btn s g" href="#cliente/${c.key}">Ver ficha</a><select class="s" data-mv="${c.key}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsPG('')}</select><button class="btn r s" data-del="${c.key}">Eliminar</button></div></div>`; };
   const sec = (t, l, vacio) => `<h3 class="lh">${t} <span>${l.length}</span></h3>${l.length ? l.map(card).join('') : `<p class="mu">${vacio}</p>`}`;
   m.innerHTML = top('Leads', 'Los nuevos arriba. Al pulsar "Soy Cristina" o "Soy Juan" se abre WhatsApp con el mensaje escrito y el lead pasa a contactado.', `<a class="btn g" href="#clientes">Embudo completo</a>`) +
-    sec('Nuevos sin contestar', nuevos, 'No hay leads nuevos.') + sec('Pendientes', pend, 'Nada pendiente.') + sec('En marcha', resto, 'Nada en marcha.');
+    sec('Nuevos sin contestar', nuevos, 'No hay leads nuevos.') + sec('Hoy te toca seguimiento', hoy, 'Nada pendiente de seguimiento hoy.') + sec('Pendientes', pend, 'Nada pendiente.') + sec('En marcha', resto, 'Nada en marcha.');
   m.querySelectorAll('[data-mv]').forEach((el) => (el.onchange = guard(async () => { const c = all.find((x) => x.key === el.dataset.mv); if (!c || !el.value) return; if (!(await moverPG(c, el.value))) { el.value = ''; return; } route(); })));
   m.querySelectorAll('[data-del]').forEach((b) => (b.onclick = guard(async () => { const c = all.find((x) => x.key === b.dataset.del); if (!c || !confirm(`¿Quitar a ${c.nombre} de la lista? Si vuelve a escribir, aparecerá otra vez.`)) return; await api('/admin/clientes/' + c.key, { method: 'DELETE' }); toast(`${c.nombre}: eliminado`); route(); })));
   m.querySelectorAll('a[data-k]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.k); if (c) a.href = waLink(c.telefono, msgWa(a.dataset.q, cocheDe(c, cars))); if (c && c.etapa === 'nuevo') api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: 'contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
@@ -736,12 +738,16 @@ V.nresumen = async (m) => {
 V.nclientes = async (m, arg) => {
   const d = await nApi(); m = shell('clientes'); let q = '';
   // Desde el Resumen: lista con el detalle de los clientes de una etapa (e:...) o de un filtro (f:sem, f:hoy)
-  if (arg && /^[ef]:/.test(arg)) {
+  if (arg && /^[efrp]:/.test(arg)) {
     const td = new Date().toISOString().slice(0, 10); const [t, v] = [arg.slice(0, 2), decodeURIComponent(arg.slice(2))];
     const F = { 'f:sem': ['Nuevos esta semana', (x) => Date.now() - Date.parse(x.created) < 7 * DIA], 'f:hoy': ['Con movimiento hoy', (x) => (x.updated || '').slice(0, 10) === td] };
-    const [tit, fn] = t === 'e:' ? [v, (x) => x.etapa === v] : (F[arg] || ['Clientes', () => true]);
+    let tit, fn;
+    if (t === 'r:' || t === 'p:') { const k = v.indexOf(':'); const dd = Number(v.slice(0, k)) || 90, val = v.slice(k + 1);
+      if (t === 'r:') { const T = d.tableros.find((x) => x.e.includes(val)) || d.tableros[0]; const i = T.e.indexOf(val); tit = `Llegaron a "${val}" (${dd} días)`; fn = (c) => enPeriodo(c.created, dd) && (() => { const s = alcanzadas(c); return T.e.some((y, j) => j >= i && s.has(y)); })(); }
+      else { tit = `Perdidos: ${val} (${dd} días)`; fn = (c) => enPeriodo(c.created, dd) && c.etapa === 'Perdido' && (c.motivo || 'Sin motivo') === val; } }
+    else [tit, fn] = t === 'e:' ? [v, (x) => x.etapa === v] : (F[arg] || ['Clientes', () => true]);
     const list = d.leads.filter(fn).sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
-    m.innerHTML = top(`${esc(tit)} · ${list.length}`, NEGS[NEG].n, `<a class="btn g" href="#resumen">Volver</a><a class="btn g" href="#clientes">Embudo</a>`) +
+    m.innerHTML = top(`${esc(tit)} · ${list.length}`, NEGS[NEG].n, `<a class="btn g" href="${/^[rp]:/.test(arg) ? '#analiticas' : '#resumen'}">Volver</a><a class="btn g" href="#clientes">Embudo</a>`) +
       (list.length ? list.map((c) => `<div class="card sec"><div class="row" style="justify-content:space-between"><a href="#ncliente/${c.id}"><b>${esc(c.nombre)}</b></a><span class="mu sm">${esc(c.etapa)}${c.updated ? ' · ' + fdt(c.updated) : ''}</span></div>
         ${c.interes ? `<p style="margin-top:6px">${esc(c.interes)}</p>` : ''}${c.notas ? `<p class="mu sm" style="margin-top:6px;white-space:pre-line">${esc(c.notas)}</p>` : ''}
         <p class="mu sm" style="margin-top:6px">${[c.telefono, c.email, c.origen].filter(Boolean).map(esc).join(' · ')}</p>
@@ -778,14 +784,14 @@ V.nanalisis = async (m) => {
     const mot = {}; per.forEach((c) => (mot[c.motivo || 'Sin motivo'] = (mot[c.motivo || 'Sin motivo'] || 0) + 1));
     const conv = d.tableros.map((t) => { const sel = L.filter((c) => { const s = alcanzadas(c); return t.e.some((x) => s.has(x)) || (c.etapa === 'Perdido' && t.e.includes(c.antes)); });
       const pasos = t.e.map((x, i) => [x, sel.filter((c) => { const s = alcanzadas(c); return t.e.some((y, j) => j >= i && s.has(y)); }).length]);
-      return `<div class="card"><h3 style="margin-bottom:4px">${esc(t.n)}: paso a paso</h3><p class="mu sm" style="margin:0 0 12px">${sel.length} clientes en el periodo.</p>${barras(pasos.map(([x, v], i) => [x, v, ` · ${pct(v, sel.length)}${i ? ` (${pct(v, pasos[i - 1][1])} del anterior)` : ''}`]), sel.length)}</div>`; });
+      return `<div class="card"><h3 style="margin-bottom:4px">${esc(t.n)}: paso a paso</h3><p class="mu sm" style="margin:0 0 12px">${sel.length} clientes en el periodo.</p>${barras(pasos.map(([x, v], i) => [x, v, ` · ${pct(v, sel.length)}${i ? ` (${pct(v, pasos[i - 1][1])} del anterior)` : ''}`, `#clientes/r:${dias}:${encodeURIComponent(x)}`]), sel.length)}</div>`; });
     const og = {}; L.forEach((c) => { const k = c.origen || 'Sin origen'; const o = (og[k] = og[k] || { n: 0, g: 0 }); o.n++; if (ganado(d, c)) o.g++; });
     const ganTxt = NEG === 'marine' ? 'Operaciones' : 'Clientes ganados';
     m.innerHTML = top(`Analíticas · ${NEGS[NEG].n}`, 'Conversión del embudo, motivos de pérdida, coste por origen y dinero.', `<a class="btn g" href="#clientes">Embudo</a>`) +
       `<div class="filt">${[[30, '30 días'], [90, '90 días'], [365, '1 año']].map(([x, t]) => `<button data-d="${x}" class="${x === dias ? 'on' : ''}">${t}</button>`).join('')}</div>
       <div class="kp"><div class="card"><span>Contactos nuevos</span><b>${L.length}</b></div><div class="card"><span>${ganTxt}</span><b>${L.filter((c) => ganado(d, c)).length}</b></div><div class="card"><span>${NEG === 'marine' ? 'Comisiones en marcha' : 'Proyectos en marcha'} (${$$.nMarcha})</span><b>${eur($$.marcha)}</b></div><div class="card"><span>Cobrado en el periodo</span><b>${eur($$.cobrado(dias))}</b></div></div>
       <div class="two">${conv.join('')}</div>
-      <div class="two" style="margin-top:16px"><div class="card"><h3 style="margin-bottom:4px">Motivos de pérdida</h3><p class="mu sm" style="margin:0 0 12px">${per.length} perdidos en el periodo.</p>${barras(Object.entries(mot).sort((a, b) => b[1] - a[1]), per.length)}</div>
+      <div class="two" style="margin-top:16px"><div class="card"><h3 style="margin-bottom:4px">Motivos de pérdida</h3><p class="mu sm" style="margin:0 0 12px">${per.length} perdidos en el periodo.</p>${barras(Object.entries(mot).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, v, '', `#clientes/p:${dias}:${encodeURIComponent(k)}`]), per.length)}</div>
       <div class="card"><h3 style="margin-bottom:4px">Gasto mensual por origen</h3><p class="mu sm" style="margin:0 0 10px">Lo que pagas al mes en cada canal (base sin IVA). Sirve para calcular lo que cuesta cada cliente.</p><form id="gf" class="fg" style="grid-template-columns:1fr 1fr">${[...new Set([...Object.keys(og), ...Object.keys(gastos), 'Meta Ads', 'Google Ads'])].filter((k) => !['Sin origen', 'Manual'].includes(k)).map((k) => `<label>${esc(k)}<input name="${esc(k)}" inputmode="decimal" value="${gastos[k] ?? ''}" placeholder="0"></label>`).join('')}<div class="row" style="grid-column:1/-1;justify-content:flex-end"><button class="btn s">Guardar gastos</button></div></form></div></div>
       <div class="card sec" style="margin-top:16px"><h3 style="margin-bottom:4px">Lo que cuesta cada contacto y cada ${NEG === 'marine' ? 'operación' : 'cliente'}</h3><p class="mu sm" style="margin:0 0 10px">Gasto del periodo (${dias} días) repartido entre los contactos de cada origen.</p>
       <table><tr><th>Origen</th><th>Contactos</th><th>${ganTxt}</th><th>Conversión</th><th>Gasto del periodo</th><th>Por contacto</th><th>Por ${NEG === 'marine' ? 'operación' : 'cliente'}</th></tr>${Object.entries(og).sort((a, b) => b[1].n - a[1].n).map(([o, x]) => { const g = (+gastos[o] || 0) * dias / 30; return `<tr><td>${esc(o)}</td><td>${x.n}</td><td>${x.g}</td><td>${pct(x.g, x.n)}</td><td>${g ? masIva(Math.round(g)) : '—'}</td><td>${g && x.n ? masIva(Math.round(g / x.n)) : '—'}</td><td>${g && x.g ? masIva(Math.round(g / x.g)) : g ? 'Sin cerrar' : '—'}</td></tr>`; }).join('') || '<tr><td class="mu">Sin datos todavía.</td></tr>'}</table>
@@ -801,13 +807,14 @@ V.nleads = async (m) => {
   const primeras = d.tableros.map((t) => t.e[0]); const finales = d.tableros.map((t) => t.e[t.e.length - 1]);
   const ord = (a, b) => (b.updated || b.created || '').localeCompare(a.updated || a.created || '');
   const nuevos = d.leads.filter((c) => primeras.includes(c.etapa)).sort(ord);
-  const marcha = d.leads.filter((c) => !primeras.includes(c.etapa) && c.etapa !== 'Perdido' && !finales.includes(c.etapa)).sort(ord).slice(0, 30);
+  const hoy = d.leads.filter((c) => !primeras.includes(c.etapa) && avN(c).length).sort((a, b) => diasDesde(b.desde) - diasDesde(a.desde));
+  const marcha = d.leads.filter((c) => !primeras.includes(c.etapa) && !hoy.includes(c) && c.etapa !== 'Perdido' && !finales.includes(c.etapa)).sort(ord).slice(0, 30);
   const card = (c) => `<div class="card sec ld"><div class="hd"><div><b>${esc(c.nombre)}</b>${c.telefono ? ` <a href="tel:${esc(c.telefono)}" style="color:var(--mu);font-weight:500;margin-left:6px;text-decoration:none">${esc(c.telefono)}</a>` : ''}<span>${fdt(c.updated || c.created)}${c.origen ? ' · ' + esc(c.origen) : ''}</span></div>${badge(String(c.etapa).toLowerCase())}</div>
-    ${c.interes ? `<p>${esc(c.interes)}</p>` : ''}${c.email ? `<p class="mu sm">${esc(c.email)}</p>` : ''}
+    ${avN(c).length ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Hoy te toca:</b> ${esc(avN(c).join(' · '))}</p>` : ''}${c.interes ? `<p>${esc(c.interes)}</p>` : ''}${c.email ? `<p class="mu sm">${esc(c.email)}</p>` : ''}
     <div class="row">${c.telefono ? `<a class="btn s" target="_blank" rel="noopener" data-wa="${c.id}" href="${waLink(c.telefono)}">${IC.wa}WhatsApp</a>` : ''}<a class="btn s g" href="#ncliente/${c.id}">Ver ficha</a><select data-mv="${c.id}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsN(d, '')}</select><button class="btn r s" data-del="${c.id}">Eliminar</button></div></div>`;
   const sec = (t, l, vacio) => `<h3 class="lh">${t} <span>${l.length}</span></h3>${l.length ? l.map(card).join('') : `<p class="mu">${vacio}</p>`}`;
   m.innerHTML = top(`Leads · ${NEGS[NEG].n}`, 'Los nuevos arriba. Al pulsar WhatsApp, un comprador nuevo pasa a contactado.', `<a class="btn g" href="#clientes">Embudo completo</a>`) +
-    sec('Nuevos sin contestar', nuevos, 'No hay leads nuevos.') + sec('En marcha', marcha, 'Nada en marcha.');
+    sec('Nuevos sin contestar', nuevos, 'No hay leads nuevos.') + sec('Hoy te toca seguimiento', hoy, 'Nada pendiente de seguimiento hoy.') + sec('En marcha', marcha, 'Nada en marcha.');
   m.querySelectorAll('[data-wa]').forEach((a) => (a.onclick = () => { const c = d.leads.find((x) => x.id === a.dataset.wa); if (c && c.etapa === 'Nuevo' && d.etapas.includes('Contactado')) nApi('/' + c.id, { method: 'PUT', body: { etapa: 'Contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
   m.querySelectorAll('[data-mv]').forEach((el) => (el.onchange = guard(async () => { const c = d.leads.find((x) => x.id === el.dataset.mv); if (!c || !el.value) return; await moverN(d, c, el.value); route(); })));
   m.querySelectorAll('[data-del]').forEach((b) => (b.onclick = guard(async () => { const c = d.leads.find((x) => x.id === b.dataset.del); if (!c || !confirm(`¿Eliminar a ${c.nombre}? Se borra del embudo.`)) return; await nApi('/' + c.id, { method: 'DELETE' }); toast(`${c.nombre}: eliminado`); route(); })));
