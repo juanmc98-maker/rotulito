@@ -21,7 +21,7 @@ const db = () => store('platagarage');
 const media = () => store('platagarage-media');
 
 // ---------- datos ----------
-const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [] };
+const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [] };
 async function load(key) {
   const v = await db().get(key, { type: 'json' });
   if (v == null) { const d = structuredClone(DEFAULTS[key]); await db().setJSON(key, d); return d; }
@@ -56,7 +56,9 @@ const isName = (n) => /^[\p{L}][\p{L} .'\-]{1,79}$/u.test(n);
 const secret = () => env('PG_SESSION_SECRET') || crypto.createHash('sha256').update('pg|' + (env('PG_ADMIN_PASSWORD') || '')).digest('hex');
 function sign(v) { return crypto.createHmac('sha256', secret()).update(v).digest('base64url'); }
 // El token incluye el usuario y su "versión": al cambiar la contraseña de un usuario se cierran sus sesiones
-function makeToken(uidv, ver = 0) { const exp = Date.now() + 30 * 864e5; const p = `u.${uidv}.${ver}.${exp}`; return `${p}.${sign(p)}`; }
+// La sesión dura 400 días (máximo que admiten los navegadores) y se renueva sola con el uso
+const SES_DIAS = 400;
+function makeToken(uidv, ver = 0) { const exp = Date.now() + SES_DIAS * 864e5; const p = `u.${uidv}.${ver}.${exp}`; return `${p}.${sign(p)}`; }
 async function sessionUser(req) {
   if (!env('PG_ADMIN_PASSWORD')) return null;
   const m = (req.headers.get('cookie') || '').match(/(?:^|;\s*)pg_s=([^;]+)/);
@@ -66,12 +68,13 @@ async function sessionUser(req) {
   if (Number(exp) < Date.now()) return null;
   const good = sign(`u.${id}.${ver}.${exp}`);
   if (good.length !== sig.length || !crypto.timingSafeEqual(Buffer.from(good), Buffer.from(sig))) return null;
-  if (id === 'admin') return { id: 'admin', name: 'Administrador', role: 'admin', negs: ['garage', 'marine', 'rotulito'] };
+  const ses = { exp: Number(exp), ver };
+  if (id === 'admin') { const av = (await load('authver')).admin || 0; if (String(av) !== ver) return null; return { id: 'admin', name: 'Administrador', role: 'admin', negs: ['garage', 'marine', 'rotulito'], ses }; }
   const u = (await load('users')).find((x) => x.id === id);
   if (!u || String(u.ver || 0) !== ver || u.disabled) return null;
   // Negocios a los que puede entrar: el administrador a todos; el resto, a los que tenga marcados (por defecto solo Plata Garage)
   const negs = u.role === 'admin' ? ['garage', 'marine', 'rotulito'] : (u.negs && u.negs.length ? u.negs : ['garage']);
-  return { id: u.id, name: u.name, role: u.role || 'editor', negs };
+  return { id: u.id, name: u.name, role: u.role || 'editor', negs, ses };
 }
 const cookie = (v, maxAge) => `pg_s=${v}; Path=${BASE}; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;
 const eqHash = (a, b) => { const x = crypto.createHash('sha256').update(String(a)).digest(), y = crypto.createHash('sha256').update(String(b)).digest(); return crypto.timingSafeEqual(x, y); };
@@ -472,9 +475,9 @@ async function api(r, req, M, ip, url, context) {
     const users = await load('users'); const u = users.find((x) => x.user === user && !x.disabled);
     if (u && checkPass(f.password, u)) tok = makeToken(u.id, u.ver || 0);
     // "Juan" entra con la contraseña maestra mientras no tenga usuario propio
-    else if ((!user || user === 'admin' || (user === 'juan' && !users.some((x) => x.user === 'juan'))) && eqHash(f.password || '', env('PG_ADMIN_PASSWORD'))) tok = makeToken('admin');
+    else if ((!user || user === 'admin' || (user === 'juan' && !users.some((x) => x.user === 'juan'))) && eqHash(f.password || '', env('PG_ADMIN_PASSWORD'))) tok = makeToken('admin', (await load('authver')).admin || 0);
     if (!tok) { await new Promise((z) => setTimeout(z, 800)); return json({ error: 'Usuario o contraseña incorrectos.' }, 401); }
-    return json({ ok: true }, 200, { 'set-cookie': cookie(tok, 30 * 86400) });
+    return json({ ok: true }, 200, { 'set-cookie': cookie(tok, SES_DIAS * 86400) });
   }
   if (r === '/logout') return json({ ok: true }, 200, { 'set-cookie': cookie('', 0) });
 
@@ -482,7 +485,10 @@ async function api(r, req, M, ip, url, context) {
   if (!r.startsWith('/admin/')) return json({ error: 'No encontrado' }, 404);
   const me = await sessionUser(req); if (!me) return json({ error: 'auth' }, 401);
   if (M !== 'GET' && (req.headers.get('x-pg') !== '1')) return json({ error: 'Petición no válida' }, 403); // CSRF
-  return await adminApi(r.slice(6), req, M, me, url);
+  const res = await adminApi(r.slice(6), req, M, me, url);
+  // Renovación: si la sesión tiene más de un día, se alarga otros 400 días desde hoy
+  if (me.ses && me.ses.exp - Date.now() < (SES_DIAS - 1) * 864e5) { try { res.headers.append('set-cookie', cookie(makeToken(me.id, me.ses.ver), SES_DIAS * 86400)); } catch (e) { /* cabeceras inmutables */ } }
+  return res;
 }
 
 // Aviso por correo: se envía a Netlify Forms (formulario "avisos"), que manda el email a la dirección configurada
@@ -716,6 +722,8 @@ async function adminApi(r, req, M, me, url) {
       const u = { negs: negsDe(body), id: uid('u'), name: clip(body.name, 60) || user, user, role: body.role === 'admin' ? 'admin' : 'editor', ver: 0, created: today(), ...hashPass(body.password) };
       users.push(u); await save('users', users); return json(pub(u));
     }
+    // Cerrar todas las sesiones abiertas con la contraseña maestra (Juan mientras no tenga usuario propio)
+    if (seg[1] === 'admin-sesiones' && M === 'PUT') { const av = await load('authver'); av.admin = (av.admin || 0) + 1; await save('authver', av); return json({ ok: true }); }
     const i = users.findIndex((x) => x.id === seg[1]); if (i < 0) return json({ error: 'No existe' }, 404);
     if (M === 'DELETE') { users.splice(i, 1); await save('users', users); return json({ ok: true }); }
     if (M === 'PUT') {
@@ -725,6 +733,7 @@ async function adminApi(r, req, M, me, url) {
       if ('role' in body) u.role = body.role === 'admin' ? 'admin' : 'editor';
       if ('negs' in body) u.negs = negsDe(body);
       if ('disabled' in body) { u.disabled = !!body.disabled; u.ver = (u.ver || 0) + 1; }
+      if (body.cerrar) u.ver = (u.ver || 0) + 1; // cierra sus sesiones en todos los dispositivos
       await save('users', users); return json(pub(u));
     }
   }
