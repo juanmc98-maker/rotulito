@@ -21,13 +21,15 @@ const db = () => store('platagarage');
 const media = () => store('platagarage-media');
 
 // ---------- datos ----------
-const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'gastos-marine': {}, 'gastos-rotulito': {}, pushsubs: [], vapid: {} };
+const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'gastos-marine': {}, 'gastos-rotulito': {}, pushsubs: [], vapid: {}, docs: {}, 'cartera-marine': [] };
 async function load(key) {
   const v = await db().get(key, { type: 'json' });
   if (v == null) { const d = structuredClone(DEFAULTS[key]); await db().setJSON(key, d); return d; }
   return v;
 }
 const save = (key, v) => db().setJSON(key, v);
+// Clave de cifrado de los documentos: PG_DOCS_KEY si existe; si no, sale del secreto de sesión (no cambiar ese secreto sin fijar antes PG_DOCS_KEY)
+const docKey = () => crypto.createHash('sha256').update('docs|' + (env('PG_DOCS_KEY') || secret())).digest();
 const uid = (p = '') => p + Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
 
 // ---------- utilidades ----------
@@ -723,6 +725,60 @@ async function adminApi(r, req, M, me, url) {
       await save('cars', cars); out.cars = { actualizados: up, creados: cr };
     }
     return json(out);
+  }
+  // ---- Documentos privados (facturas, contratos, fotos, documentación) de coches y barcos ----
+  // Se guardan cifrados (AES-256-GCM) y solo se pueden ver con sesión iniciada; coches = Plata Garage, barcos = Plata Marine
+  if (seg[0] === 'docs') {
+    const negDe = (sc) => (sc === 'car' ? 'garage' : sc === 'boat' ? 'marine' : '');
+    if (seg[1] === 'file' && M === 'GET') {
+      const all = await load('docs'); let meta = null, sc = '';
+      for (const [k, v] of Object.entries(all)) { const f = (v.files || []).find((x) => x.id === seg[2]); if (f) { meta = f; sc = k.split(':')[0]; break; } }
+      if (!meta || !(me.negs || []).includes(negDe(sc))) return json({ error: 'No encontrado' }, 404);
+      const r = await media().get('doc/' + meta.id, { type: 'arrayBuffer' }); if (!r) return json({ error: 'No encontrado' }, 404);
+      const buf = Buffer.from(r); const k = docKey(); const dec = crypto.createDecipheriv('aes-256-gcm', k, buf.subarray(0, 12)); dec.setAuthTag(buf.subarray(12, 28));
+      const out = Buffer.concat([dec.update(buf.subarray(28)), dec.final()]);
+      return new Response(out, { headers: { 'content-type': meta.mime || 'application/octet-stream', 'content-disposition': `${url.searchParams.get('dl') ? 'attachment' : 'inline'}; filename*=UTF-8''${encodeURIComponent(meta.nombre)}`, 'cache-control': 'private, no-store', 'x-robots-tag': 'noindex' } });
+    }
+    const sc = seg[1], ref = clip(seg[2], 60); if (!negDe(sc) || !ref) return json({ error: 'No válido' }, 400);
+    if (!(me.negs || []).includes(negDe(sc))) return json({ error: 'No tienes acceso.' }, 403);
+    const all = await load('docs'); const k = `${sc}:${ref}`; const ent = (all[k] = all[k] || { files: [] });
+    if (M === 'GET') return json(ent);
+    if (M === 'PUT') { if ('venta' in body) { const n = Number(String(body.venta).replace(',', '.')); ent.venta = isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0; } await save('docs', all); return json(ent); }
+    if (M === 'POST') {
+      const buf = Buffer.from(String(body.data || ''), 'base64'); if (!buf.length || buf.length > 4.2e6) return json({ error: 'El archivo pesa demasiado (máx. 4 MB). Si es un PDF escaneado, redúcelo antes.' }, 400);
+      const mime = /^(application\/pdf|image\/(jpeg|png|webp|heic)|application\/(msword|vnd\.openxmlformats-officedocument\.[\w.]+))$/.test(body.mime || '') ? body.mime : 'application/octet-stream';
+      const id = 'd' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'); const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', docKey(), iv);
+      const enc = Buffer.concat([c.update(buf), c.final()]); await media().set('doc/' + id, Buffer.concat([iv, c.getAuthTag(), enc]));
+      const n = Number(String(body.importe ?? '').replace(',', '.'));
+      ent.files.unshift({ id, nombre: clip(body.nombre, 120) || 'documento', tipo: clip(body.tipo, 40) || 'Otro', importe: isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0, fecha: /^\d{4}-\d{2}-\d{2}$/.test(body.fecha || '') ? body.fecha : today(), mime, size: buf.length, by: me.name, at: new Date().toISOString() });
+      await save('docs', all); return json(ent);
+    }
+    if (M === 'DELETE' && seg[3]) { const i = ent.files.findIndex((x) => x.id === seg[3]); if (i < 0) return json({ error: 'No existe' }, 404); ent.files.splice(i, 1); await save('docs', all); await media().delete('doc/' + seg[3]).catch(() => {}); return json(ent); }
+  }
+  // Trimestre para la gestoría: coches vendidos en el trimestre con compra, gastos, venta y margen (REBU), por dueño
+  if (seg[0] === 'trimestre' && M === 'GET') {
+    const y = Number(url.searchParams.get('y')) || new Date().getFullYear(), q = Math.min(4, Math.max(1, Number(url.searchParams.get('q')) || 1));
+    const ini = `${y}-${String((q - 1) * 3 + 1).padStart(2, '0')}-01`, fin = `${q === 4 ? y + 1 : y}-${String(q === 4 ? 1 : q * 3 + 1).padStart(2, '0')}-01`;
+    const [cars, all] = await Promise.all([load('cars'), load('docs')]);
+    const rows = cars.filter((c) => c.sold && c.soldAt && c.soldAt.slice(0, 10) >= ini && c.soldAt.slice(0, 10) < fin).map((c) => {
+      const e = all['car:' + c.id] || { files: [] }; const compra = e.files.filter((f) => f.tipo === 'Factura de compra').reduce((a, f) => a + f.importe, 0);
+      const gastos = e.files.filter((f) => !['Factura de compra', 'Factura de venta', 'Contrato', 'Documentación', 'Foto'].includes(f.tipo)).reduce((a, f) => a + f.importe, 0);
+      const venta = e.venta || c.price || 0;
+      return { id: c.id, coche: `${c.brand} ${c.model} ${c.version || ''}`.trim(), year: c.year, owner: c.owner || '', vendido: c.soldAt.slice(0, 10), compra, gastos, venta, margen: Math.round((venta - compra - gastos) * 100) / 100, files: e.files };
+    });
+    return json({ y, q, ini, fin, rows });
+  }
+  // Cartera de barcos de Plata Marine (barcos con hoja de encargo firmada)
+  if (seg[0] === 'cartera') {
+    if (!(me.negs || []).includes('marine')) return json({ error: 'No tienes acceso.' }, 403);
+    const list = await load('cartera-marine');
+    if (M === 'GET' && !seg[1]) return json(list);
+    const campos = (o, b) => { ['barco', 'vendedor', 'telefono', 'email', 'zona', 'web', 'notas'].forEach((f) => { if (f in b) o[f] = clip(b[f], f === 'notas' ? 3000 : 200); }); ['precio', 'comision'].forEach((f) => { if (f in b) { const n = Number(String(b[f]).replace(/\./g, '').replace(',', '.')); o[f] = isFinite(n) && n > 0 ? n : 0; } }); ['firma', 'fin'].forEach((f) => { if (f in b) o[f] = /^\d{4}-\d{2}-\d{2}$/.test(b[f] || '') ? b[f] : ''; }); if ('estado' in b) o.estado = ['En venta', 'Reservado', 'Vendido', 'Retirado'].includes(b.estado) ? b.estado : 'En venta'; return o; };
+    if (M === 'POST' && !seg[1]) { if (!clip(body.barco, 200)) return json({ error: 'Pon el nombre del barco' }, 400); const o = campos({ id: uid('b'), estado: 'En venta', created: new Date().toISOString() }, body); list.unshift(o); await save('cartera-marine', list); return json(o); }
+    const i = list.findIndex((x) => x.id === seg[1]); if (i < 0) return json({ error: 'No existe' }, 404);
+    if (M === 'GET') return json(list[i]);
+    if (M === 'PUT') { campos(list[i], body); list[i].updated = new Date().toISOString(); await save('cartera-marine', list); return json(list[i]); }
+    if (M === 'DELETE') { list.splice(i, 1); await save('cartera-marine', list); return json({ ok: true }); }
   }
   if (seg[0] === 'upload' && M === 'POST') {
     const { name, type, data } = body; // data: base64 (ya reducida en el navegador)
