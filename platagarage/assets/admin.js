@@ -658,7 +658,7 @@ const msgWa = (quien, car) => `${saludo()}, Soy ${quien} de Plata Garage. He rec
 V.leads = async (m) => {
   const [all, cars] = await Promise.all([api('/admin/clientes'), api('/admin/cars')]); m = shell('leads');
   const nuevos = all.filter((c) => c.etapa === 'nuevo');
-  const pend = all.filter((c) => c.etapa !== 'nuevo' && ![...POST_PG, 'perdido'].includes(c.etapa) && c.leads.some((l) => l.status === 'pendiente'));
+  const pend = all.filter((c) => c.etapa !== 'nuevo' && ![...POST_PG, 'perdido'].includes(c.etapa) && c.leads.some((l) => l.status === 'pendiente' && l.tipo !== 'portal'));
   const resto = all.filter((c) => !nuevos.includes(c) && !pend.includes(c) && ![...POST_PG, 'perdido'].includes(c.etapa)).slice(0, 20);
   badges.leads = nuevos.length || ''; 
   const card = (c) => { const car = cocheDe(c, cars); const own = car?.owner || ''; const l = c.leads[0] || {};
