@@ -588,11 +588,22 @@ V.clientes = async (m, arg) => {
     const n = (k) => all.filter((c) => c.etapa === k).length; const vend = all.filter((c) => POST_PG.includes(c.etapa)).length, tot = all.length;
     const conAviso = enTab.filter((c) => c.etapa !== 'perdido').map((c) => [c, avs(c), '#cliente/' + c.key]).filter((x) => x[1].length);
     const kp = tab === 'venta'
-      ? [['Nuevos sin atender', n('nuevo')], ['En marcha', ['contactado', 'cita', 'visitado', 'financiera', 'reserva'].reduce((a, k) => a + n(k), 0)], ['Vendidos', vend], ['Conversión', pct(vend, tot)], ['Con aviso', conAviso.length]]
-      : [['Pendientes de transferencia', n('vendido')], ['Esperando el permiso', n('transferencia') + n('entregado')], ['Permiso por enviar', n('permiso')], ['Enviados sin cerrar', n('enviado')], ['Con aviso', conAviso.length]];
+      ? [['Nuevos sin atender', n('nuevo'), ['nuevo']], ['En marcha', ['contactado', 'cita', 'visitado', 'financiera', 'reserva'].reduce((a, k) => a + n(k), 0), ['contactado', 'cita', 'visitado', 'financiera', 'reserva']], ['Vendidos', vend, POST_PG], ['Conversión', pct(vend, tot)], ['Con aviso', conAviso.length, 'aviso']]
+      : [['Pendientes de transferencia', n('vendido'), ['vendido']], ['Esperando el permiso', n('transferencia') + n('entregado'), ['transferencia', 'entregado']], ['Permiso por enviar', n('permiso'), ['permiso']], ['Enviados sin cerrar', n('enviado'), ['enviado']], ['Con aviso', conAviso.length, 'aviso']];
+    let fk = null;
     m.innerHTML = top('Clientes', tab === 'venta' ? `${tot} personas han contactado. El estado avanza solo (cita, visita, reserva, venta); también puedes arrastrar la tarjeta.` : 'Lo que queda por hacer después de vender: transferencia, entrega y envío del permiso.', csvBtn) + tabs +
-      `<div class="kp">${kp.map(([t, v]) => `<div class="card"><span>${t}</span><b>${v}</b></div>`).join('')}</div>${avisosCard(conAviso)}
-      <input id="qq" placeholder="Buscar por nombre, teléfono o email" style="max-width:420px;margin-bottom:14px"><div class="kb" id="kb"></div>`;
+      `<div class="kp">${kp.map(([t, v, f], i) => `<div class="card"${f ? ` data-kf="${i}" style="cursor:pointer"` : ''}><span>${t}</span><b>${v}</b></div>`).join('')}</div>${avisosCard(conAviso)}
+      <input id="qq" placeholder="Buscar por nombre, teléfono o email" style="max-width:420px;margin-bottom:14px"><div id="kl"></div><div class="kb" id="kb"></div>`;
+    // Al pulsar una tarjeta de arriba: lista de esas personas (pulsar otra vez para volver al tablero)
+    m.querySelectorAll('[data-kf]').forEach((el) => (el.onclick = () => {
+      const i = Number(el.dataset.kf); fk = fk === i ? null : i; m.querySelectorAll('[data-kf]').forEach((x) => (x.style.borderColor = Number(x.dataset.kf) === fk ? 'var(--or)' : ''));
+      const box = $('#kl'); if (fk === null) { box.innerHTML = ''; $('#kb').style.display = ''; return; }
+      const f = kp[fk][2]; const avK = new Set(conAviso.map((x) => x[0].key));
+      const L = all.filter((c) => (f === 'aviso' ? avK.has(c.key) : f.includes(c.etapa))).sort((a, z) => String(z.last).localeCompare(String(a.last)));
+      $('#kb').style.display = 'none';
+      box.innerHTML = `<div class="card sec"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">${kp[fk][0]} <span class="mu">${L.length}</span></h3><button class="btn g s" id="klx">Ver tablero</button></div>${L.map((c) => `<a class="li" href="#cliente/${c.key}" style="text-decoration:none"><div><b>${esc(c.nombre)}</b><span>${esc(c.compras[0]?.nombre || c.leads[0]?.resumen || '')}</span></div><div class="r">${etq(c.etapa)}<br>${fdate(c.last)}</div></a>`).join('') || '<p class="mu">Nadie.</p>'}</div>`;
+      $('#klx').onclick = () => el.click(); box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
     const draw = () => tablero($('#kb'), cols, enTab.filter((c) => !q || `${c.nombre} ${c.telefono} ${c.email}`.toLowerCase().includes(q)), {
       col: (c) => c.etapa, id: (c) => c.key, href: (c) => '#cliente/' + c.key, avisos: (c) => (c.etapa === 'perdido' ? [] : avs(c)),
       linea: (c) => (c.etapa === 'perdido' ? `Motivo: ${[c.motivo, c.motivoTxt].filter(Boolean).join(' · ') || '—'}` : c.compras[0]?.nombre || c.leads[0]?.resumen || ''),
