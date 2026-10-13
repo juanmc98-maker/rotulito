@@ -104,7 +104,7 @@ function checkContact(f, { emailReq = false } = {}) {
   const telefono = normPhone(f.telefono); if (!telefono) return { error: 'Escribe un teléfono válido.' };
   const email = clip(f.email, 200).toLowerCase(); if (!isEmail(email) || (emailReq && !email)) return { error: emailReq && !email ? 'Escribe tu email.' : 'El email no es válido.' };
   if (/https?:\/\/|<a\s|\[url/i.test(String(f.mensaje || '') + String(f.notas || ''))) return { error: 'No se admiten enlaces en el mensaje.' };
-  return { data: { nombre, telefono, email } };
+  return { data: { nombre, telefono, email, origen: clip(f.origen, 160), canal: clip(f.canal, 60) } };
 }
 
 // ---------- horarios ----------
@@ -322,7 +322,7 @@ export default async (req, context) => {
     if (sub === '/sitemap.xml') return text(sitemap(site, pubCars(cars), (await load('posts')).filter((x) => x.published)), 'application/xml');
     if (sub === '/llms.txt') return text(llms(site, pubCars(cars)), 'text/plain');
     if (sub === '/') return html(V.home({ cars: pubCars(cars), sched: await load('schedule') }));
-    if (sub === '/vehiculos') return html(V.catalog({ cars: pubCars(cars), q: Object.fromEntries(url.searchParams) }));
+    if (sub === '/vehiculos') return html(V.catalog({ cars: pubCars(cars), q: Object.fromEntries(url.searchParams), vendido: url.searchParams.get('vendido') ? cars.find((c) => c.slug === url.searchParams.get('vendido') && c.sold) || null : null }));
     if (sub === '/preguntas-frecuentes') return html(V.faqPage({ cars: pubCars(cars) }));
     if (sub.startsWith('/coches-segunda-mano-')) {
       const z = SEO.ZONAS.find((x) => x.slug === sub.slice(21));
@@ -338,7 +338,8 @@ export default async (req, context) => {
       const slug = sub.slice(11).replace(/\.html$/, '');
       if (sub.endsWith('.html')) return redirect(`${BASE}/vehiculos/${slug}`);
       const car = cars.find((c) => c.slug === slug || (c.oldSlugs || []).includes(slug));
-      if (!car || car.sold || car.hidden) return redirect(`${BASE}/vehiculos/`);
+      if (car && car.sold) return redirect(`${BASE}/vehiculos/?vendido=${encodeURIComponent(car.slug)}`); // vendido: 301 al stock, con la oferta de buscarle uno igual
+      if (!car || car.hidden) return redirect(`${BASE}/vehiculos/`);
       if (car.slug !== slug) return redirect(`${BASE}/vehiculos/${car.slug}`);
       const fichaUrl = `${url.origin}${BASE}/vehiculos/${car.slug}`;
       const qr = await QRCode.toString(fichaUrl, { type: 'svg', margin: 0, width: 96 }).catch(() => '');
@@ -421,9 +422,9 @@ async function api(r, req, M, ip, url, context) {
     if (await rateLimited(ip, 'alerta', 5)) return json({ error: 'Demasiadas solicitudes. Prueba más tarde.' }, 429);
     const list = await load('alertas');
     const coche = clip(f.coche, 120); const car = coche ? (await load('cars')).find((x) => x.slug === coche && !x.sold) : null;
-    const it = { id: uid('a'), email, busca: car ? `Bajada de precio: ${car.brand} ${car.model} (${car.year})` : clip(f.busca, 120), max: num(f.max), created: new Date().toISOString(), status: 'activa', origen: clip(f.origen, 120), ...(car ? { coche: car.slug, tipo: 'precio', precio: car.price } : {}) };
+    const it = { canal: clip(f.canal, 60), id: uid('a'), email, busca: car ? `Bajada de precio: ${car.brand} ${car.model} (${car.year})` : clip(f.busca, 120), max: num(f.max), created: new Date().toISOString(), status: 'activa', origen: clip(f.origen, 120), ...(car ? { coche: car.slug, tipo: 'precio', precio: car.price } : {}) };
     const i = list.findIndex((x) => x.email === email && (x.coche || '') === (it.coche || '')); if (i >= 0) list[i] = { ...list[i], ...it, id: list[i].id }; else list.unshift(it);
-    await save('alertas', list); await notify('alerta', it, url.origin).catch(() => {}); return json({ ok: true });
+    await save('alertas', list); await notify('alerta', it, url.origin).catch(() => {}); await bump('lp', (it.origen || '/').split('?')[0]).catch(() => {}); await bump('lsrc', it.canal || 'directo').catch(() => {}); return json({ ok: true });
   }
 
   if (['/cita', '/tasacion', '/envio', '/mensaje', '/busqueda'].includes(r) && M === 'POST') {
@@ -456,6 +457,12 @@ async function api(r, req, M, ip, url, context) {
       const list = await load('busquedas');
       list.unshift({ ...base, marca: clip(f.marca, 40), modelo: clip(f.modelo, 60), anioDesde: num(f.anio), kmMax: num(f.km), presupuesto: num(f.presupuesto), combustible: clip(f.combustible, 20), cambio: clip(f.cambio, 20), comentario: clip(f.mensaje, 1500) });
       await save('busquedas', list);
+      if (f.avisar === 'si' && base.email) { // consentimiento aparte para los avisos por email
+        const al = await load('alertas'); const busca = [clip(f.marca, 40), clip(f.modelo, 60), clip(f.combustible, 20), clip(f.cambio, 20)].filter(Boolean).join(' ') || 'Cualquier coche';
+        const it = { id: uid('a'), email: base.email, busca, max: num(f.presupuesto), created: base.created, status: 'activa', origen: base.origen, canal: base.canal };
+        const i = al.findIndex((x) => x.email === it.email && !x.coche); if (i >= 0) al[i] = { ...al[i], ...it, id: al[i].id }; else al.unshift(it);
+        await save('alertas', al);
+      }
     } else {
       const list = await load('mensajes');
       list.unshift({ ...base, asunto: clip(f.asunto, 120), mensaje: clip(f.mensaje, 3000), leido: false });
@@ -463,6 +470,7 @@ async function api(r, req, M, ip, url, context) {
     }
     await notify(r.slice(1), { ...base, ...f, ...carRef(f.coche || ''), ...(r === '/tasacion' && f.coche ? { motivo: 'Lo entregaría como parte de pago' } : {}), web: undefined, t: undefined, privacidad: undefined }, url.origin).catch(() => {});
     await bump('ev', 'form-' + r.slice(1)).catch(() => {});
+    await bump('lp', base.origen || '/').catch(() => {}); await bump('lsrc', base.canal || 'directo').catch(() => {});
     return json(out);
   }
 

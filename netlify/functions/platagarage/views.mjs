@@ -193,7 +193,7 @@ const tel=f.telefono.value.replace(/[\\s().-]/g,'');if(!/^(\\+34|0034)?[6789]\\d
 if(f.fecha&&!f.fecha.value){m.textContent='Elige un día en el calendario.';m.className='msg err';return}
 if(f.hora&&!f.hora.value){m.textContent='Elige una hora.';m.className='msg err';return}
 if(f.email&&f.email.required&&!/^[^\\s@]+@[^\\s@]+\\.[a-z]{2,}$/i.test(f.email.value)){m.textContent='Escribe tu email.';m.className='msg err';return}
-b.disabled=true;try{const r=await fetch(f.dataset.api,{method:'POST',body:new FormData(f)});const j=await r.json();if(!r.ok)throw new Error(j.error||'Error');try{pgConv('lead',f.dataset.t)}catch(x){}setTimeout(()=>location.href='${B}/gracias?t='+encodeURIComponent(f.dataset.t)+(j.ref?'&r='+j.ref+'&k='+j.k:''),250)}catch(err){m.textContent=err.message;m.className='msg err';b.disabled=false}}));`;
+b.disabled=true;try{const fd=new FormData(f);fd.append('origen',location.pathname);fd.append('canal',window.pgSrc||'');const r=await fetch(f.dataset.api,{method:'POST',body:fd});const j=await r.json();if(!r.ok)throw new Error(j.error||'Error');try{pgConv('lead',f.dataset.t)}catch(x){}setTimeout(()=>location.href='${B}/gracias?t='+encodeURIComponent(f.dataset.t)+(j.ref?'&r='+j.ref+'&k='+j.k:''),250)}catch(err){m.textContent=err.message;m.className='msg err';b.disabled=false}}));`;
 const PICK_JS = `(()=>{const s=document.getElementById('pkc'),v=document.getElementById('pkv');if(!s)return;const d=()=>{const o=s.selectedOptions[0];v.innerHTML=o&&o.value?'<img alt="" src="'+o.dataset.i+'"><div><b>'+o.textContent.split(' · ')[0]+'</b><span>'+o.dataset.p+' · '+o.dataset.k+'</span></div>':''};s.onchange=d;d()})();`;
 const SLOTS_JS = `(()=>{const cd=document.getElementById('cd');if(!cd)return;const cm=document.getElementById('cm'),fd=document.getElementById('fecha'),hh=document.getElementById('hora'),sl=document.getElementById('slots'),bp=document.querySelector('.ch .cp'),bn=document.querySelector('.ch .cn');
 const MES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];const now=new Date();let y=now.getFullYear(),m=now.getMonth();const y0=y,m0=m;
@@ -246,7 +246,7 @@ function nlqTxt(o){const p=[];if(o.words&&o.words.length)p.push('«'+o.words.joi
 const TRACK_JS = `(()=>{try{const u=new URL(location.href),r=document.referrer?new URL(document.referrer).hostname:'';let s=u.searchParams.get('utm_source')||(u.searchParams.get('fbclid')?'facebook':'')||(u.searchParams.get('gclid')?'google-ads':'');
 if(!s&&r&&r!==location.hostname){s=/google/.test(r)?'google':/facebook|fb\\\\./.test(r)?'facebook':/instagram/.test(r)?'instagram':/bing/.test(r)?'bing':/wallapop/.test(r)?'wallapop':/coches\\\\.net/.test(r)?'coches.net':/milanuncios/.test(r)?'milanuncios':r.replace(/^www\\\\./,'')}
 const c=document.body.dataset.car||'',snd=o=>navigator.sendBeacon&&navigator.sendBeacon('${B}/api/hit',new Blob([JSON.stringify(o)],{type:'application/json'}));
-snd({e:'view',p:location.pathname,s,c,n:!r||r!==location.hostname?1:0});
+snd({e:'view',p:location.pathname,s,c,n:!r||r!==location.hostname?1:0});window.pgSrc=s||(r&&r!==location.hostname?r:'directo');
 const pth=location.pathname.replace('${B}','');const t=pth==='/'?'home':pth.startsWith('/vehiculos/')&&pth.length>11?'ficha':pth.startsWith('/vehiculos')?'catalogo':pth.startsWith('/coches')?'landing':pth.startsWith('/cita')?'cita':'otra';
 let lcp=0,cls=0,inp=0;try{new PerformanceObserver(l=>{const e=l.getEntries();lcp=e[e.length-1].startTime}).observe({type:'largest-contentful-paint',buffered:true});new PerformanceObserver(l=>l.getEntries().forEach(e=>{if(!e.hadRecentInput)cls+=e.value})).observe({type:'layout-shift',buffered:true});new PerformanceObserver(l=>l.getEntries().forEach(e=>{if(e.interactionId&&e.duration>inp)inp=e.duration})).observe({type:'event',buffered:true,durationThreshold:16})}catch(x){}
 let sent=false;const fin=()=>{if(sent||!lcp)return;sent=true;snd({e:'cwv',t,lcp:Math.round(lcp),cls:+cls.toFixed(3),inp:Math.round(inp)})};addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')fin()});addEventListener('pagehide',fin);document.addEventListener('click',e=>{const a=e.target.closest('a');if(!a)return;const h=a.getAttribute('href')||'';if(h.startsWith('https://wa.me')){snd({e:'wa',c});try{pgConv('contact','wa')}catch(x){}}else if(h.startsWith('tel:'))snd({e:'tel',c});else if(a.id==='pdf')snd({e:'pdf',c})},true)}catch(x){}})();`;
@@ -277,7 +277,7 @@ const ALERT_JS = `(()=>{const al=document.getElementById('al');if(!al)return;let
 const open=()=>{if(seen)return;seen=true;try{sessionStorage.setItem('pg_al','1')}catch(x){}al.classList.add('on')};setTimeout(open,25000);addEventListener('scroll',()=>{if(scrollY>document.body.scrollHeight*.55)open()},{passive:true});
 al.querySelector('.x').onclick=()=>al.classList.remove('on');const f=document.getElementById('alf');f.t.value=Date.now();
 f.onsubmit=async e=>{e.preventDefault();const m=f.querySelector('.msg');m.className='msg';if(!f.consent.checked){m.textContent='Marca la casilla para que podamos avisarte.';m.className='msg err';return}
-const fd=new FormData(f);fd.append('origen',location.pathname);const r=await fetch('${B}/api/alerta',{method:'POST',body:fd});const j=await r.json().catch(()=>({}));if(!r.ok){m.textContent=j.error||'Error';m.className='msg err';return}
+const fd=new FormData(f);fd.append('origen',location.pathname);fd.append('canal',window.pgSrc||'');const r=await fetch('${B}/api/alerta',{method:'POST',body:fd});const j=await r.json().catch(()=>({}));if(!r.ok){m.textContent=j.error||'Error';m.className='msg err';return}
 f.innerHTML='<p class="msg ok" style="display:block">¡Hecho! Te avisaremos cuando entre un coche así.</p>'}})();`;
 
 // ---------- páginas ----------
@@ -300,29 +300,39 @@ export function home({ cars }) {
   return page({ title: 'Coches de segunda mano en Sabadell | Plata Garage', desc: 'Coches de segunda mano en Sabadell y el Vallès con garantía de 12 meses. Mira el stock, pide cita y ven a verlo sin compromiso.', on: 'home', body, alert: true, path: '/', head: ld(ldWeb()) + ld(ldFaq(FAQ.slice(0, 5))) });
 }
 
-export function catalog({ cars, q = {} }) {
+export function catalog({ cars, q = {}, vendido = null }) {
   const opts = (k) => [...new Set(cars.map((c) => c[k]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
   const sel = (id, label, list) => `<select id="${id}" aria-label="${label}"><option value="">${label}</option>${list.map((x) => `<option${q[id] === x ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
   const body = `<section style="padding-top:56px"><div class="w"><div class="pill"><i></i>${cars.length} coches disponibles</div><h1 class="s">Coches de segunda mano <span class="gr">en Sabadell</span></h1>
+${vendido ? buscaMini({ titulo: `Ese ${vendido.brand} ${vendido.model} ya se ha vendido`, sub: 'Te buscamos uno igual o parecido, sin compromiso. Abajo tienes también todo lo que hay ahora en stock.', pre: { marca: vendido.brand, modelo: vendido.model, combustible: vendido.fuel || '', cambio: vendido.trans || '', presupuesto: Math.round((vendido.price * 1.1) / 500) * 500, mensaje: `Venía del ${vendido.brand} ${vendido.model} (${vendido.year}), ya vendido` } }) + '<div style="height:26px"></div>' : ''}
 <form class="qs" id="qf" role="search"><input id="q" name="q" value="${esc(q.q || '')}" placeholder="Escribe lo que buscas: «diésel automático hasta 12.000 €», «SUV desde 2018»…" aria-label="Buscar coche"><button class="btn" type="submit">Buscar</button></form><p class="note" id="qi" style="min-height:20px"></p>
 <div class="filters">${sel('m', 'Marca', opts('brand'))}${sel('f', 'Combustible', opts('fuel'))}${sel('t', 'Cambio', opts('trans'))}${sel('c', 'Carrocería', opts('body'))}
 <select id="p" aria-label="Precio máximo"><option value="">Precio máximo</option>${[4000, 6000, 8000, 10000, 15000, 20000, 30000].map((v) => `<option value="${v}">Hasta ${eur(v)}</option>`).join('')}</select>
 <select id="o" aria-label="Ordenar"><option value="p-">Precio: mayor a menor</option><option value="p+">Precio: menor a mayor</option><option value="k+">Menos kilómetros</option><option value="y-">Más nuevos</option><option value="s-">Últimos en llegar</option></select></div>
 <p class="note" id="n"></p><div class="grid" id="g">${cars.sort((a, b) => b.price - a.price).map(card).join('')}</div>
 <div class="chipl" style="margin-top:28px">${tiposConStock(cars).map((t) => `<a href="${B}/coches/${t.slug}">${esc(t.h)}</a>`).join('')}</div>
-<p class="mu" id="z" style="display:none">No hay coches con esos filtros. <a href="${B}/te-lo-buscamos" style="color:var(--or)">Dinos qué buscas</a> y te ayudamos a encontrarlo.</p></div></section>`;
+${buscaMini({ titulo: 'Ahora mismo no tenemos un coche así', sub: 'El stock cambia cada semana. Déjanos tus datos y te lo buscamos nosotros, sin compromiso.', id: 'z', oculto: true })}
+<div class="box" id="avb" style="padding:20px;max-width:760px;margin-top:22px"><p style="margin:0"><b>¿Ninguno te convence?</b> <a href="#" id="avl" style="color:var(--or)">Avísame cuando entre un coche con estos filtros</a></p>
+<form id="avf" hidden novalidate style="margin-top:12px">${hp()}<input type="hidden" name="busca"><input type="hidden" name="max"><input name="email" type="email" required maxlength="200" placeholder="Tu email *">
+<label class="chk"><input type="checkbox" name="consent" value="si"><span>Quiero recibir por email avisos de coches que encajen con esta búsqueda. Me puedo dar de baja cuando quiera. <a href="${B}/privacidad" target="_blank">Privacidad</a></span></label><div class="msg" role="alert"></div><button class="btn sm" type="submit">Avisarme</button></form></div></div></section>`;
   const script = `const g=document.getElementById('g'),cs=[...g.children],v=id=>document.getElementById(id).value;
 ${NLQ_JS}
 let Q={};const qi=document.getElementById('qi');
 function run(){const m=v('m'),f=v('f'),t=v('t'),c=v('c'),p=Math.min(+v('p')||1e9,Q.pmax||1e9),o=v('o');let n=0;
 const k=o[0]==='p'?'p':o[0]==='k'?'k':o[0]==='y'?'y':'s',dir=o[1]==='+'?1:-1;
 cs.sort((a,b)=>{const x=a.dataset[k],y=b.dataset[k];return (k==='s'?x.localeCompare(y):(+x-+y))*dir}).forEach(e=>{const d=e.dataset,ok=(!m||d.m===m)&&(!f||d.f===f)&&(!t||d.t===t)&&(!c||d.c===c)&&+d.p<=p&&nlqMatch(Q,d);e.style.display=ok?'':'none';if(ok)n++;g.appendChild(e)});
-document.getElementById('n').textContent=n+' resultado'+(n===1?'':'s');document.getElementById('z').style.display=n?'none':''}
+document.getElementById('n').textContent=n+' resultado'+(n===1?'':'s');const z=document.getElementById('z'),zf=z.querySelector('form'),qq=document.getElementById('q').value.trim();z.style.display=n?'none':'';
+zf.marca.value=m;zf.combustible.value=f;zf.cambio.value=t;if(p<1e9&&!zf.presupuesto.dataset.u)zf.presupuesto.value=p;zf.mensaje.value='Buscó en el stock: '+[qq,m,f,t,c,p<1e9?'hasta '+p+' €':''].filter(Boolean).join(', ');
+const af=document.getElementById('avf');af.busca.value=[qq,m,f,t,c].filter(Boolean).join(', ').slice(0,120)||'Cualquier coche';af.max.value=p<1e9?p:''}
+document.querySelector('#z input[name=presupuesto]').addEventListener('input',e=>e.target.dataset.u=1);
+(()=>{const f=document.getElementById('avf');document.getElementById('avl').onclick=e=>{e.preventDefault();f.hidden=!f.hidden;f.t.value=Date.now();if(!f.hidden)f.email.focus()};
+f.onsubmit=async e=>{e.preventDefault();const m=f.querySelector('.msg');m.className='msg';if(!f.consent.checked){m.textContent='Marca la casilla para que podamos avisarte.';m.className='msg err';return}
+const fd=new FormData(f);fd.append('origen',location.pathname+location.search);fd.append('canal',window.pgSrc||'');const r=await fetch('${B}/api/alerta',{method:'POST',body:fd});const j=await r.json().catch(()=>({}));if(!r.ok){m.textContent=j.error||'Error';m.className='msg err';return}f.innerHTML='<p class="msg ok" style="display:block">Hecho. Te avisaremos cuando entre un coche así.</p>'}})();
 document.querySelectorAll('.filters select').forEach(s=>s.addEventListener('change',run));
 const qf=document.getElementById('qf');qf.onsubmit=e=>{e.preventDefault();doQ(true)};
 function doQ(push){const q=document.getElementById('q').value.trim();Q=nlq(q);qi.textContent=q?nlqTxt(Q):'';if(push){const u=new URL(location.href);q?u.searchParams.set('q',q):u.searchParams.delete('q');history.replaceState(null,'',u)}run()}
 doQ(false);`;
-  return page({ title: 'Coches de segunda mano en Sabadell | Plata Garage', desc: `${cars.length} coches de ocasión en Sabadell con garantía de 12 meses. Filtra por marca, precio y combustible y pide cita.`, on: 'veh', body, script, alert: true, path: '/vehiculos/', noindex: !!q.q });
+  return page({ title: 'Coches de segunda mano en Sabadell | Plata Garage', desc: `${cars.length} coches de ocasión en Sabadell con garantía de 12 meses. Filtra por marca, precio y combustible y pide cita.`, on: 'veh', body, script: FORM_JS + script, alert: !vendido, path: '/vehiculos/', noindex: !!q.q || !!vendido });
 }
 
 const FICHA_CSS = `
@@ -414,6 +424,7 @@ ${imgs.length > 1 ? `<section class="fs" id="fotos"><div class="ey">Fotos</div><
 <div class="box"><h3>${ic.key}¿Tienes coche para entregar?</h3><p class="mu" style="margin:0 0 12px;font-size:14px">Te lo valoramos sin compromiso y te decimos cuánto te quedaría por pagar por el ${esc(c.brand)} ${esc(c.model)}.</p><a class="btn g" href="${B}/cuanto-vale-mi-coche?coche=${c.slug}">Valorar mi coche</a></div>
 <div class="box"><h3>${ic.truck}Te lo llevamos a casa</h3><p class="mu" style="margin:0 0 12px;font-size:14px">Dinos tu código postal y te pasamos presupuesto del envío, sin compromiso.</p>
 <form class="f" data-api="${B}/api/envio" data-t="envio" novalidate>${hp()}<input type="hidden" name="coche" value="${c.slug}"><label>Código postal *<input name="cp" required inputmode="numeric" pattern="\\d{5}" maxlength="5"></label>${contactFields()}${priv()}<div class="msg" role="alert"></div><button class="btn g" type="submit">Pedir presupuesto de envío</button></form></div></div></section></div></div>
+<section style="padding:10px 0 30px"><div class="w">${buscaMini({ titulo: '¿No es exactamente lo que buscas?', sub: 'Dinos qué cambiarías y te buscamos uno parecido, sin compromiso.', pre: { marca: c.brand, modelo: c.model, combustible: c.fuel || '', cambio: c.trans || '', presupuesto: Math.round((c.price * 1.15) / 500) * 500, mensaje: `Parecido al ${name} (${c.year})` } })}</div></section>
 ${sim.length ? `<section id="similares" style="padding:40px 0 90px"><div class="w"><h2 style="font-size:32px;margin-bottom:28px">También te puede interesar</h2><div class="grid">${sim.map(card).join('')}</div></div></section>` : ''}
 <div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Fotos"><button class="x" aria-label="Cerrar">×</button><button class="p" aria-label="Anterior">‹</button><img alt=""><button class="n" aria-label="Siguiente">›</button><span class="c"></span></div>
 <div class="sb" id="sb"><b>${eur(c.price)}</b><a class="btn" href="#visita">Pedir cita</a><a class="wa" href="${wa(waTxt)}" rel="noopener" aria-label="WhatsApp">${ic.wa}</a></div>`;
@@ -481,7 +492,7 @@ const TITULARES = `<ul><li><b>Cristina Plata Galán</b> · NIF 48271238B · C/ T
 export function privacidad() {
   const body = `<section style="padding-top:56px"><div class="w post legal"><h1 class="s">Política de privacidad</h1><p class="note">Última actualización: octubre de 2026.</p>
 <h2>1. Responsables del tratamiento</h2><p>Los datos que nos facilitas en esta web los tratan, como corresponsables, los profesionales autónomos que operan bajo el nombre comercial «Plata Garage»:</p>${TITULARES}<p>Cada uno trata los datos de los clientes con los que contrata. Contacto para cualquier cuestión de privacidad: info@platagarage.com · ${TEL}.</p>
-<h2>2. Qué datos tratamos y para qué</h2><ul><li><b>Citas, reservas, envíos, tasaciones, "Te lo buscamos" y mensajes:</b> nombre, teléfono, email y lo que nos cuentes en el formulario, para atender tu solicitud y contactarte por teléfono, WhatsApp o email sobre ella.</li>
+<h2>2. Qué datos tratamos y para qué</h2><ul><li><b>Citas, reservas, envíos, tasaciones, "Te lo buscamos" y mensajes:</b> nombre, teléfono, email y lo que nos cuentes en el formulario, para atender tu solicitud y contactarte por teléfono, WhatsApp o email sobre ella. Con tu solicitud guardamos también la página desde la que nos escribes y de dónde llegaste a la web (por ejemplo, Google), para saber qué funciona.</li>
 <li><b>Avisos de coches nuevos:</b> tu email y lo que buscas, para enviarte avisos de coches en stock que encajen. Solo si marcas la casilla, y puedes darte de baja cuando quieras respondiendo a cualquier aviso o escribiendo a info@platagarage.com.</li>
 <li><b>Medición de la web:</b> contamos visitas por página, de dónde llegan (por ejemplo, Google o Facebook), el tipo de dispositivo y la ciudad aproximada, siempre de forma agregada, sin cookies y sin guardar tu IP ni ningún dato que te identifique.</li></ul>
 <h2>3. Base legal</h2><p>Tu consentimiento al enviar cada formulario o activar los avisos (art. 6.1.a RGPD) y la aplicación de medidas precontractuales a petición tuya (art. 6.1.b RGPD). La medición agregada se basa en nuestro interés legítimo en saber qué funciona en la web (art. 6.1.f RGPD), sin datos personales.</p>
@@ -570,7 +581,14 @@ export function blogList({ posts }) {
 export function blogPost({ post: p, cars }) {
   const ldA = { '@context': 'https://schema.org', '@type': 'BlogPosting', headline: p.title, description: p.excerpt, datePublished: p.publishedAt, dateModified: p.updated || p.publishedAt, image: p.cover || undefined, publisher: { '@id': `${CTX.site}${B}/#negocio` } };
   const body = `<div class="w"><div class="crumb"><a href="${B}/blog/">${ic.back}Volver al blog</a></div><article class="post" style="padding:30px 0 60px"><p class="note">${fechaLarga(p.publishedAt)}${p.tags?.length ? ' · ' + p.tags.map(esc).join(' · ') : ''}</p><h1 class="s">${esc(p.title)}</h1>${p.cover ? `<img src="${esc(p.cover)}" alt="${esc(p.title)}" style="margin:24px 0">` : ''}${md(p.body)}</article>
-<section style="padding:0 0 80px"><h2 style="font-size:30px;margin-bottom:24px">Coches en stock</h2><div class="grid">${cars.slice(0, 3).map(card).join('')}</div></section></div>`;
+${(() => { const tx = normTxt(`${p.title} ${(p.tags || []).join(' ')} ${p.body || ''}`);
+  // Siguiente paso según el tema del artículo
+  const [h, t, bt, url] = /vender|tasaci|cuanto vale|parte de pago|entregar mi coche/.test(tx) ? ['¿Quieres saber cuánto vale tu coche?', 'Te damos una valoración orientativa y, si te interesa, lo dejamos como parte de pago.', 'Valorar mi coche', `${B}/cuanto-vale-mi-coche`]
+    : ['¿Buscas coche?', 'Mira lo que tenemos ahora o dinos qué buscas y te lo buscamos nosotros, sin compromiso.', 'Que me lo busquen', `${B}/te-lo-buscamos`];
+  // Coches relacionados: los que más palabras comparten con el artículo (marca, modelo, combustible, carrocería)
+  const rel = cars.map((c) => ({ c, s: [c.brand, c.model, c.fuel, c.body, c.trans].filter(Boolean).reduce((a, w) => a + (tx.includes(normTxt(w)) ? (w === c.brand || w === c.model ? 3 : 1) : 0), 0) })).sort((x, y) => y.s - x.s || x.c.price - y.c.price).slice(0, 3).map((x) => x.c);
+  return `<div class="box" style="padding:26px;margin:0 0 50px"><h3>${h}</h3><p class="mu" style="margin:6px 0 16px">${t}</p><div class="row"><a class="btn" href="${url}">${bt}</a><a class="btn g" href="${B}/vehiculos/">Ver el stock</a></div></div>
+<section style="padding:0 0 80px"><h2 style="font-size:30px;margin-bottom:24px">Coches que te pueden interesar</h2><div class="grid">${rel.map(card).join('')}</div></section></div>`; })()}`;
   return page({ title: `${p.title} | Plata Garage`, desc: p.excerpt || p.title, on: 'blog', body, head: ld(ldA), path: `/blog/${p.slug}`, image: p.cover });
 }
 
@@ -578,7 +596,7 @@ export function notFound(msg = 'Esta página no existe o el coche ya no está di
   return page({ noindex: true, title: 'Página no encontrada | Plata Garage', desc: msg, body: `<section><div class="w"><div class="cta"><h2>Vaya…</h2><p class="lead">${esc(msg)}</p><div class="row"><a class="btn" href="${B}/vehiculos/">Ver coches en stock</a></div></div></div></section>` });
 }
 
-const AV = '13';
+const AV = '14';
 export function adminShell() {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Backoffice · Plata Garage</title><link rel="icon" href="${B}/assets/icon-192.png"><link rel="manifest" href="${B}/assets/manifest.webmanifest"><link rel="apple-touch-icon" href="${B}/assets/icon-192.png"><meta name="theme-color" content="#050505"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Plata Garage"><link rel="stylesheet" href="${B}/assets/admin.css?v=${AV}"></head><body><div id="app"></div><script src="${B}/assets/admin.js?v=${AV}"></script></body></html>`;
 }
@@ -586,7 +604,11 @@ export function adminShell() {
 // ---------- páginas de SEO local ----------
 const ldList = (cars) => ({ '@context': 'https://schema.org', '@type': 'ItemList', itemListElement: cars.slice(0, 30).map((c, i) => ({ '@type': 'ListItem', position: i + 1, url: abs(`${B}/vehiculos/${c.slug}`), name: `${carName(c)} ${c.year}` })) });
 const ldCrumb = (items) => ({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: items.map(([n, u], i) => ({ '@type': 'ListItem', position: i + 1, name: n, ...(u ? { item: abs(B + u) } : {}) })) });
-const vacio = (txt) => `<div class="box" style="padding:28px;max-width:760px"><h3>Ahora mismo no tenemos ${esc(txt)} en stock</h3><p class="mu" style="margin:0 0 16px">El stock cambia cada semana. Dinos qué buscas y te avisamos, o te lo buscamos nosotros.</p><div class="row"><a class="btn" href="${B}/te-lo-buscamos">Que me lo busquen</a><a class="btn g" href="${B}/vehiculos/">Ver todo el stock</a></div></div>`;
+// Formulario corto "te lo buscamos" con lo que buscaba ya puesto: que nadie se vaya sin dejar el contacto cuando no tenemos su coche
+const buscaMini = ({ titulo, sub = '', pre = {}, id = '', oculto = false }) => `<div class="box bm"${id ? ` id="${id}"` : ''} style="padding:26px;max-width:760px;margin-top:22px${oculto ? ';display:none' : ''}"><h3>${esc(titulo)}</h3>${sub ? `<p class="mu" style="margin:6px 0 16px">${sub}</p>` : ''}<form class="f" data-api="${B}/api/busqueda" data-t="busqueda" novalidate>${hp()}${['marca', 'modelo', 'combustible', 'cambio', 'mensaje'].map((k) => `<input type="hidden" name="${k}" value="${esc(pre[k] || '')}">`).join('')}
+<label>Presupuesto máximo (€)<input name="presupuesto" inputmode="numeric" maxlength="7" value="${pre.presupuesto || ''}" placeholder="12000"></label>${contactFields()}${priv()}
+<label class="chk"><input type="checkbox" name="avisar" value="si"><span>Además, avisadme por email cuando entre un coche así (opcional; me puedo dar de baja cuando quiera).</span></label><div class="msg" role="alert"></div><button class="btn" type="submit">Que me lo busquen</button></form></div>`;
+const vacio = (txt, pre = {}) => buscaMini({ titulo: `Ahora mismo no tenemos ${txt} en stock`, sub: `El stock cambia cada semana. Déjanos tus datos y te lo buscamos nosotros, sin compromiso. O <a href="${B}/vehiculos/" style="color:var(--or)">mira todo el stock</a>.`, pre: { mensaje: `Buscaba ${txt}`, ...pre } });
 
 export function landingPage({ l, cars }) {
   const list = [...l.cars].sort((a, b) => a.price - b.price);
@@ -598,11 +620,11 @@ export function landingPage({ l, cars }) {
   const rel = l.kind === 'marca' ? tiposConStock(cars).slice(0, 10).map((t) => [t.slug, t.h]) : marcas(cars).map((m) => [m.slug, m.name]);
   const body = `<section style="padding-top:56px" class="lh"><div class="w"><div class="crumb" style="padding:0 0 18px"><a href="${B}/vehiculos/">${ic.back}Todo el stock</a></div><div class="pill"><i></i>${list.length} en stock</div><h1 class="s">${esc(l.h)} <span class="gr">de segunda mano en Sabadell</span></h1>
 <p class="lead">${esc(l.txt)} Todos con garantía de 12 meses y atención con cita previa.</p>
-${list.length ? `<div class="grid">${list.map(card).join('')}</div>` : vacio(l.kind === 'marca' ? l.h : l.h.toLowerCase())}
+${list.length ? `<div class="grid">${list.map(card).join('')}</div>` : vacio(l.kind === 'marca' ? l.h : l.h.toLowerCase(), l.kind === 'marca' ? { marca: l.h } : {})}
 <div class="chipl" style="margin-top:34px">${rel.map(([s, t]) => `<a href="${B}/coches/${s}">${esc(t)}</a>`).join('')}</div>
 <div style="margin-top:56px">${faqHtml(faqs)}</div></div></section>`;
   const title = `${h1} | Plata Garage`.length <= 62 ? `${h1} | Plata Garage` : `${l.h} en Sabadell | Plata Garage`;
-  return page({ title, desc: `${l.h} de segunda mano en Sabadell: ${list.length} en stock${list.length ? ` desde ${eur(list[0].price)}` : ''}, con garantía de 12 meses. Pide cita y ven a verlos.`.slice(0, 158), on: 'veh', body, alert: true, path: `/coches/${l.slug}`, noindex: !list.length, image: list[0]?.images?.[0], head: ld(ldList(list)) + ld(ldFaq(faqs)) + ld(ldCrumb([['Inicio', '/'], ['Vehículos', '/vehiculos/'], [l.h]])) });
+  return page({ title, desc: `${l.h} de segunda mano en Sabadell: ${list.length} en stock${list.length ? ` desde ${eur(list[0].price)}` : ''}, con garantía de 12 meses. Pide cita y ven a verlos.`.slice(0, 158), on: 'veh', body, alert: !!list.length, script: list.length ? '' : FORM_JS, path: `/coches/${l.slug}`, noindex: !list.length, image: list[0]?.images?.[0], head: ld(ldList(list)) + ld(ldFaq(faqs)) + ld(ldCrumb([['Inicio', '/'], ['Vehículos', '/vehiculos/'], [l.h]])) });
 }
 
 export function zona({ z, cars }) {
