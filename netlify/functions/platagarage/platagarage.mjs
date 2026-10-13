@@ -751,12 +751,13 @@ async function adminApi(r, req, M, me, url) {
       const id = 'd' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'); const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', docKey(), iv);
       const enc = Buffer.concat([c.update(buf), c.final()]); await media().set('doc/' + id, Buffer.concat([iv, c.getAuthTag(), enc]));
       const n = Number(String(body.importe ?? '').replace(',', '.'));
-      ent.files.unshift({ id, nombre: clip(body.nombre, 120) || 'documento', tipo: clip(body.tipo, 40) || 'Otro', importe: isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0, fecha: /^\d{4}-\d{2}-\d{2}$/.test(body.fecha || '') ? body.fecha : today(), mime, size: buf.length, by: me.name, at: new Date().toISOString() });
+      ent.files.unshift({ id, nombre: clip(body.nombre, 120) || 'documento', tipo: clip(body.tipo, 40) || 'Otro', importe: isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0, fecha: /^\d{4}-\d{2}-\d{2}$/.test(body.fecha || '') ? body.fecha : today(), mime, size: buf.length, by: me.name, at: new Date().toISOString(), ...(String(body.iva ?? '') !== '' && isFinite(Number(body.iva)) ? { iva: Math.round(Number(body.iva) * 100) / 100 } : {}) });
       await save('docs', all); return json(ent);
     }
     if (M === 'PATCH' && seg[3]) { const f = ent.files.find((x) => x.id === seg[3]); if (!f) return json({ error: 'No existe' }, 404);
       if ('tipo' in body) f.tipo = clip(body.tipo, 40) || f.tipo; if ('nombre' in body) f.nombre = clip(body.nombre, 120) || f.nombre;
       if ('importe' in body) { const n = Number(String(body.importe ?? '').replace(',', '.')); f.importe = isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0; }
+      if ('iva' in body) { const v = String(body.iva ?? '').trim(); const n = Number(v.replace(',', '.')); if (v === '' || !isFinite(n) || n < 0) delete f.iva; else f.iva = Math.round(n * 100) / 100; }
       if (/^\d{4}-\d{2}-\d{2}$/.test(body.fecha || '')) f.fecha = body.fecha; await save('docs', all); return json(ent); }
     if (M === 'DELETE' && seg[3]) { const i = ent.files.findIndex((x) => x.id === seg[3]); if (i < 0) return json({ error: 'No existe' }, 404); ent.files.splice(i, 1); await save('docs', all); await media().delete('doc/' + seg[3]).catch(() => {}); return json(ent); }
   }
