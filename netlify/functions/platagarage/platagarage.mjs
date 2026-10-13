@@ -316,7 +316,7 @@ export default async (req, context) => {
 
     // ---- web pública ----
     const site = (env('PG_SITE_URL') || url.origin).replace(/\/+$/, '');
-    V.setCtx({ site, index: INDEX(), gtag: clip(env('PG_GTAG_ID'), 20), pixel: clip(env('PG_META_PIXEL'), 20) });
+    V.setCtx({ site, index: INDEX(), gtag: clip(env('PG_GTAG_ID'), 20), pixel: clip(env('PG_META_PIXEL'), 20), clarity: clip(env('PG_CLARITY') || 'yx42pl2vd4', 20) });
     const cars = await load('cars');
     if (sub === '/robots.txt') return text(`User-agent: *\n${INDEX() ? `Allow: /\nDisallow: ${BASE}/admin\nDisallow: ${BASE}/api/\nDisallow: ${BASE}/gracias\n` : 'Disallow: /\n'}\nSitemap: ${site}${BASE}/sitemap.xml\n`, 'text/plain');
     if (sub === '/sitemap.xml') return text(sitemap(site, pubCars(cars), (await load('posts')).filter((x) => x.published)), 'application/xml');
@@ -555,6 +555,7 @@ async function hit(req, context) {
     const g = context?.geo; if (g?.city) inc('city', clip(g.city, 60)); if (g?.country?.code) inc('pais', clip(g.country.code, 4));
     if (b.n) inc('tot', 'nuevas');
   }
+  else if (b.e === 'falta') { const K = { precio: 'El precio', financiacion: 'La financiación', verlo: 'Verlo en persona', datos: 'Más fotos o datos', garantia: 'La garantía', entregar: 'Entregar su coche' }; if (K[b.k]) { inc('falta', K[b.k]); if (b.c) inc('faltacar', `${clip(b.c, 120)}|${K[b.k]}`); } }
   else if (b.e === 'q') { const q = clip(String(b.q || '').replace(/[^a-z0-9ñ .,€-]/gi, ' ').replace(/\s+/g, ' ').trim(), 80); if (q) { inc('q', q); if (!Number(b.n)) inc('q0', q); } }
   else if (b.e === 'cwv') {
     const tpl = ['home', 'catalogo', 'ficha', 'landing', 'cita', 'otra'].includes(b.t) ? b.t : 'otra';

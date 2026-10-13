@@ -121,7 +121,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 96px;color:var(--mu);font
 @media(max-width:900px){.cg,.v3,.ic3{grid-template-columns:1fr}.al{bottom:84px}}
 .fl2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:22px 0}.fl2 div{display:flex;flex-wrap:wrap;gap:6px 14px;align-content:flex-start}.fl2 b{width:100%;color:#ddd;font-weight:600;margin-bottom:2px}.fl2 a{font-size:13px;text-decoration:none}.fl2 a:hover{color:#fff}
 .faq{max-width:860px}.faq h2{font-size:clamp(26px,3vw,36px);margin-bottom:18px}.faq details{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:0 20px;margin-bottom:10px}.faq summary{cursor:pointer;padding:16px 0;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}.faq summary:after{content:"+";color:var(--or);font-size:20px;line-height:1}.faq details[open] summary:after{content:"–"}.faq summary::-webkit-details-marker{display:none}.faq p{margin:0 0 16px;color:#d6d6d6}
-.qs{display:flex;gap:10px;margin:22px 0 0;max-width:760px}.qs input{flex:1;padding:14px 20px;font-size:16px}.chipl{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}.chipl a{border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:13px;color:#ddd;text-decoration:none}.chipl a:hover{border-color:var(--or);color:#fff}
+.qs{display:flex;gap:10px;margin:22px 0 0;max-width:760px}.qs input{flex:1;padding:14px 20px;font-size:16px}.chipl{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}.chipl a.on{background:var(--or);color:#050505;border-color:var(--or)}.chipl a{border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:13px;color:#ddd;text-decoration:none}.chipl a:hover{border-color:var(--or);color:#fff}
 .lh p.lead{max-width:760px}
 @media(max-width:700px){.fl2{grid-template-columns:1fr}.qs{flex-direction:column}}
 .tag.rb{background:#ef4444;color:#fff}.tag.nw{background:#22c55e;color:#04210f}.card .pr s,.pz s{color:#bbb;font-weight:500;font-size:.6em;margin-right:12px}
@@ -140,7 +140,7 @@ const ld = (o) => `<script type="application/ld+json">${JSON.stringify(o).replac
 
 function page({ title, desc, on = '', body, head = '', script = '', car = '', alert = false, path = '', image = '', noindex = false }) {
   const canon = path ? `${CTX.site}${B}${path}` : '';
-  const ads = !!(CTX.gtag || CTX.pixel);
+  const ads = !!(CTX.gtag || CTX.pixel || CTX.clarity);
   const ogImg = abs(image || `${B}/assets/hero.jpg`);
   const meta = `<meta name="robots" content="${CTX.index && !noindex ? 'index,follow,max-image-preview:large' : 'noindex,nofollow'}">${canon ? `<link rel="canonical" href="${esc(canon)}">` : ''}<meta property="og:type" content="website"><meta property="og:site_name" content="Plata Garage"><meta property="og:locale" content="es_ES"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">${canon ? `<meta property="og:url" content="${esc(canon)}">` : ''}<meta property="og:image" content="${esc(ogImg)}"><meta name="twitter:card" content="summary_large_image">`;
   const n = (h, t, k) => `<a href="${B}${h}"${on === k ? ' class="on" aria-current="page"' : ''}>${t}</a>`;
@@ -155,7 +155,7 @@ ${meta}<title>${esc(title)}</title><meta name="description" content="${esc(desc)
 <div class="fl2"><div><b>Coches por zona</b>${ZONAS.map((z) => `<a href="${B}/coches-segunda-mano-${z.slug}">${esc(z.name)}</a>`).join('')}</div><div><b>Por tipo</b>${FOOT_TIPOS.map(([sl, t]) => `<a href="${B}/coches/${sl}">${t}</a>`).join('')}<a href="${B}/preguntas-frecuentes">Preguntas frecuentes</a></div></div>
 <p>La información de esta web es orientativa y no vinculante. Puede contener errores: confirma los datos del vehículo antes de decidir.</p><p style="margin-top:18px;font-size:13px">Web por <a href="https://www.rotulito.com/" rel="noopener">rotulito.com</a></p></div></footer>
 <a class="wf" href="${wa('Hola, quería información sobre un coche.')}" rel="noopener" aria-label="Escribir por WhatsApp">${ic.wa}</a>
-${alert ? ALERT_HTML : ''}${ads ? COOKIE_HTML : ''}<script>${TRACK_JS}${FAV_JS}${ads ? cookieJs() : 'window.pgConv=()=>{};'}${alert ? ALERT_JS : ''}${script || ''}</script></body></html>`;
+${alert ? ALERT_HTML : ''}${ads ? COOKIE_HTML() : ''}<script>${TRACK_JS}${FAV_JS}${ads ? cookieJs() : 'window.pgConv=()=>{};'}${alert ? ALERT_JS : ''}${script || ''}</script></body></html>`;
 }
 
 const FOOT_TIPOS = [['automaticos', 'Automáticos'], ['diesel', 'Diésel'], ['gasolina', 'Gasolina'], ['suv', 'SUV'], ['familiares', 'Familiares'], ['compactos', 'Compactos'], ['menos-de-10000', 'Menos de 10.000 €'], ['menos-de-15000', 'Menos de 15.000 €']];
@@ -260,15 +260,24 @@ const tog=e=>{const b=e.target.closest('[data-fav]');if(!b)return;e.preventDefau
 document.addEventListener('click',tog,true);document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.fav)tog(e)},true);paint()})();`;
 
 // Cookies de publicidad (Google Ads / Meta): solo se cargan si el visitante acepta. Rechazar es igual de fácil que aceptar.
-const COOKIE_HTML = `<div class="cb" id="cb" role="dialog" aria-label="Cookies"><p>Usamos cookies propias necesarias y, solo si aceptas, cookies de Google y Meta para medir y mejorar nuestros anuncios. <a href="${B}/cookies">Más información</a>.</p><div class="row"><button class="btn g" id="ckn" type="button">Rechazar</button><button class="btn" id="cky" type="button">Aceptar</button></div></div>`;
-const cookieJs = () => `(()=>{const G=${JSON.stringify(CTX.gtag || '')},P=${JSON.stringify(CTX.pixel || '')},K='pg_ck';let st=null;try{st=localStorage.getItem(K)}catch(x){}
-const cb=document.getElementById('cb');window.pgConv=()=>{};
+const COOKIE_HTML = () => { const ads = !!(CTX.gtag || CTX.pixel);
+  return `<div class="cb" id="cb" role="dialog" aria-label="Cookies"><p>Usamos cookies necesarias y, solo si aceptas, cookies de analítica (Microsoft Clarity) para ver cómo se usa la web y mejorarla${ads ? ', y de publicidad (Google y Meta) para medir nuestros anuncios' : ''}. <a href="${B}/cookies">Más información</a>.</p>
+<div id="ckp" hidden style="margin:10px 0"><label class="chk"><input type="checkbox" id="cka"><span>Analítica: cómo se navega por la web (Microsoft Clarity)</span></label>${ads ? '<label class="chk"><input type="checkbox" id="ckd"><span>Publicidad: medir nuestros anuncios (Google y Meta)</span></label>' : ''}</div>
+<div class="row"><button class="btn g" id="ckn" type="button">Rechazar</button><button class="btn g" id="ckx" type="button">Configurar</button><button class="btn" id="cky" type="button">Aceptar</button></div></div>`; };
+const cookieJs = () => `(()=>{const G=${JSON.stringify(CTX.gtag || '')},P=${JSON.stringify(CTX.pixel || '')},CL=${JSON.stringify(CTX.clarity || '')},K='pg_ck';let st=null;try{st=localStorage.getItem(K)}catch(x){}
+const cb=document.getElementById('cb');window.pgConv=(t,k)=>{try{if(window.gtag)gtag('event',t==='lead'?'generate_lead':'contact',{method:k});if(window.fbq)fbq('track',t==='lead'?'Lead':'Contact');if(window.clarity)clarity('event',t+'-'+k)}catch(x){}};
+// Analítica: Microsoft Clarity, solo con permiso
+const loadA=()=>{if(!CL||window.clarity)return;(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,'clarity','script',CL);clarity('consentv2',{ad_Storage:'denied',analytics_Storage:'granted'})};
 const load=()=>{if(G){const s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+G;document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments)};gtag('js',new Date());gtag('consent','default',{ad_storage:'granted',analytics_storage:'granted',ad_user_data:'granted',ad_personalization:'granted'});gtag('config',G)}
 if(P){!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init',P);fbq('track','PageView')}
-window.pgConv=(t,k)=>{try{if(window.gtag)gtag('event',t==='lead'?'generate_lead':'contact',{method:k});if(window.fbq)fbq('track',t==='lead'?'Lead':'Contact')}catch(x){}}};
-const set=v=>{try{localStorage.setItem(K,v)}catch(x){}cb.classList.remove('on');if(v==='si')load()};
-if(st==='si')load();else if(st!=='no')cb.classList.add('on');
+};
+// Elección guardada: 'si' (todo), 'no' (nada), 'a' (solo analítica), 'd' (solo publicidad)
+const apply=v=>{if(v==='si'||v==='a')loadA();else if(window.clarity){try{clarity('consentv2',{ad_Storage:'denied',analytics_Storage:'denied'});clarity('consent',false)}catch(x){}}if(v==='si'||v==='d')load()};
+const set=v=>{try{localStorage.setItem(K,v)}catch(x){}cb.classList.remove('on');apply(v)};
+if(st)apply(st);if(!st)cb.classList.add('on');
 document.getElementById('cky').onclick=()=>set('si');document.getElementById('ckn').onclick=()=>set('no');
+document.getElementById('ckx').onclick=()=>{const p=document.getElementById('ckp');if(p.hidden){p.hidden=false;const a=document.getElementById('cka'),d=document.getElementById('ckd');a.checked=st==='si'||st==='a';if(d)d.checked=st==='si'||st==='d';document.getElementById('ckx').textContent='Guardar mi elección';return}
+const a=document.getElementById('cka').checked,d=(document.getElementById('ckd')||{}).checked;set(a&&d?'si':a?'a':d?'d':'no')};
 const c=document.getElementById('ckc');if(c)c.onclick=e=>{e.preventDefault();cb.classList.add('on')}})();`;
 
 // Aviso de stock (alertas): ventana discreta, una vez por sesión
@@ -426,13 +435,14 @@ ${feats.length ? `<section class="fs" id="equipamiento"><div class="ey">Equipami
 <p class="note">Datos orientativos y no vinculantes; pueden contener errores. Confírmalos con nosotros antes de decidir.</p>
 <div class="pn" style="display:none;gap:16px;align-items:center"><div style="width:96px">${qr}</div><div>Plata Garage · Sabadell · ${TEL}<br>Fotos, cita y más datos: ${esc(fichaUrl)}</div></div></section>
 ${imgs.length > 1 ? `<section class="fs" id="fotos"><div class="ey">Fotos</div><h2>Todas las fotos (${imgs.length})</h2><div class="ph6">${imgs.map((u, i) => `<button type="button" data-i="${i}" aria-label="Ver foto ${i + 1} en grande"><img src="${esc(im(u, 500))}" alt="${esc(name)} ${c.year} – foto ${i + 1}" loading="lazy" width="400" height="300"></button>`).join('')}</div></section>` : ''}
+<section class="fs" id="falta"><div class="box" style="padding:22px"><h3>¿Qué te falta para decidirte?</h3><p class="mu sm" style="margin:4px 0 12px">Un toque y te ayudamos con eso. Es anónimo.</p><div class="chipl" id="ftl">${[['precio', 'El precio'], ['financiacion', 'La financiación'], ['verlo', 'Verlo en persona'], ['datos', 'Más fotos o datos'], ['garantia', 'Saber qué cubre la garantía'], ['entregar', 'Entregar mi coche']].map(([k, t]) => `<a href="#" data-f="${k}">${t}</a>`).join('')}</div><div id="ftr" class="note" style="margin-top:12px"></div></div></section>
 <section class="fs" id="dudas">${faqHtml(fq, 'Dudas sobre este coche')}</section>
 <section class="fs" id="visita"><div class="ey">Verlo en persona</div><h2>Reserva tu visita para este coche</h2>${citaForm({ cars, coche: c.slug, inFicha: true })}
 <div class="v3"><div class="box"><h3>${ic.chat}¿Prefieres preguntar?</h3><a class="btn" href="${wa(waTxt)}" rel="noopener">${ic.wa}Preguntar por WhatsApp</a><a class="tx" href="tel:+34660493228">${ic.tel} ${TEL}</a><p class="note">Garantía de 12 meses. Financiación: consúltanos condiciones.</p></div>${reservaBox}
 <div class="box"><h3>${ic.key}¿Tienes coche para entregar?</h3><p class="mu" style="margin:0 0 12px;font-size:14px">Te lo valoramos sin compromiso y te decimos cuánto te quedaría por pagar por el ${esc(c.brand)} ${esc(c.model)}.</p><a class="btn g" href="${B}/cuanto-vale-mi-coche?coche=${c.slug}">Valorar mi coche</a></div>
 <div class="box"><h3>${ic.truck}Te lo llevamos a casa</h3><p class="mu" style="margin:0 0 12px;font-size:14px">Dinos tu código postal y te pasamos presupuesto del envío, sin compromiso.</p>
 <form class="f" data-api="${B}/api/envio" data-t="envio" novalidate>${hp()}<input type="hidden" name="coche" value="${c.slug}"><label>Código postal *<input name="cp" required inputmode="numeric" pattern="\\d{5}" maxlength="5"></label>${contactFields()}${priv()}<div class="msg" role="alert"></div><button class="btn g" type="submit">Pedir presupuesto de envío</button></form></div></div></section></div></div>
-<section style="padding:10px 0 30px"><div class="w">${buscaMini({ titulo: '¿No es exactamente lo que buscas?', sub: 'Dinos qué cambiarías y te buscamos uno parecido, sin compromiso.', pre: { marca: c.brand, modelo: c.model, combustible: c.fuel || '', cambio: c.trans || '', presupuesto: Math.round((c.price * 1.15) / 500) * 500, mensaje: `Parecido al ${name} (${c.year})` } })}</div></section>
+<section style="padding:10px 0 30px" id="busca"><div class="w">${buscaMini({ titulo: '¿No es exactamente lo que buscas?', sub: 'Dinos qué cambiarías y te buscamos uno parecido, sin compromiso.', pre: { marca: c.brand, modelo: c.model, combustible: c.fuel || '', cambio: c.trans || '', presupuesto: Math.round((c.price * 1.15) / 500) * 500, mensaje: `Parecido al ${name} (${c.year})` } })}</div></section>
 ${sim.length ? `<section id="similares" style="padding:40px 0 90px"><div class="w"><h2 style="font-size:32px;margin-bottom:28px">También te puede interesar</h2><div class="grid">${sim.map(card).join('')}</div></div></section>` : ''}
 <div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Fotos"><button class="x" aria-label="Cerrar">×</button><button class="p" aria-label="Anterior">‹</button><img alt=""><button class="n" aria-label="Siguiente">›</button><span class="c"></span></div>
 <div class="sb" id="sb"><b>${eur(c.price)}</b><a class="btn" href="#visita">Pedir cita</a><a class="wa" href="${wa(waTxt)}" rel="noopener" aria-label="WhatsApp">${ic.wa}</a></div>`;
@@ -450,6 +460,10 @@ const r=await fetch('${B}/api/alerta',{method:'POST',body:new FormData(f)});cons
 const sb=document.getElementById('sb'),hero=document.querySelector('.fh');new IntersectionObserver(([e])=>sb.classList.toggle('on',!e.isIntersecting)).observe(hero);
 const links=[...document.querySelectorAll('.idx a')];const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id))}}),{rootMargin:'-40% 0px -55% 0px'});
 links.forEach(a=>{const s=document.querySelector(a.getAttribute('href'));if(s)io.observe(s)});
+(()=>{const R={precio:['Dinos hasta cuánto quieres gastar y te buscamos alternativas en ese precio.','Que me busquen uno','#busca'],financiacion:['Te calculamos la cuota sin compromiso: escríbenos y te decimos plazo y entrada.','Calcular mi cuota',${JSON.stringify(wa(`Hola, ¿me calculáis la cuota del ${name} (${c.year})?`))}],verlo:['Elige día y hora y te lo tenemos preparado para verlo y probarlo.','Pedir cita','${B}/cita?coche=${c.slug}'],datos:['Pregúntanos lo que quieras saber del coche y te contestamos.','Preguntar por WhatsApp',${JSON.stringify(wa(`Hola, quería más información del ${name} (${c.year}).`))}],garantia:['Todos llevan garantía de 12 meses. Tienes los detalles en las dudas de abajo.','Ver las dudas','#dudas'],entregar:['Te damos una valoración orientativa de tu coche como parte de pago.','Valorar mi coche','${B}/cuanto-vale-mi-coche?coche=${c.slug}']};
+const r=document.getElementById('ftr');document.querySelectorAll('#ftl [data-f]').forEach(a=>a.onclick=e=>{e.preventDefault();const k=a.dataset.f,x=R[k];document.querySelectorAll('#ftl a').forEach(b=>b.classList.toggle('on',b===a));
+try{navigator.sendBeacon('${B}/api/hit',new Blob([JSON.stringify({e:'falta',k,c:'${c.slug}'})],{type:'application/json'}))}catch(z){}
+r.innerHTML=x[0]+' <a class="btn sm" style="margin-left:8px" href="'+x[2]+'"'+(x[2].startsWith('http')?' rel="noopener"':'')+'>'+x[1]+'</a>'})})();
 ${FORM_JS}${SLOTS_JS}`;
   return page({ title, desc, on: 'veh', body, head: `<link rel="preload" as="image" href="${esc(im(imgs[0], 1600))}" imagesrcset="${esc(srcset(imgs[0], [640, 960, 1280, 1600]))}" imagesizes="100vw" fetchpriority="high"><style>${FICHA_CSS}</style>` + ld(ldCar) + ld(crumbs) + ld(ldFaq(fq)), script, car: c.slug, alert: true, path: `/vehiculos/${c.slug}`, image: imgs[0] });
 }
@@ -505,7 +519,7 @@ export function privacidad() {
 <li><b>Medición de la web:</b> contamos visitas por página, de dónde llegan (por ejemplo, Google o Facebook), el tipo de dispositivo, la ciudad aproximada y lo que se escribe en el buscador de coches, siempre de forma agregada, sin cookies y sin guardar tu IP ni ningún dato que te identifique.</li></ul>
 <h2>3. Base legal</h2><p>Tu consentimiento al enviar cada formulario o activar los avisos (art. 6.1.a RGPD) y la aplicación de medidas precontractuales a petición tuya (art. 6.1.b RGPD). La medición agregada se basa en nuestro interés legítimo en saber qué funciona en la web (art. 6.1.f RGPD), sin datos personales.</p>
 <h2>4. Conservación</h2><p>Mientras dure la gestión de tu solicitud y, después, durante los plazos legales aplicables. Si no llega a haber operación, borramos los datos como máximo a los 12 meses. Los avisos de coches nuevos, hasta que te des de baja.</p>
-<h2>5. Destinatarios</h2><p>No cedemos tus datos a terceros salvo obligación legal. Usamos proveedores que actúan como encargados del tratamiento: Netlify (alojamiento de la web y de los datos, y envío de los avisos internos por correo) y Google (correo electrónico). Si nos escribes por WhatsApp, se aplican también las condiciones de WhatsApp (Meta).</p>
+<h2>5. Destinatarios</h2><p>No cedemos tus datos a terceros salvo obligación legal. Usamos proveedores que actúan como encargados del tratamiento: Netlify (alojamiento de la web y de los datos, y envío de los avisos internos por correo), Google (correo electrónico)${CTX.clarity ? ' y, solo si aceptas las cookies de analítica, Microsoft (Clarity)' : ''}. Si nos escribes por WhatsApp, se aplican también las condiciones de WhatsApp (Meta).</p>
 <h2>6. Tus derechos</h2><p>Puedes pedir acceso, rectificación, supresión, oposición, limitación y portabilidad, y retirar tu consentimiento en cualquier momento, escribiendo a info@platagarage.com. Si crees que no hemos atendido bien tu petición, puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).</p>
 <h2>7. Cookies</h2><p>${CTX.gtag || CTX.pixel ? 'Solo si lo aceptas, usamos cookies de Google y Meta para medir nuestros anuncios.' : 'Esta web no instala cookies de publicidad ni de analítica.'} Los favoritos y tu elección sobre cookies se guardan solo en tu navegador. Tienes el detalle en la <a href="${B}/cookies">política de cookies</a>.</p></div></section>`;
   return page({ title: 'Política de privacidad | Plata Garage', desc: 'Política de privacidad de Plata Garage', body, path: '/privacidad' });
@@ -604,7 +618,7 @@ export function notFound(msg = 'Esta página no existe o el coche ya no está di
   return page({ noindex: true, title: 'Página no encontrada | Plata Garage', desc: msg, body: `<section><div class="w"><div class="cta"><h2>Vaya…</h2><p class="lead">${esc(msg)}</p><div class="row"><a class="btn" href="${B}/vehiculos/">Ver coches en stock</a></div></div></div></section>` });
 }
 
-const AV = '15';
+const AV = '16';
 export function adminShell() {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Backoffice · Plata Garage</title><link rel="icon" href="${B}/assets/icon-192.png"><link rel="manifest" href="${B}/assets/manifest.webmanifest"><link rel="apple-touch-icon" href="${B}/assets/icon-192.png"><meta name="theme-color" content="#050505"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Plata Garage"><link rel="stylesheet" href="${B}/assets/admin.css?v=${AV}"></head><body><div id="app"></div><script src="${B}/assets/admin.js?v=${AV}"></script></body></html>`;
 }
@@ -683,12 +697,13 @@ ${cars.length < 2 ? `<p class="lead">Elige al menos 2 coches en <a href="${B}/fa
 }
 
 export function cookies() {
-  const ads = !!(CTX.gtag || CTX.pixel);
+  const ads = !!(CTX.gtag || CTX.pixel || CTX.clarity);
   const body = `<section style="padding-top:56px"><div class="w post legal"><h1 class="s">Política de cookies</h1><p class="note">Última actualización: octubre de 2026.</p>
 <h2>1. Qué usamos</h2><ul><li><b>Técnicas y necesarias</b> (sin consentimiento, art. 22.2 LSSI): guardar en tu navegador los coches que marcas como favoritos y tu elección sobre las cookies, y la cookie de sesión del panel interno de gestión.</li>
 <li><b>Medición propia sin cookies:</b> contamos visitas de forma agregada sin instalar cookies ni guardar datos que te identifiquen.</li>
-${ads ? `<li><b>Publicidad (solo si aceptas):</b> ${CTX.gtag ? 'Google Ads / Google Analytics (Google Ireland Ltd.)' : ''}${CTX.gtag && CTX.pixel ? ' y ' : ''}${CTX.pixel ? 'Meta Pixel (Meta Platforms Ireland Ltd.)' : ''}, para medir qué anuncios funcionan y mostrar anuncios relevantes. Pueden implicar transferencias internacionales con las garantías de sus proveedores.</li>` : '<li><b>Publicidad:</b> ahora mismo no usamos cookies de publicidad. Si las activamos, te pediremos permiso antes.</li>'}</ul>
-<h2>2. Cómo cambiar tu elección</h2><p>${ads ? 'Puedes aceptar o rechazar cuando quieras desde "Configurar cookies", al pie de cada página. Rechazarlas no impide usar la web.' : 'No hace falta: no instalamos cookies que requieran consentimiento.'} También puedes borrar las cookies desde la configuración de tu navegador.</p>
+${CTX.clarity ? '<li><b>Analítica (solo si aceptas):</b> Microsoft Clarity (Microsoft Ireland Operations Ltd.) registra de forma seudónima cómo se navega por la web (clics, desplazamiento, mapas de calor y grabaciones de la sesión) para detectar qué no funciona y mejorarla. No graba lo que escribes en los formularios. Cookies: _clck (1 año) y _clsk (1 día). Puede implicar transferencias internacionales con las garantías de Microsoft.</li>' : ''}
+${CTX.gtag || CTX.pixel ? `<li><b>Publicidad (solo si aceptas):</b> ${CTX.gtag ? 'Google Ads / Google Analytics (Google Ireland Ltd.)' : ''}${CTX.gtag && CTX.pixel ? ' y ' : ''}${CTX.pixel ? 'Meta Pixel (Meta Platforms Ireland Ltd.)' : ''}, para medir qué anuncios funcionan y mostrar anuncios relevantes. Pueden implicar transferencias internacionales con las garantías de sus proveedores.</li>` : '<li><b>Publicidad:</b> ahora mismo no usamos cookies de publicidad. Si las activamos, te pediremos permiso antes.</li>'}</ul>
+<h2>2. Cómo cambiar tu elección</h2><p>${ads ? 'Puedes aceptar, rechazar o elegir por tipo cuando quieras desde "Configurar cookies", al pie de cada página. Rechazarlas no impide usar la web.' : 'No hace falta: no instalamos cookies que requieran consentimiento.'} También puedes borrar las cookies desde la configuración de tu navegador.</p>
 <h2>3. Más información</h2><p>Consulta nuestra <a href="${B}/privacidad">política de privacidad</a> o escríbenos a info@platagarage.com.</p></div></section>`;
   return page({ title: 'Política de cookies | Plata Garage', desc: 'Política de cookies de Plata Garage', body, path: '/cookies' });
 }
