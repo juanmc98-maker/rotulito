@@ -80,6 +80,7 @@ let badges = {};
 // Negocio activo: Plata Garage (panel completo), Plata Marine y Rotulito (embudo de clientes)
 const NEGS = { garage: { n: 'Plata Garage', logo: B + '/assets/logo.png', dark: true }, marine: { n: 'Plata Marine', logo: '/img/plata-marine-logo.png' }, rotulito: { n: 'Rotulito', logo: '/assets/rotulito-logo.svg' } };
 let MIS = ['garage'];
+let PRIMERA = true; // primera carga de la app
 let NEG = 'garage'; try { NEG = localStorage.getItem('pg_neg') || 'garage'; if (!NEGS[NEG]) NEG = 'garage'; } catch (e) { /* sin almacenamiento */ }
 // Cada negocio con sus colores (Plata Garage: oscuro y naranja; Plata Marine y Rotulito: los de su web)
 const tema = () => { document.documentElement.dataset.neg = NEG; const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = NEG === 'garage' ? '#050505' : '#ffffff'; };
@@ -594,6 +595,8 @@ async function route() {
 let polling = null;
 async function boot() {
   try { const me = await api('/admin/me'); MIS = me.negs || ['garage']; if (!MIS.includes(NEG)) { NEG = MIS[0]; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } } } catch (e) { return; }
+  // La app instalada antigua abría en #resumen: en Plata Garage, la primera vez se va a Leads
+  if (PRIMERA) { PRIMERA = false; if (NEG === 'garage' && (location.hash === '#resumen' || !location.hash)) history.replaceState(null, '', location.pathname + '#leads'); }
   if (NEG !== 'garage') { route(); return; }
   try { const s = await api('/admin/summary'); badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes }; route(); if (!polling) { poll(); polling = setInterval(poll, 60000); } } catch (e) { /* login ya mostrado */ }
 }
