@@ -765,6 +765,30 @@ async function adminApi(r, req, M, me, url) {
     if (M === 'DELETE' && seg[3]) { const i = ent.files.findIndex((x) => x.id === seg[3]); if (i < 0) return json({ error: 'No existe' }, 404); ent.files.splice(i, 1); await save('docs', all); await media().delete('doc/' + seg[3]).catch(() => {}); return json(ent); }
   }
   // Trimestre para la gestoría: coches vendidos en el trimestre con compra, gastos, venta y margen (REBU), por dueño
+  // ---- Holded (solo la cuenta de Juan): factura de venta en BORRADOR para sus coches; no emite nada ----
+  if (seg[0] === 'holded') {
+    if (me.role !== 'admin') return json({ error: 'Solo Juan puede usar Holded.' }, 403);
+    const TOK = process.env.HOLDED_TOKEN; if (!TOK) return json({ error: 'Falta la clave de Holded en Netlify (HOLDED_TOKEN).' }, 400);
+    const H = async (path, opt = {}) => { const r = await fetch('https://api.holded.com/api/v2' + path, { ...opt, headers: { Authorization: 'Bearer ' + TOK, Accept: 'application/json', 'Content-Type': 'application/json' } }); const t = await r.text(); let d; try { d = JSON.parse(t); } catch { d = t.slice(0, 300); } return { ok: r.ok, status: r.status, d }; };
+    if (seg[1] === 'info' && M === 'GET') { const [c, t] = await Promise.all([H('/contacts?limit=1'), H('/taxes')]); return json({ contactos: c.status, impuestos: t.status, taxes: t.d }); }
+    if (seg[1] === 'factura' && M === 'POST') {
+      const cars = await load('cars'); const car = cars.find((x) => x.id === body.car); if (!car) return json({ error: 'Coche no encontrado' }, 404);
+      if (car.owner !== 'Juan') return json({ error: 'Holded es solo para los coches de Juan.' }, 400);
+      if (car.holdedId) return json({ error: 'Este coche ya tiene la factura en Holded.', id: car.holdedId }, 400);
+      const cl = (await buildClientes()).find((x) => x.key === car.buyer); if (!cl) return json({ error: 'Asigna antes el comprador en la ficha del coche.' }, 400);
+      const docs = (await load('docs'))['car:' + car.id] || { files: [] }; const gen = docs.files.some((f) => f.tipo === 'Factura de compra' && (f.iva || 0) > 0);
+      const venta = Number(docs.venta || car.price || 0); if (!venta) return json({ error: 'Falta el precio de venta.' }, 400);
+      let cid = null; const nm = clip(cl.nombre || 'Cliente', 80); const tel = String(cl.telefono || '').replace(/\D/g, '').slice(-9);
+      const sr = await H('/contacts/search?name=' + encodeURIComponent(nm) + '&limit=25');
+      if (sr.ok && sr.d && sr.d.items) { const hit = sr.d.items.find((x) => (tel && [x.mobile, x.phone].some((p) => p && String(p).replace(/\D/g, '').endsWith(tel))) || (cl.email && x.email === cl.email)); if (hit) cid = hit.id; }
+      if (!cid) { const cr = await H('/contacts', { method: 'POST', body: JSON.stringify({ name: nm, is_person: true, type: 'client', mobile: cl.telefono || null, email: cl.email || null }) }); if (!cr.ok) return json({ error: 'Holded no creó el contacto (' + cr.status + ')', det: cr.d }, 502); cid = cr.d.id; }
+      const desc = `${car.brand} ${car.model}${car.version ? ' ' + car.version : ''} · ${car.year}${car.matricula ? ' · matrícula ' + car.matricula : ''}${car.km ? ' · ' + car.km + ' km' : ''}`;
+      const item = gen ? { name: desc, units: 1, price: Math.round(venta / 1.21 * 100) / 100, taxes: ['s_iva_21'] } : { name: desc, units: 1, price: venta, taxes: [process.env.HOLDED_TAX_REBU || 's_iva_0'] };
+      const inv = { contact_id: cid, contact_name: nm, date: new Date().toISOString().slice(0, 10), language: 'es', currency: 'EUR', items: [item], body: gen ? null : 'Régimen especial de los bienes usados (arts. 135 a 139 de la Ley 37/1992 del IVA).', notes: 'Creada desde la app de Plata Garage. Revisa NIF y dirección del cliente antes de emitirla.' };
+      const ir = await H('/invoices', { method: 'POST', body: JSON.stringify(inv) }); if (!ir.ok) return json({ error: 'Holded no creó la factura (' + ir.status + ')', det: ir.d }, 502);
+      car.holdedId = ir.d.id; await save('cars', cars); return json({ ok: true, id: ir.d.id, regimen: gen ? 'general' : 'REBU' });
+    }
+  }
   if (seg[0] === 'trimestre' && M === 'GET') {
     const y = Number(url.searchParams.get('y')) || new Date().getFullYear(), q = Math.min(4, Math.max(1, Number(url.searchParams.get('q')) || 1));
     const ini = `${y}-${String((q - 1) * 3 + 1).padStart(2, '0')}-01`, fin = `${q === 4 ? y + 1 : y}-${String(q === 4 ? 1 : q * 3 + 1).padStart(2, '0')}-01`;
