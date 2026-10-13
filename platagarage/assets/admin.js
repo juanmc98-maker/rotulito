@@ -810,6 +810,9 @@ V.conexion = async (m) => {
 };
 
 // ---------- router ----------
+// Al volver a la app (móvil), recarga la pantalla de listas para ver lo último
+let lastVis = Date.now();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') { lastVis = Date.now(); return; } const k = (location.hash.slice(1) || '').split('/')[0]; if (Date.now() - lastVis > 5000 && $('#mn') && ['', 'leads', 'resumen', 'clientes', 'reservas'].includes(k)) route(); });
 async function route() {
   const [k, arg] = (location.hash.slice(1) || home().slice(1)).split('/');
   const fn = NEG === 'garage' ? (V[k] || V.leads) : ({ resumen: V.nresumen, analiticas: V.nanalisis, clientes: V.nclientes, ncliente: V.ncliente, conexion: V.conexion }[k] || V.nresumen);
