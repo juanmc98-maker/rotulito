@@ -66,9 +66,13 @@ let badges = {};
 const NEGS = { garage: { n: 'Plata Garage', logo: B + '/assets/logo.png', dark: true }, marine: { n: 'Plata Marine', logo: '/img/plata-marine-logo.png' }, rotulito: { n: 'Rotulito', logo: '/assets/rotulito-logo.svg' } };
 let MIS = ['garage'];
 let NEG = 'garage'; try { NEG = localStorage.getItem('pg_neg') || 'garage'; if (!NEGS[NEG]) NEG = 'garage'; } catch (e) { /* sin almacenamiento */ }
+// Cada negocio con sus colores (Plata Garage: oscuro y naranja; Plata Marine y Rotulito: los de su web)
+const tema = () => { document.documentElement.dataset.neg = NEG; const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = NEG === 'garage' ? '#050505' : '#ffffff'; };
+tema();
 const NAV_OTRO = [['resumen', 'Resumen'], ['clientes', 'Clientes'], ['conexion', 'Entrada de leads']];
 const logoTag = (n = NEG) => `<span class="nlg${NEGS[n].dark ? '' : ' w'}"><img src="${NEGS[n].logo}" alt="${NEGS[n].n}"></span>`;
 function shell(active) {
+  tema();
   if (!$('.lay')) {
     $('#app').innerHTML = `<div class="mob"><a href="#resumen" id="mlg">${logoTag()}</a><button class="rb" id="mb" aria-label="Menú">${IC.menu}</button></div><div class="lay"><aside id="sb"></aside><main id="mn"></main></div>`;
     $('#mb').onclick = () => $('#sb').classList.add('open');
@@ -262,7 +266,7 @@ Si ya no quieres recibir estos avisos, responde a este correo con "baja".`)}">Em
 function historial(c) {
   const ph = c.priceHistory || []; const lg = [...(c.log || [])].reverse();
   if (!ph.length && !lg.length) return '';
-  return `<div class="card sec"><h3>Historial</h3>${ph.length > 1 ? `<p class="sm mu" style="margin:8px 0 4px">Precios: ${ph.map((x) => `${fdate(x.d)} <b style="color:#fff">${eur(x.p)}</b>`).join(' → ')}. Precio más bajo de los últimos 30 días: <b style="color:#fff">${eur(Math.min(...ph.filter((x) => (Date.now() - new Date(x.d)) / 864e5 <= 30).map((x) => x.p).concat(c.price)))}</b> (es el que habría que tachar si se anuncia una rebaja).</p>` : ''}
+  return `<div class="card sec"><h3>Historial</h3>${ph.length > 1 ? `<p class="sm mu" style="margin:8px 0 4px">Precios: ${ph.map((x) => `${fdate(x.d)} <b style="color:var(--hi)">${eur(x.p)}</b>`).join(' → ')}. Precio más bajo de los últimos 30 días: <b style="color:var(--hi)">${eur(Math.min(...ph.filter((x) => (Date.now() - new Date(x.d)) / 864e5 <= 30).map((x) => x.p).concat(c.price)))}</b> (es el que habría que tachar si se anuncia una rebaja).</p>` : ''}
   ${lg.slice(0, 15).map((x) => `<div class="sm" style="padding:6px 0;border-bottom:1px solid var(--line)"><span class="mu">${fdt(x.d)} · ${esc(x.by || '')}</span> — ${esc(x.t)}</div>`).join('')}</div>`;
 }
 
@@ -270,7 +274,7 @@ V.bancos = async (m) => {
   let hs = await api('/admin/holders'); m = shell('bancos');
   const draw = () => {
     m.innerHTML = top('Bancos', 'Da de alta <b>titulares</b> y, dentro de cada uno, sus <b>números de cuenta</b>. Al crear un coche solo eliges el titular.') +
-    `<div class="card sec"><b>Bizum de la empresa</b><p class="mu" style="margin:4px 0 0">Las reservas por Bizum usan el número <b style="color:#fff">660 49 32 28</b>.</p></div>
+    `<div class="card sec"><b>Bizum de la empresa</b><p class="mu" style="margin:4px 0 0">Las reservas por Bizum usan el número <b style="color:var(--hi)">660 49 32 28</b>.</p></div>
     <div class="card sec"><div class="row"><label style="flex:1">Nombre del titular *<input id="hn" placeholder="Ej: Cristina Plata"></label><button class="btn" id="ha" style="align-self:flex-end">+ Añadir titular</button></div></div>
     <div class="two">${hs.map((h, i) => `<div class="card"><label>Titular<input data-h="${i}" value="${esc(h.name)}"></label><div style="margin:12px 0">${h.accounts.map((a, j) => `<div class="row" style="margin-bottom:8px"><input placeholder="Banco" data-b="${i}.${j}" value="${esc(a.bank)}" style="flex:1"><input placeholder="IBAN" data-i="${i}.${j}" value="${esc(a.iban)}" style="flex:2"><button class="ib" data-xa="${i}.${j}" title="Quitar cuenta">✕</button></div>`).join('')}
     <button class="btn g s" data-aa="${i}">+ Añadir cuenta</button></div><div class="row" style="justify-content:space-between"><button class="btn r s" data-xh="${i}">Eliminar titular</button><button class="btn s" data-sv>Guardar</button></div></div>`).join('')}</div>`;
@@ -519,7 +523,7 @@ V.ncliente = async (m, id) => {
     `<div class="two"><div class="card"><h3 style="margin-bottom:12px">Estado</h3><label>Etapa<select id="et">${d.etapas.map((e) => `<option${e === c.etapa ? ' selected' : ''}>${esc(e)}</option>`).join('')}</select></label>
     <label style="margin-top:10px">Interés<input id="in" value="${esc(c.interes || '')}"></label><label style="margin-top:10px">Notas internas<textarea id="nt" rows="5">${esc(c.notas || '')}</textarea></label>
     <div class="row" style="margin-top:12px"><button class="btn" id="sv">Guardar</button>${c.telefono ? `<a class="btn g" target="_blank" rel="noopener" href="${waLink(c.telefono)}">${IC.wa}WhatsApp</a><a class="btn g" href="tel:${esc(c.telefono)}">Llamar</a>` : ''}${c.email ? `<a class="btn g" href="mailto:${esc(c.email)}">Email</a>` : ''}<span style="flex:1"></span><button class="btn r s" id="del">Borrar</button></div></div>
-    <div class="card"><h3 style="margin-bottom:12px">Historial</h3>${(c.historial || []).map((h) => `<div class="li"><div><span style="color:#ddd">${esc(h.t)}</span></div><div class="r">${fdt(h.d)}</div></div>`).join('') || '<p class="mu">Sin movimientos.</p>'}</div></div>`;
+    <div class="card"><h3 style="margin-bottom:12px">Historial</h3>${(c.historial || []).map((h) => `<div class="li"><div><span style="color:var(--tx)">${esc(h.t)}</span></div><div class="r">${fdt(h.d)}</div></div>`).join('') || '<p class="mu">Sin movimientos.</p>'}</div></div>`;
   const g = guard(async (msg = 'Guardado') => { await nApi('/' + id, { method: 'PUT', body: { etapa: $('#et').value, notas: $('#nt').value, interes: $('#in').value } }); toast(msg); route(); });
   $('#sv').onclick = () => g(); $('#et').onchange = () => g('Etapa cambiada');
   $('#del').onclick = guard(async () => { if (!confirm('¿Borrar este cliente del embudo?')) return; await nApi('/' + id, { method: 'DELETE' }); location.hash = '#clientes'; });
