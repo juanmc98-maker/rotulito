@@ -248,7 +248,8 @@ async function buildClientes() {
       banco: st.banco || '', finEstado: st.finEstado || '', certificado: st.certificado || '', vendidoEl: venta?.soldAt || fechas.vendido || '', importe: venta?.price || 0,
       compras: bought.map((x) => ({ id: x.id, slug: x.slug, nombre: `${x.brand} ${x.model} (${x.year})`, sold: x.sold, soldAt: x.soldAt })), alerta: al.some((a) => a.email && a.email === c.email && a.status === 'activa') };
   });
-  return out.sort((a, z) => (z.last || '').localeCompare(a.last || ''));
+  // Los que se han quitado de la lista no salen, salvo que vuelvan a escribir después
+  return out.filter((c) => { const st = cl.find((x) => x.key === c.key); return !(st && st.borrado && (c.last || '') <= st.borrado); }).sort((a, z) => (z.last || '').localeCompare(a.last || ''));
 }
 
 // ---------- calendario iCal (suscripción desde Google o Apple Calendar) ----------
@@ -791,6 +792,11 @@ async function adminApi(r, req, M, me, url) {
       if ('certificado' in body) it.certificado = clip(body.certificado, 40);
       if ('notas' in body) it.notas = clip(body.notas, 4000);
       await save('clientes', cl); return json({ ok: true });
+    }
+    if (M === 'DELETE' && seg[1]) {
+      const cl = await load('clientes'); const k = pkey(seg[1]); if (!k) return json({ error: 'Cliente no válido' }, 400);
+      let it = cl.find((x) => x.key === k); if (!it) { it = { key: k }; cl.push(it); }
+      it.borrado = new Date().toISOString(); it.borradoPor = me.name; await save('clientes', cl); return json({ ok: true });
     }
   }
   if (seg[0] === 'stats' && M === 'GET') {
