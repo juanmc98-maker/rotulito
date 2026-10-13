@@ -166,15 +166,20 @@ async function poll() {
     lastSum = cur;
   } catch (e) { /* sin sesión */ }
 }
+// Rotación: días en stock, último cambio de precio y contactos de cada coche (objetivo: no pasar de 45 días)
+const rot = (c, cl = []) => { const dias = diasDesde(c.llegada || c.created); const ph = c.priceHistory || []; const dp = diasDesde(ph.length > 1 ? ph[ph.length - 1].d : c.llegada || c.created);
+  const nm = `${c.brand} ${c.model}`.toLowerCase(); const leads = cl.reduce((n, x) => n + (x.leads || []).filter((l) => l.coche === c.id || (l.cocheNombre || l.coche || '').toString().toLowerCase().includes(nm)).length, 0);
+  const nivel = c.sold ? '' : dias >= 75 ? 'r' : dias >= 45 ? 'w' : ''; const siguiente = c.price > 1500 ? Math.floor((c.price - 1000 + 10) / 1000) * 1000 - 10 : 0;
+  return { dias, dp, leads, nivel, siguiente }; };
 V.coches = async (m, arg) => {
-  const cars = await api('/admin/cars'); m = shell('coches');
+  const [cars, cl] = await Promise.all([api('/admin/cars'), api('/admin/clientes').catch(() => [])]); m = shell('coches');
   const f = arg || 'stock';
   const list = cars.filter((c) => (f === 'stock' ? !c.sold : f === 'vendidos' ? c.sold : f === 'cristina' ? !c.sold && c.owner === 'Cristina' : f === 'juan' ? !c.sold && c.owner === 'Juan' : true));
   const st = (c) => (c.sold ? '<span class="bg x">Vendido</span>' : c.status === 'reservado' ? '<span class="bg b">Reservado</span>' : c.status === 'preparacion' ? '<span class="bg w">En preparación</span>' : '<span class="bg ok">En stock</span>') + (c.featured && !c.sold ? '<span class="bg o">Destacado</span>' : '') + (c.hidden ? '<span class="bg r">Oculto</span>' : '');
   m.innerHTML = top('Coches', `${cars.filter((c) => !c.sold).length} en stock · ${cars.filter((c) => c.sold).length} vendidos`, `<a class="btn" href="#coche/nuevo">+ Nuevo coche</a>`) +
     `<div class="filt">${[['stock', 'En stock'], ['cristina', 'De Cristina'], ['juan', 'De Juan'], ['vendidos', 'Vendidos'], ['todos', 'Todos']].map(([k, t]) => `<button data-f="${k}" class="${f === k ? 'on' : ''}">${t}</button>`).join('')}</div>
     <input id="cq" type="search" placeholder="Buscar coche: marca, modelo, matrícula, año…" autocomplete="off" style="width:100%;margin:0 0 14px">
-    <div class="tw"><table class="ct"><thead><tr><th>Coche</th><th>Año</th><th class="hide-m">Km</th><th>Precio</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>${cars.map((c) => `<tr data-id="${c.id}" data-in="${list.includes(c) ? 1 : ''}" data-k="${esc([c.brand, c.model, c.version, c.matricula, c.year, c.price, c.owner, c.color].filter(Boolean).join(' ').toLowerCase())}"${list.includes(c) ? '' : ' style="display:none"'}><td><a class="cn" href="#coche/${c.id}" title="Editar"><img class="thumb" src="${esc(c.images?.[0] || '')}" alt="" loading="lazy"><div><b>${esc(c.brand)} ${esc(c.model)}</b><small>${esc(c.version || '')}${c.owner ? ' · ' + esc(c.owner) : ''}</small></div></a></td><td>${c.year}</td><td class="hide-m">${nf(c.km)}</td><td><b>${eur(c.price)}</b></td><td>${st(c)}</td>
+    <div class="tw"><table class="ct"><thead><tr><th>Coche</th><th>Año</th><th class="hide-m">Km</th><th>Precio</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>${cars.map((c) => `<tr data-id="${c.id}" data-in="${list.includes(c) ? 1 : ''}" data-k="${esc([c.brand, c.model, c.version, c.matricula, c.year, c.price, c.owner, c.color].filter(Boolean).join(' ').toLowerCase())}"${list.includes(c) ? '' : ' style="display:none"'}><td><a class="cn" href="#coche/${c.id}" title="Editar"><img class="thumb" src="${esc(c.images?.[0] || '')}" alt="" loading="lazy"><div><b>${esc(c.brand)} ${esc(c.model)}</b><small>${esc(c.version || '')}${c.owner ? ' · ' + esc(c.owner) : ''}</small></div></a></td><td>${c.year}</td><td class="hide-m">${nf(c.km)}</td><td><b>${eur(c.price)}</b>${c.sold ? '' : (() => { const r = rot(c, cl); return `<small style="display:block;color:${r.nivel === 'r' ? 'var(--bad)' : r.nivel === 'w' ? '#e0b341' : 'var(--mu)'}">${r.dias} días · ${r.leads} contacto${r.leads === 1 ? '' : 's'}</small>`; })()}</td><td>${st(c)}</td>
     <td><div class="acts"><button class="ib ${c.featured ? 'on' : ''}" data-a="star" title="Destacar en la portada">${IC.star}</button><a class="ib" href="#coche/${c.id}" title="Editar">${IC.edit}</a><button class="ib" data-a="dup" title="Duplicar (para dar de alta uno parecido)">${IC.copy}</button><button class="btn g s" data-a="sold">${c.sold ? 'Volver a stock' : 'Vendido'}</button><button class="btn r s" data-a="del">Eliminar</button></div></td></tr>`).join('') || '<tr><td colspan="6" class="mu">No hay coches.</td></tr>'}</tbody></table></div>`;
   m.querySelectorAll('.filt button').forEach((b) => (b.onclick = () => (location.hash = '#coches/' + b.dataset.f)));
   // Buscador: con texto busca en todos los coches (también vendidos); vacío, vuelve al filtro elegido
@@ -387,7 +392,7 @@ V.coche = async (m, id) => {
   <div class="card sec"><h3>Visibilidad</h3><div class="row" style="gap:22px"><label>Estado${sel('status', [['disponible', 'Disponible'], ['preparacion', 'En preparación (próximamente)'], ['reservado', 'Reservado']], c.status)}</label>
   <label class="chk"><input type="checkbox" name="featured" ${c.featured ? 'checked' : ''}>Destacado en la portada</label><label class="chk"><input type="checkbox" name="hidden" ${c.hidden ? 'checked' : ''}>Ocultar de la web</label><label class="chk"><input type="checkbox" name="sold" ${c.sold ? 'checked' : ''}>Marcar como vendido</label></div>
   ${isNew ? '' : `<label style="margin-top:12px;max-width:420px">Comprador (para el embudo de clientes)<select name="buyer"><option value="">—</option>${cl.map((x) => `<option value="${x.key}"${c.buyer === x.key ? ' selected' : ''}>${esc(x.nombre)} · ${esc(x.telefono)}</option>`).join('')}</select></label>`}</div>
-  <div class="row" style="justify-content:flex-end"><a class="btn g" href="#coches">Cancelar</a><button class="btn" type="submit">${isNew ? 'Crear coche' : 'Guardar cambios'}</button></div></form>${isNew ? '' : interesados(c, als, bus) + historial(c)}`;
+  <div class="row" style="justify-content:flex-end"><a class="btn g" href="#coches">Cancelar</a><button class="btn" type="submit">${isNew ? 'Crear coche' : 'Guardar cambios'}</button></div></form>${isNew ? '' : rotCard(c, cl) + interesados(c, als, bus) + historial(c)}`;
   let onImgs = null, imgsKey = JSON.stringify(imgs);
   const drawImgs = () => {
     if (onImgs && JSON.stringify(imgs) !== imgsKey) { imgsKey = JSON.stringify(imgs); onImgs(); }
@@ -472,6 +477,9 @@ Plata Garage
 
 Si ya no quieres recibir estos avisos, responde a este correo con "baja".`)}">Email</a></div></div>`).join('')}</div>`;
 }
+function rotCard(c, cl) { if (c.sold) return ''; const r = rot(c, cl);
+  const msg = r.nivel === 'r' ? `Lleva ${r.dias} días: está parado. ${r.dp >= 21 && r.siguiente ? `El precio no se toca desde hace ${r.dp} días: plantéate bajarlo a <b>${eur(r.siguiente)}</b>.` : 'Revisa fotos y anuncio.'}` : r.nivel === 'w' ? `Pasa de 45 días. ${r.leads < 3 ? 'Con pocos contactos: ' : ''}${r.dp >= 21 && r.siguiente ? `si esta semana no se mueve, el siguiente escalón es <b>${eur(r.siguiente)}</b>.` : 'Vigílalo esta semana.'}` : 'Va bien de tiempo.';
+  return `<div class="card sec"${r.nivel ? ' style="border-color:' + (r.nivel === 'r' ? 'var(--bad)' : '#e0b341') + '"' : ''}><h3>Rotación</h3><div class="kp" style="margin:8px 0 10px"><div class="card"><span>Días en stock</span><b>${r.dias}</b></div><div class="card"><span>Contactos</span><b>${r.leads}</b></div><div class="card"><span>Sin tocar precio</span><b>${r.dp} d</b></div></div><p class="sm" style="margin:0">${msg}</p></div>`; }
 function historial(c) {
   const ph = c.priceHistory || []; const lg = [...(c.log || [])].reverse();
   if (!ph.length && !lg.length) return '';
