@@ -821,6 +821,14 @@ V.conexion = async (m) => {
 };
 
 // ---------- router ----------
+// Deslizar hacia abajo desde arriba del todo para actualizar (como en otras apps)
+(() => {
+  let y0 = null, dy = 0, busy = false; const ind = document.createElement('div'); ind.id = 'ptr'; ind.textContent = '↓ Suelta para actualizar'; document.body.appendChild(ind);
+  const tope = () => (window.scrollY || document.documentElement.scrollTop) <= 0;
+  window.addEventListener('touchstart', (e) => { y0 = !busy && tope() && e.touches.length === 1 && $('#mn') ? e.touches[0].clientY : null; dy = 0; }, { passive: true });
+  window.addEventListener('touchmove', (e) => { if (y0 === null) return; dy = e.touches[0].clientY - y0; if (dy <= 0 || !tope()) { ind.style.transform = ''; return; } const h = Math.min(dy * 0.5, 70); ind.style.transform = `translate(-50%, ${h}px)`; ind.style.opacity = Math.min(1, h / 50); ind.textContent = h >= 55 ? '↻ Suelta para actualizar' : '↓ Desliza para actualizar'; }, { passive: true });
+  window.addEventListener('touchend', async () => { if (y0 === null) return; const ok = dy * 0.5 >= 55; y0 = null; if (!ok) { ind.style.transform = ''; ind.style.opacity = 0; return; } busy = true; ind.textContent = 'Actualizando…'; try { await route(); } finally { busy = false; ind.style.transform = ''; ind.style.opacity = 0; } });
+})();
 // Al volver a la app (móvil), recarga la pantalla de listas para ver lo último
 let lastVis = Date.now();
 document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') { lastVis = Date.now(); return; } const k = (location.hash.slice(1) || '').split('/')[0]; if (Date.now() - lastVis > 5000 && $('#mn') && ['', 'leads', 'resumen', 'clientes', 'reservas'].includes(k)) route(); });
