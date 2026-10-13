@@ -471,7 +471,8 @@ async function api(r, req, M, ip, url, context) {
     let tok = null;
     const users = await load('users'); const u = users.find((x) => x.user === user && !x.disabled);
     if (u && checkPass(f.password, u)) tok = makeToken(u.id, u.ver || 0);
-    else if ((!user || user === 'admin') && eqHash(f.password || '', env('PG_ADMIN_PASSWORD'))) tok = makeToken('admin');
+    // "Juan" entra con la contraseña maestra mientras no tenga usuario propio
+    else if ((!user || user === 'admin' || (user === 'juan' && !users.some((x) => x.user === 'juan'))) && eqHash(f.password || '', env('PG_ADMIN_PASSWORD'))) tok = makeToken('admin');
     if (!tok) { await new Promise((z) => setTimeout(z, 800)); return json({ error: 'Usuario o contraseña incorrectos.' }, 401); }
     return json({ ok: true }, 200, { 'set-cookie': cookie(tok, 30 * 86400) });
   }
