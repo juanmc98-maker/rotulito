@@ -708,3 +708,4 @@ ${CTX.gtag || CTX.pixel ? `<li><b>Publicidad (solo si aceptas):</b> ${CTX.gtag ?
 <h2>3. Más información</h2><p>Consulta nuestra <a href="${B}/privacidad">política de privacidad</a> o escríbenos a info@platagarage.com.</p></div></section>`;
   return page({ title: 'Política de cookies | Plata Garage', desc: 'Política de cookies de Plata Garage', body, path: '/cookies' });
 }
+
