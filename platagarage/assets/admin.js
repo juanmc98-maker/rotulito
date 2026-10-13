@@ -33,6 +33,7 @@ const IC = {
   menu: svg('<path d="M3 6h18M3 12h18M3 18h18"/>'),
   x: svg('<path d="M18 6L6 18M6 6l12 12"/>'),
   conexion: svg('<path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/>'),
+  leads: svg('<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.5-6.9A2 2 0 0016.8 4H7.2a2 2 0 00-1.7 1.1z"/>'),
   clientes: svg('<path d="M3 4h18l-7 8v6l-4 2v-8z"/>'),
   copy: svg('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>'),
   wa: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2a9.9 9.9 0 00-8.5 15l-1.5 5 5.2-1.4A9.9 9.9 0 1012.04 2zm5.8 14.1c-.25.7-1.45 1.33-2 1.4-.52.08-1.17.11-1.89-.12a17 17 0 01-1.7-.63c-3-1.3-4.95-4.32-5.1-4.52-.15-.2-1.22-1.62-1.22-3.09 0-1.46.77-2.18 1.04-2.48.27-.3.6-.37.79-.37h.57c.18 0 .43-.07.67.51.25.6.84 2.05.92 2.2.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.17-.31.38-.45.51-.15.15-.3.31-.13.6.17.3.77 1.27 1.65 2.06 1.13 1.01 2.09 1.33 2.39 1.48.3.14.47.12.64-.08.17-.2.74-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.73.82 2.03.97.3.15.5.22.57.35.07.12.07.72-.18 1.41z"/></svg>',
@@ -49,18 +50,32 @@ function toast(msg, err) { const t = document.createElement('div'); t.className 
 const guard = (fn) => async (...a) => { try { await fn(...a); } catch (e) { if (e.message !== 'Sesión caducada') toast(e.message, true); } };
 
 // ---------- login ----------
+// Al abrir la app: "¿Quién eres?" (Cristina / Juan) y después solo la contraseña
+const QUIEN = [['cristina', 'Cristina'], ['juan', 'Juan']];
 function showLogin() {
-  $('#app').innerHTML = `<div class="login"><form class="card" id="lf"><img src="${B}/assets/logo.png" alt="Plata Garage"><h2>Backoffice</h2><label style="text-align:left">Usuario<input name="user" autocomplete="username" required autofocus autocapitalize="none"></label><label style="text-align:left">Contraseña<input type="password" name="password" autocomplete="current-password" required></label><button class="btn" style="justify-content:center">Entrar</button><p class="mu sm" id="le"></p></form></div>`;
-  $('#lf').onsubmit = async (e) => {
-    e.preventDefault(); const b = e.target.querySelector('button'); b.disabled = true;
-    const r = await fetch(API + '/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user: e.target.user.value.trim(), password: e.target.password.value }) });
-    const j = await r.json().catch(() => ({})); b.disabled = false;
-    if (r.ok) { location.hash = '#resumen'; boot(); } else $('#le').textContent = j.error || 'No se pudo entrar';
+  let last = ''; try { last = localStorage.getItem('pg_who') || ''; } catch (e) { /* */ }
+  const pick = () => {
+    $('#app').innerHTML = `<div class="login"><div class="card"><img src="${B}/assets/logo.png" alt="Plata Garage"><h2>¿Quién eres?</h2><div class="who">${QUIEN.map(([u, n]) => `<button type="button" class="btn${u === last ? '' : ' g'}" data-u="${u}">${n}</button>`).join('')}</div><a href="#" class="mu sm" id="otro">Otro usuario</a></div></div>`;
+    $('#app').querySelectorAll('[data-u]').forEach((b) => (b.onclick = () => form(b.dataset.u, b.textContent)));
+    $('#otro').onclick = (e) => { e.preventDefault(); form('', ''); };
   };
+  const form = (u, n) => {
+    $('#app').innerHTML = `<div class="login"><form class="card" id="lf"><img src="${B}/assets/logo.png" alt="Plata Garage"><h2>${n ? 'Hola, ' + esc(n) : 'Backoffice'}</h2>${u ? `<input type="hidden" name="user" value="${u}">` : '<label style="text-align:left">Usuario<input name="user" autocomplete="username" required autocapitalize="none"></label>'}<label style="text-align:left">Contraseña<input type="password" name="password" autocomplete="current-password" required></label><button class="btn" style="justify-content:center">Entrar</button><a href="#" class="mu sm" id="cw">No soy ${n ? esc(n) : 'yo'}</a><p class="mu sm" id="le"></p></form></div>`;
+    $('#cw').onclick = (e) => { e.preventDefault(); pick(); };
+    $('#lf').password.focus();
+    $('#lf').onsubmit = async (e) => {
+      e.preventDefault(); const b = e.target.querySelector('button'); b.disabled = true;
+      const user = e.target.user.value.trim();
+      const r = await fetch(API + '/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user, password: e.target.password.value }) });
+      const j = await r.json().catch(() => ({})); b.disabled = false;
+      if (r.ok) { try { if (u) localStorage.setItem('pg_who', u); } catch (er) { /* */ } location.hash = home(); boot(); } else $('#le').textContent = j.error || 'No se pudo entrar';
+    };
+  };
+  pick();
 }
 
 // ---------- layout ----------
-const NAV = [['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes'], ['coches', 'Coches'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['horarios', 'Horarios'], ['valoraciones', 'Valoraciones'], ['busquedas', 'Te lo buscamos'], ['alertas', 'Alertas'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog'], ['usuarios', 'Usuarios']];
+const NAV = [['leads', 'Leads'], ['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes'], ['coches', 'Coches'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['horarios', 'Horarios'], ['valoraciones', 'Valoraciones'], ['busquedas', 'Te lo buscamos'], ['alertas', 'Alertas'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog'], ['usuarios', 'Usuarios']];
 let badges = {};
 // Negocio activo: Plata Garage (panel completo), Plata Marine y Rotulito (embudo de clientes)
 const NEGS = { garage: { n: 'Plata Garage', logo: B + '/assets/logo.png', dark: true }, marine: { n: 'Plata Marine', logo: '/img/plata-marine-logo.png' }, rotulito: { n: 'Rotulito', logo: '/assets/rotulito-logo.svg' } };
@@ -74,22 +89,24 @@ const logoTag = (n = NEG) => `<span class="nlg${NEGS[n].dark ? '' : ' w'}"><img 
 function shell(active) {
   tema();
   if (!$('.lay')) {
-    $('#app').innerHTML = `<div class="mob"><a href="#resumen" id="mlg">${logoTag()}</a><button class="rb" id="mb" aria-label="Menú">${IC.menu}</button></div><div class="lay"><aside id="sb"></aside><main id="mn"></main></div>`;
+    $('#app').innerHTML = `<div class="mob"><a href="#" id="mlg">${logoTag()}</a><button class="rb" id="mb" aria-label="Menú">${IC.menu}</button></div><div class="lay"><aside id="sb"></aside><main id="mn"></main></div>`;
     $('#mb').onclick = () => $('#sb').classList.add('open');
-    $('#mlg').onclick = (e) => { e.preventDefault(); if (location.hash === '#resumen') route(); else location.hash = '#resumen'; };
+    $('#mlg').onclick = (e) => { e.preventDefault(); goHome(); };
   }
   const ml = $('#mlg'); if (ml) ml.innerHTML = logoTag();
-  $('#sb').innerHTML = `<div class="sbh"><a class="lg" href="#resumen" id="slg">${logoTag()}</a><button class="rb mo" id="sx" aria-label="Cerrar menú">${IC.x}</button></div>
+  $('#sb').innerHTML = `<div class="sbh"><a class="lg" href="#" id="slg">${logoTag()}</a><button class="rb mo" id="sx" aria-label="Cerrar menú">${IC.x}</button></div>
     <div class="negs"${MIS.length < 2 ? ' style="display:none"' : ''}>${MIS.map((k) => `<button data-neg="${k}" class="${k === NEG ? 'on' : ''}" title="${NEGS[k].n}">${NEGS[k].n}</button>`).join('')}</div><small class="sbl">Backoffice</small>` +
     (NEG === 'garage' ? NAV : NAV_OTRO).map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') +
     `<div class="sp"></div><a href="${NEG === 'marine' ? 'https://www.platamarine.com/' : NEG === 'rotulito' ? 'https://www.rotulito.com/' : B + '/'}" target="_blank" rel="noopener">${IC.web}Ver web pública</a><a href="#" id="lo">${IC.out}Cerrar sesión</a>`;
   $('#sx').onclick = () => $('#sb').classList.remove('open');
-  $('#sb').querySelectorAll('[data-neg]').forEach((b) => (b.onclick = () => { NEG = b.dataset.neg; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } $('#sb').classList.remove('open'); if (location.hash === '#resumen') route(); else location.hash = '#resumen'; }));
-  $('#slg').onclick = (e) => { e.preventDefault(); $('#sb').classList.remove('open'); if (location.hash === '#resumen') route(); else location.hash = '#resumen'; };
+  $('#sb').querySelectorAll('[data-neg]').forEach((b) => (b.onclick = () => { NEG = b.dataset.neg; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } $('#sb').classList.remove('open'); goHome(); }));
+  $('#slg').onclick = (e) => { e.preventDefault(); $('#sb').classList.remove('open'); goHome(); };
   $('#lo').onclick = guard(async (e) => { e.preventDefault(); await fetch(API + '/logout'); showLogin(); });
   $('#sb').classList.remove('open');
   return $('#mn');
 }
+const home = () => (NEG === 'garage' ? '#leads' : '#resumen');
+function goHome() { if (location.hash === home()) route(); else location.hash = home(); }
 const top = (t, sub = '', right = '') => `<div class="top"><div><h1>${t}</h1>${sub ? `<p>${sub}</p>` : ''}</div><div class="row">${right}</div></div>`;
 const badge = (s) => { const m = { pendiente: 'w', confirmada: 'b', completada: 'ok', cancelada: 'r', contactado: 'b', ofertado: 'o', cerrada: 'ok', 'presupuesto enviado': 'b', aceptado: 'ok', rechazado: 'r', respondido: 'ok' }; return `<span class="bg ${m[s] || 'x'}">${esc(s[0].toUpperCase() + s.slice(1))}</span>`; };
 
@@ -472,6 +489,38 @@ V.clientes = async (m) => {
     const csv = '﻿' + rows.map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `clientes-plata-garage-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); };
   draw();
 };
+// ---------- Leads: lo primero que se ve al entrar ----------
+// Enlace a la ficha en la web propia (al migrar, cambiar solo WEB)
+const WEB = 'https://www.platagarage.com';
+const nrm = (x) => ' ' + String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim() + ' ';
+// Coche del lead: por la ficha si viene de la web; si viene de un portal, por marca/modelo/año del texto del aviso
+function cocheDe(c, cars) {
+  for (const l of c.leads) { const x = l.coche && cars.find((y) => y.slug === l.coche); if (x) return x; }
+  for (const l of c.leads) {
+    const n = nrm(l.cocheNombre); if (n.trim() === '') continue; let best = null, bs = 0;
+    cars.filter((y) => !y.sold).forEach((y) => { let p = 0; if (n.includes(nrm(y.brand))) p += 2; if (n.includes(nrm(y.model))) p += 3; if (y.year && n.includes(` ${y.year} `)) p += 1; if (y.version && n.includes(nrm(y.version))) p += 1; if (p > bs) { bs = p; best = y; } });
+    if (bs >= 3) return best;
+  }
+  return null;
+}
+// Texto provisional: se cambia por el de la respuesta rápida de WhatsApp cuando Juan lo pase
+const msgWa = (quien, car) => car ? `Hola, soy ${quien} de Plata Garage. Te escribo por el ${car.brand} ${car.model} por el que preguntaste. Aquí lo tienes con todas las fotos y los datos: ${WEB}/vehiculos/${car.slug}` : `Hola, soy ${quien} de Plata Garage. He visto tu mensaje, ¿en qué te puedo ayudar?`;
+V.leads = async (m) => {
+  const [all, cars] = await Promise.all([api('/admin/clientes'), api('/admin/cars')]); m = shell('leads');
+  const nuevos = all.filter((c) => c.etapa === 'nuevo');
+  const pend = all.filter((c) => c.etapa !== 'nuevo' && !['vendido', 'perdido'].includes(c.etapa) && c.leads.some((l) => l.status === 'pendiente'));
+  const resto = all.filter((c) => !nuevos.includes(c) && !pend.includes(c) && !['vendido', 'perdido'].includes(c.etapa)).slice(0, 20);
+  badges.leads = nuevos.length || ''; 
+  const card = (c) => { const car = cocheDe(c, cars); const own = car?.owner || ''; const l = c.leads[0] || {};
+    const bt = (q) => `<a class="btn s${own && own !== q ? ' g' : (!own && q !== 'Cristina' ? ' g' : '')}" target="_blank" rel="noopener" data-k="${c.key}" href="${waLink(c.telefono, msgWa(q, car))}">${IC.wa}Soy ${q}</a>`;
+    return `<div class="card sec ld"><div class="hd"><div><b>${esc(c.nombre)}</b><span>${fdt(c.last)}</span></div>${badge(etq(c.etapa).toLowerCase())}</div>
+      <p>${esc(l.resumen || '')}</p>${car ? `<p class="mu sm">Coche: <a href="${WEB}/vehiculos/${car.slug}" target="_blank" rel="noopener" style="color:var(--or)">${esc(car.brand)} ${esc(car.model)} (${car.year || ''})</a>${own ? ' · de ' + esc(own) : ''}</p>` : ''}
+      <div class="row">${bt('Cristina')}${bt('Juan')}<a class="btn s g" href="#cliente/${c.key}">Ver ficha</a></div></div>`; };
+  const sec = (t, l, vacio) => `<h3 class="lh">${t} <span>${l.length}</span></h3>${l.length ? l.map(card).join('') : `<p class="mu">${vacio}</p>`}`;
+  m.innerHTML = top('Leads', 'Los nuevos arriba. Al pulsar "Soy Cristina" o "Soy Juan" se abre WhatsApp con el mensaje escrito y el lead pasa a contactado.', `<a class="btn g" href="#clientes">Embudo completo</a>`) +
+    sec('Nuevos sin contestar', nuevos, 'No hay leads nuevos.') + sec('Pendientes', pend, 'Nada pendiente.') + sec('En marcha', resto, 'Nada en marcha.');
+  m.querySelectorAll('a[data-k]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.k); if (c && c.etapa === 'nuevo') api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: 'contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
+};
 V.cliente = async (m, key) => {
   const c = (await api('/admin/clientes')).find((x) => x.key === key); m = shell('clientes');
   if (!c) { m.innerHTML = top('Cliente') + '<div class="card mu">No encontrado.</div>'; return; }
@@ -538,8 +587,8 @@ V.conexion = async (m) => {
 
 // ---------- router ----------
 async function route() {
-  const [k, arg] = (location.hash.slice(1) || 'resumen').split('/');
-  const fn = NEG === 'garage' ? (V[k] || V.resumen) : ({ resumen: V.nresumen, clientes: V.nclientes, ncliente: V.ncliente, conexion: V.conexion }[k] || V.nresumen);
+  const [k, arg] = (location.hash.slice(1) || home().slice(1)).split('/');
+  const fn = NEG === 'garage' ? (V[k] || V.leads) : ({ resumen: V.nresumen, clientes: V.nclientes, ncliente: V.ncliente, conexion: V.conexion }[k] || V.nresumen);
   try { await fn($('#mn'), arg); window.scrollTo(0, 0); } catch (e) { if (e.message !== 'Sesión caducada') { shell(k).innerHTML = `<div class="card">No se ha podido cargar: ${esc(e.message)}</div>`; } }
 }
 let polling = null;
