@@ -129,6 +129,7 @@ function cleanCar(b, old = {}) {
   const c = { ...old };
   const S = (k, n = 120) => { if (k in b) c[k] = clip(b[k], n); };
   ['brand', 'model', 'version', 'fuel', 'trans', 'body', 'color', 'holder', 'status', 'etiqueta', 'owner'].forEach((k) => S(k));
+  if ('matricula' in b) c.matricula = clip(String(b.matricula).toUpperCase().replace(/[\s-]/g, ''), 12);
   if ('desc' in b) c.desc = clip(b.desc, 8000);
   if ('comment' in b) c.comment = clip(b.comment, 3000);
   ['year', 'km', 'price', 'cv', 'doors', 'seats', 'monthly', 'term', 'reserve'].forEach((k) => { if (k in b) c[k] = num(b[k]); });
@@ -753,6 +754,10 @@ async function adminApi(r, req, M, me, url) {
       ent.files.unshift({ id, nombre: clip(body.nombre, 120) || 'documento', tipo: clip(body.tipo, 40) || 'Otro', importe: isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0, fecha: /^\d{4}-\d{2}-\d{2}$/.test(body.fecha || '') ? body.fecha : today(), mime, size: buf.length, by: me.name, at: new Date().toISOString() });
       await save('docs', all); return json(ent);
     }
+    if (M === 'PATCH' && seg[3]) { const f = ent.files.find((x) => x.id === seg[3]); if (!f) return json({ error: 'No existe' }, 404);
+      if ('tipo' in body) f.tipo = clip(body.tipo, 40) || f.tipo; if ('nombre' in body) f.nombre = clip(body.nombre, 120) || f.nombre;
+      if ('importe' in body) { const n = Number(String(body.importe ?? '').replace(',', '.')); f.importe = isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0; }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(body.fecha || '')) f.fecha = body.fecha; await save('docs', all); return json(ent); }
     if (M === 'DELETE' && seg[3]) { const i = ent.files.findIndex((x) => x.id === seg[3]); if (i < 0) return json({ error: 'No existe' }, 404); ent.files.splice(i, 1); await save('docs', all); await media().delete('doc/' + seg[3]).catch(() => {}); return json(ent); }
   }
   // Trimestre para la gestoría: coches vendidos en el trimestre con compra, gastos, venta y margen (REBU), por dueño
