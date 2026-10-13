@@ -609,7 +609,10 @@ export async function diario() {
   const res = { garage: toca('garage', await buildClientes()), marine: toca('marine', await load('leads-marine')), rotulito: toca('rotulito', await load('leads-rotulito')) };
   const nom = { garage: 'Plata Garage', marine: 'Plata Marine', rotulito: 'Rotulito' };
   for (const [neg, L] of Object.entries(res)) if (L.length) await pushAll(neg, `Hoy te toca: ${L.length} seguimiento${L.length > 1 ? 's' : ''} · ${nom[neg]}`, L.slice(0, 4).map((c) => String(c.nombre || '').split(' ')[0]).join(', ') + (L.length > 4 ? '…' : ''), 'hoy-' + neg).catch((e) => console.error('push', e.message));
-  return Object.fromEntries(Object.entries(res).map(([k, v]) => [k, v.length]));
+  // Coches parados: más de 45 días en stock y 3 semanas sin tocar el precio
+  const parados = (await load('cars')).filter((c) => !c.sold && !c.hidden && diasD(c.llegada || c.created) >= 45 && diasD((c.priceHistory || []).length > 1 ? c.priceHistory[c.priceHistory.length - 1].d : c.llegada || c.created) >= 21).sort((a, b) => diasD(b.llegada || b.created) - diasD(a.llegada || a.created));
+  if (parados.length) await pushAll('garage', `Coches parados: ${parados.length} sin moverse`, parados.slice(0, 3).map((c) => `${c.brand} ${c.model} (${diasD(c.llegada || c.created)} d)`).join(', ') + (parados.length > 3 ? '…' : '') + ' · revisa precio', 'parados').catch((e) => console.error('push', e.message));
+  return Object.fromEntries([...Object.entries(res).map(([k, v]) => [k, v.length]), ['parados', parados.length]]);
 }
 // Medición propia sin cookies ni datos personales: contadores por día
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|headless|lighthouse|pingdom/i;
