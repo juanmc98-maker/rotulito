@@ -548,12 +548,25 @@ V.nresumen = async (m) => {
   const hoy = L.filter((x) => (x.updated || '').slice(0, 10) === td).length, sem = L.filter((x) => Date.now() - Date.parse(x.created) < 7 * 864e5).length;
   const prim = L.filter((x) => x.etapa === d.etapas[0]);
   m.innerHTML = top(`Resumen · ${NEGS[NEG].n}`, 'Lo que ha entrado y en qué punto está cada cliente.', `<a class="btn" href="#clientes">Ver embudo</a>`) +
-    `<div class="kp">${[['Clientes en total', L.length], ['Nuevos esta semana', sem], ['Con movimiento hoy', hoy], [`Sin atender (${d.etapas[0]})`, prim.length]].map(([t, v]) => `<a class="card" href="#clientes"><span>${t}</span><i>${IC.clientes}</i><b>${v}</b></a>`).join('')}</div>
-    <div class="card sec"><h3 style="margin-bottom:8px">Por etapa</h3>${d.etapas.map((e) => { const n = L.filter((x) => x.etapa === e).length; return `<div class="li"><div><b>${esc(e)}</b></div><div class="r"><b class="o">${n}</b></div></div>`; }).join('')}</div>
+    `<div class="kp">${[['Clientes en total', L.length, ''], ['Nuevos esta semana', sem, '/f:sem'], ['Con movimiento hoy', hoy, '/f:hoy'], [`Sin atender (${d.etapas[0]})`, prim.length, '/e:' + encodeURIComponent(d.etapas[0])]].map(([t, v, f]) => `<a class="card" href="#clientes${f}"><span>${t}</span><i>${IC.clientes}</i><b>${v}</b></a>`).join('')}</div>
+    <div class="card sec"><h3 style="margin-bottom:8px">Por etapa</h3>${d.etapas.map((e) => { const n = L.filter((x) => x.etapa === e).length; return `<a class="li" href="#clientes/e:${encodeURIComponent(e)}"><div><b>${esc(e)}</b></div><div class="r"><b class="o">${n} ›</b></div></a>`; }).join('')}</div>
     <div class="card sec"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Últimos contactos</h3><a href="#clientes" class="sm" style="color:var(--or)">Ver todos</a></div>${[...L].sort((a, b) => (b.updated || '').localeCompare(a.updated || '')).slice(0, 8).map((x) => `<a class="li" href="#ncliente/${x.id}" style="text-decoration:none"><div><b>${esc(x.nombre)}</b><span>${esc(x.historial?.[0]?.t || x.interes || '')}</span></div><div class="r">${fdate(x.updated)}<br><span class="mu">${esc(x.etapa)}</span></div></a>`).join('') || '<p class="mu">Todavía no ha entrado ningún contacto. Mira "Entrada de leads".</p>'}</div>`;
 };
-V.nclientes = async (m) => {
+V.nclientes = async (m, arg) => {
   const d = await nApi(); m = shell('clientes'); let q = '';
+  // Desde el Resumen: lista con el detalle de los clientes de una etapa (e:...) o de un filtro (f:sem, f:hoy)
+  if (arg) {
+    const td = new Date().toISOString().slice(0, 10); const [t, v] = [arg.slice(0, 2), decodeURIComponent(arg.slice(2))];
+    const F = { 'f:sem': ['Nuevos esta semana', (x) => Date.now() - Date.parse(x.created) < 7 * 864e5], 'f:hoy': ['Con movimiento hoy', (x) => (x.updated || '').slice(0, 10) === td] };
+    const [tit, fn] = t === 'e:' ? [v, (x) => x.etapa === v] : (F[arg] || ['Clientes', () => true]);
+    const list = d.leads.filter(fn).sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+    m.innerHTML = top(`${esc(tit)} · ${list.length}`, NEGS[NEG].n, `<a class="btn g" href="#resumen">Volver</a><a class="btn g" href="#clientes">Embudo</a>`) +
+      (list.length ? list.map((c) => `<div class="card sec"><div class="row" style="justify-content:space-between"><a href="#ncliente/${c.id}"><b>${esc(c.nombre)}</b></a><span class="mu sm">${esc(c.etapa)}${c.updated ? ' · ' + fdt(c.updated) : ''}</span></div>
+        ${c.interes ? `<p style="margin-top:6px">${esc(c.interes)}</p>` : ''}${c.notas ? `<p class="mu sm" style="margin-top:6px;white-space:pre-line">${esc(c.notas)}</p>` : ''}
+        <p class="mu sm" style="margin-top:6px">${[c.telefono, c.email, c.origen].filter(Boolean).map(esc).join(' · ')}</p>
+        <div class="row" style="margin-top:10px"><a class="btn s" href="#ncliente/${c.id}">Abrir ficha</a>${c.telefono ? `<a class="btn g s" target="_blank" rel="noopener" href="${waLink(c.telefono)}">${IC.wa}WhatsApp</a>` : ''}</div></div>`).join('') : '<div class="card mu">No hay clientes aquí.</div>');
+    return;
+  }
   const draw = () => {
     const list = d.leads.filter((c) => !q || `${c.nombre} ${c.telefono} ${c.email} ${c.interes}`.toLowerCase().includes(q));
     $('#kb').innerHTML = d.etapas.map((e) => { const cs = list.filter((c) => c.etapa === e); return `<div class="col" data-e="${esc(e)}"><h4>${esc(e)} <span>${cs.length}</span></h4>${cs.map((c) => `<div class="kc" draggable="true" data-k="${c.id}"><a href="#ncliente/${c.id}"><b>${esc(c.nombre)}</b><span>${esc(c.interes || c.historial?.[0]?.t || '')}</span><small>${fdate(c.updated)}${c.origen ? ' · ' + esc(c.origen) : ''}</small></a><select class="mv" data-k="${c.id}" aria-label="Mover a">${d.etapas.map((x) => `<option${x === c.etapa ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></div>`).join('') || '<p class="mu sm" style="padding:6px">—</p>'}</div>`; }).join('');
