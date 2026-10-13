@@ -21,7 +21,7 @@ const db = () => store('platagarage');
 const media = () => store('platagarage-media');
 
 // ---------- datos ----------
-const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'gastos-marine': {}, 'gastos-rotulito': {} };
+const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'gastos-marine': {}, 'gastos-rotulito': {}, pushsubs: [], vapid: {} };
 async function load(key) {
   const v = await db().get(key, { type: 'json' });
   if (v == null) { const d = structuredClone(DEFAULTS[key]); await db().setJSON(key, d); return d; }
@@ -305,7 +305,8 @@ const SW_JS = `// Panel instalable: siempre carga la versión más reciente (sin
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', () => {});
-self.addEventListener('notificationclick', (e) => { e.notification.close(); e.waitUntil(self.clients.matchAll({ type: 'window' }).then((cs) => (cs[0] ? cs[0].focus() : self.clients.openWindow('/platagarage/admin')))); });
+self.addEventListener('push', (e) => { let d = {}; try { d = e.data.json(); } catch (x) { /* */ } e.waitUntil(self.registration.showNotification(d.title || 'Plata Garage', { body: d.body || '', icon: '/platagarage/assets/icon-192.png', tag: d.tag || undefined, data: { url: d.url || '/platagarage/admin' } })); });
+self.addEventListener('notificationclick', (e) => { e.notification.close(); const u = (e.notification.data && e.notification.data.url) || '/platagarage/admin'; e.waitUntil(self.clients.matchAll({ type: 'window' }).then((cs) => { if (cs[0]) { cs[0].focus(); return cs[0].navigate ? cs[0].navigate(u).catch(() => {}) : null; } return self.clients.openWindow(u); })); });
 `;
 
 // Aviso de bajada de precio a quien lo pidió en la ficha (con su consentimiento y baja en un clic)
@@ -427,19 +428,23 @@ async function api(r, req, M, ip, url, context) {
   if (r.startsWith('/lead/') && M === 'POST') {
     const [, , neg, tok] = r.split('/'); if (!NEGS[neg] || !env('PG_ADMIN_PASSWORD') || (tok || '').length !== 32 || !eqHash(tok, negToken(neg))) return json({ error: 'No autorizado' }, 401);
     const b = await req.json().catch(() => ({})); let n = 0;
-    for (const x of (Array.isArray(b) ? b : [b]).slice(0, 50)) if (await addNegLead(neg, x)) n++;
+    const arr = (Array.isArray(b) ? b : [b]).slice(0, 50); for (const x of arr) if (await addNegLead(neg, x)) n++;
+    if (n) await pushAll(neg, `${n > 1 ? n + ' leads nuevos' : 'Nuevo lead'} · ${NEGS[neg].nombre || neg}`, n > 1 ? '' : [clip(arr[0].nombre, 60), clip(arr[0].interes || arr[0].origen, 60)].filter(Boolean).join(' · '), 'lead-' + neg).catch((e) => console.error('push', e.message));
     return json({ ok: true, nuevos: n });
   }
   if (r.startsWith('/portal/') && M === 'POST') {
     const tok = r.slice(8); if (!env('PG_ADMIN_PASSWORD') || tok.length !== 32 || !eqHash(tok, ingestToken())) return json({ error: 'No autorizado' }, 401);
     const b = await req.json().catch(() => ({})); const items = Array.isArray(b) ? b : [b];
-    const list = await load('portales'); let n = 0;
+    const list = await load('portales'); let n = 0, fix = 0;
     for (const x of items.slice(0, 50)) {
-      const ref = clip(x.ref, 120); if (!ref || list.some((y) => y.ref === ref)) continue;
+      const ref = clip(x.ref, 120); if (!ref) continue;
+      const old = list.find((y) => y.ref === ref);
+      if (old) { if (x.repasar && old.status === 'pendiente' && !old.notas) { const t2 = normPhone(x.telefono) || clip(x.telefono, 20); Object.assign(old, { tipoContacto: clip(x.tipo, 40) || old.tipoContacto, nombre: clip(x.nombre, 80) || old.nombre, telefono: t2 || old.telefono, email: clip(x.email, 200).toLowerCase() || old.email, cocheNombre: clip(x.coche, 120) || old.cocheNombre, mensaje: clip(x.mensaje, 2000) }); fix++; } continue; }
       const tel = normPhone(x.telefono) || clip(x.telefono, 20);
       list.unshift({ id: uid('w'), ref, fuente: clip(x.fuente, 30), tipoContacto: clip(x.tipo, 40), nombre: clip(x.nombre, 80) || 'Sin nombre', telefono: tel, email: clip(x.email, 200).toLowerCase(), cocheNombre: clip(x.coche, 120), mensaje: clip(x.mensaje, 2000), created: x.fecha && !isNaN(Date.parse(x.fecha)) ? new Date(x.fecha).toISOString() : new Date().toISOString(), status: 'pendiente', notas: '' }); n++;
     }
-    if (n) await save('portales', list.slice(0, 3000));
+    if (fix && !n) await save('portales', list.slice(0, 3000));
+    if (n) { await save('portales', list.slice(0, 3000)); const x = list[0]; await pushAll('garage', n > 1 ? `${n} leads nuevos de portales` : `Nuevo lead de ${x.fuente || 'portal'}${x.tipoContacto ? ' (' + x.tipoContacto + ')' : ''}`, [x.nombre, x.cocheNombre].filter(Boolean).join(' · '), 'portal').catch((e) => console.error('push', e.message)); }
     return json({ ok: true, nuevos: n });
   }
   if (r === '/baja' && M === 'GET') {
@@ -545,8 +550,22 @@ async function sendMail({ to, subject, html: body, text: txt, replyTo }) {
   return true;
 }
 const hesc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// Avisos push al móvil (también con la app cerrada): solo a quien tenga acceso a ese negocio
+async function webpushLib() { const { default: wp } = await import('web-push'); let v = await load('vapid'); if (!v || !v.pub) { const k = wp.generateVAPIDKeys(); v = { pub: k.publicKey, priv: k.privateKey }; await save('vapid', v); } wp.setVapidDetails('mailto:info@platagarage.com', v.pub, v.priv); return { wp, v }; }
+const NEG_URL = { garage: '#leads', marine: '#leads', rotulito: '#leads' };
+async function pushAll(neg, title, body, tag, only) {
+  const subs = await load('pushsubs'); if (!subs.length) return;
+  const users = await load('users');
+  const can = (s) => { if (only) return s.sub.endpoint === only; if (s.uid === 'admin') return true; const u = users.find((x) => x.id === s.uid); if (!u || u.disabled) return false; const negs = u.role === 'admin' ? ['garage', 'marine', 'rotulito'] : (u.negs && u.negs.length ? u.negs : ['garage']); return negs.includes(neg); };
+  const list = subs.filter(can); if (!list.length) return;
+  const { wp } = await webpushLib(); const dead = [];
+  const payload = JSON.stringify({ title: clip(title, 80), body: clip(body, 160), tag: tag || undefined, url: `${BASE}/admin?neg=${neg}${NEG_URL[neg] || ''}` });
+  await Promise.all(list.map((s) => wp.sendNotification(s.sub, payload, { TTL: 86400, urgency: 'high' }).catch((e) => { if (e.statusCode === 404 || e.statusCode === 410) dead.push(s.sub.endpoint); else console.error('push', e.statusCode, e.message); })));
+  if (dead.length) await save('pushsubs', subs.filter((s) => !dead.includes(s.sub.endpoint)));
+}
 async function notify(tipo, d, origin) {
   if (!origin) return;
+  { const T = { cita: d.tipo === 'reserva' || d.motivo === 'Reservar este coche' ? 'Nueva reserva' : 'Nueva cita', tasacion: 'Nueva tasación', envio: 'Nuevo envío', mensaje: 'Nuevo mensaje', busqueda: 'Te lo buscamos', alerta: 'Nueva alerta' }; await pushAll('garage', `${T[tipo] || 'Nuevo aviso'} · Plata Garage`, [d.nombre || d.email, d.cocheNombre].filter(Boolean).join(' · ') || 'Ábrelo en la app', tipo).catch((e) => console.error('push', e.message)); }
   // Mismo formato que el aviso del panel anterior: tarjeta oscura con logo, tabla de datos, notas y botón al backoffice
   const diaL = d.fecha ? new Date(d.fecha + 'T12:00:00Z').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
   const F = [['Cliente', d.nombre], ['Email', d.email], ['Teléfono', d.telefono], ['Día', diaL], ['Hora', d.hora], ['Motivo', d.motivo], ['Coche de interés', d.cocheNombre], ['Código postal', d.cp], ['Asunto', d.asunto], ['Su coche', [d.marca, d.modelo, d.anio].filter(Boolean).join(' ')], ['Kilómetros', d.km], ['Combustible', d.combustible], ['Cambio', d.cambio], ['Estado', d.estado], ['ITV', d.itv], ['Presupuesto', d.presupuesto ? d.presupuesto + ' €' : ''], ['Busca', d.busca], ['Máximo', d.max ? d.max + ' €' : '']].filter(([, v]) => v != null && v !== '');
@@ -742,6 +761,16 @@ async function adminApi(r, req, M, me, url) {
       if (prev !== it.etapa) { const d = new Date().toISOString(); it.desde = d; if (it.etapa === 'Perdido') it.antes = prev; it.fechas = { ...(it.fechas || {}), [it.etapa]: d }; if (it.etapa !== 'Perdido') { it.motivo = ''; it.motivoTxt = ''; } it.historial = [{ d, t: `Etapa: ${prev} → ${it.etapa}${it.etapa === 'Perdido' ? ' (' + [it.motivo, it.motivoTxt].filter(Boolean).join(': ') + ')' : ''} (${me.name})` }, ...(it.historial || [])].slice(0, 100); }
       it.updated = new Date().toISOString(); await save(key, list); return json(it);
     }
+  }
+  if (seg[0] === 'push') {
+    if (M === 'GET') return json({ key: (await webpushLib()).v.pub });
+    const sub = body.sub; if (!sub || typeof sub.endpoint !== 'string' || !/^https:\/\//.test(sub.endpoint) || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) return json({ error: 'Suscripción no válida' }, 400);
+    let subs = (await load('pushsubs')).filter((s) => s.sub.endpoint !== sub.endpoint);
+    if (M === 'DELETE' || body.off) { await save('pushsubs', subs); return json({ ok: true }); }
+    subs.unshift({ uid: me.id, sub: { endpoint: clip(sub.endpoint, 600), keys: { p256dh: clip(sub.keys.p256dh, 200), auth: clip(sub.keys.auth, 100) } }, d: new Date().toISOString() });
+    await save('pushsubs', subs.slice(0, 40));
+    await pushAll('garage', 'Avisos activados', 'Te llegarán aquí los leads nuevos', 'test', sub.endpoint).catch(() => {});
+    return json({ ok: true });
   }
   if (seg[0] === 'ical' && M === 'GET') return json({ url: `${url.origin}${BASE}/api/ical/${icalToken()}.ics`, portales: `${url.origin}${BASE}/api/portal/${ingestToken()}` });
   if (seg[0] === 'clientes') {
