@@ -21,7 +21,7 @@ const db = () => store('platagarage');
 const media = () => store('platagarage-media');
 
 // ---------- datos ----------
-const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [] };
+const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'gastos-marine': {}, 'gastos-rotulito': {} };
 async function load(key) {
   const v = await db().get(key, { type: 'json' });
   if (v == null) { const d = structuredClone(DEFAULTS[key]); await db().setJSON(key, d); return d; }
@@ -196,7 +196,10 @@ Los datos son orientativos y no vinculantes; confírmalos con Plata Garage antes
 
 // ---------- clientes (embudo) ----------
 // Agrupa todas las solicitudes por teléfono y calcula la etapa del embudo de forma automática
-const ETAPAS = ['nuevo', 'contactado', 'cita', 'visitado', 'reserva', 'vendido', 'perdido'];
+const ETAPAS = ['nuevo', 'contactado', 'cita', 'visitado', 'financiera', 'reserva', 'vendido', 'transferencia', 'entregado', 'permiso', 'enviado', 'cerrado', 'perdido'];
+const POSTVENTA = ['vendido', 'transferencia', 'entregado', 'permiso', 'enviado', 'cerrado'];
+const MOTIVOS = ['Precio', 'Financiación denegada', 'Compró otro', 'No contesta', 'Pago en efectivo', 'Otro'];
+const ORIGEN_PG = (leads) => { const p = leads.find((l) => l.tipo === 'portal'); if (!p) return 'Web'; const f = String(p.fuente || ''); return /coches/i.test(f) ? 'Coches.net' : /wallapop/i.test(f) ? 'Wallapop' : (f || 'Portal'); };
 const pkey = (t) => String(t || '').replace(/\D/g, '').slice(-9);
 async function buildClientes() {
   const [b, t, e, m, bu, al, cars, cl, po] = await Promise.all(['bookings', 'tasaciones', 'envios', 'mensajes', 'busquedas', 'alertas', 'cars', 'clientes', 'portales'].map(load));
@@ -205,7 +208,7 @@ async function buildClientes() {
     const k = pkey(x.telefono); if (!k) return;
     if (!map.has(k)) map.set(k, { key: k, nombre: x.nombre, telefono: x.telefono, email: x.email || '', leads: [] });
     const c = map.get(k); if (x.email && !c.email) c.email = x.email; if (x.nombre && (!c.nombre || (x.created || '') > (c.last || ''))) c.nombre = x.nombre;
-    c.leads.push({ tipo, id: x.id, created: x.created || '', status: x.status, resumen, fecha: x.fecha, hora: x.hora, coche: x.coche, cocheNombre: x.cocheNombre, motivo: x.motivo, btipo: x.tipo });
+    c.leads.push({ tipo, id: x.id, created: x.created || '', status: x.status, fuente: x.fuente, resumen, fecha: x.fecha, hora: x.hora, coche: x.coche, cocheNombre: x.cocheNombre, motivo: x.motivo, btipo: x.tipo });
     if ((x.created || '') > (c.last || '')) c.last = x.created || '';
   };
   b.forEach((x) => add(x, 'cita', `${x.tipo === 'reserva' ? 'Reserva' : 'Cita'} ${x.fecha || ''} ${x.hora || ''} · ${x.cocheNombre || x.motivo || ''}`));
@@ -230,10 +233,18 @@ async function buildClientes() {
     // La etapa puesta a mano manda, salvo que después pase algo que haga avanzar al cliente
     let etapa = auto;
     if (st.etapa) { const newer = (c.last || '') > (st.at || ''); etapa = st.etapa === 'perdido' ? (newer ? auto : 'perdido') : (r(auto) > r(st.etapa) && auto !== 'perdido' ? auto : st.etapa); }
+    let motivo = etapa === 'perdido' ? (st.motivo || '') : '';
     // Sin movimiento en 45 días y sin venta → se archiva sola como perdido
     const lastAct = [c.last, st.at].filter(Boolean).sort().pop() || '';
-    if (!['vendido', 'perdido'].includes(etapa) && !cit.some((l) => l.fecha >= td) && lastAct && addDays(td, -45) > lastAct.slice(0, 10)) etapa = 'perdido';
-    return { ...c, etapa, auto, manual: st.etapa || '', notas: st.notas || '', compras: bought.map((x) => ({ id: x.id, slug: x.slug, nombre: `${x.brand} ${x.model} (${x.year})`, sold: x.sold, soldAt: x.soldAt })), alerta: al.some((a) => a.email && a.email === c.email && a.status === 'activa') };
+    if (![...POSTVENTA, 'perdido'].includes(etapa) && !cit.some((l) => l.fecha >= td) && lastAct && addDays(td, -45) > lastAct.slice(0, 10)) { etapa = 'perdido'; motivo = 'Sin movimiento (45 días)'; }
+    // Hasta dónde llegó en el embudo (para la conversión paso a paso, aunque luego se haya perdido)
+    const llego = Math.max(auto === 'perdido' ? 0 : r(auto), st.etapa && st.etapa !== 'perdido' ? r(st.etapa) : 0, etapa === 'perdido' ? 0 : r(etapa), st.maxr || 0);
+    const fechas = st.fechas || {};
+    const venta = bought.find((x) => x.sold);
+    const desde = fechas[etapa] || (etapa === st.etapa ? st.at : '') || (etapa === 'vendido' && venta?.soldAt) || c.last || '';
+    return { ...c, etapa, auto, manual: st.etapa || '', notas: st.notas || '', motivo, motivoTxt: st.motivoTxt || '', llego, desde, fechas, origen: ORIGEN_PG(c.leads), primero: c.leads[c.leads.length - 1]?.created || '',
+      banco: st.banco || '', finEstado: st.finEstado || '', certificado: st.certificado || '', vendidoEl: venta?.soldAt || fechas.vendido || '', importe: venta?.price || 0,
+      compras: bought.map((x) => ({ id: x.id, slug: x.slug, nombre: `${x.brand} ${x.model} (${x.year})`, sold: x.sold, soldAt: x.soldAt })), alerta: al.some((a) => a.email && a.email === c.email && a.status === 'activa') };
   });
   return out.sort((a, z) => (z.last || '').localeCompare(a.last || ''));
 }
@@ -242,10 +253,33 @@ async function buildClientes() {
 const icalToken = () => sign('ical-v1').slice(0, 32);
 const ingestToken = () => sign('portales-v1').slice(0, 32);
 // Otros negocios en el mismo panel: Plata Marine y Rotulito (embudo propio para cada uno)
+// Cada negocio con sus tableros (máx. 7 pasos cada uno) y una columna común "Perdido" con motivo obligatorio
 const NEGS = {
-  marine: { nombre: 'Plata Marine', etapas: ['Sin respuesta', 'Conversación', 'Cualificado', 'Valoración enviada', 'Hoja enviada', 'Encargo firmado', 'Visita', 'Oferta', 'Cerrado', 'Descartado'] },
-  rotulito: { nombre: 'Rotulito', etapas: ['Nuevo', 'Contactado', 'Propuesta enviada', 'Cliente', 'Perdido'] },
+  marine: { nombre: 'Plata Marine', tableros: [
+    { id: 'compradores', n: 'Compradores', e: ['Nuevo', 'Contactado', 'Visita', 'Oferta', 'Señal', 'Prueba de mar / peritaje', 'Aceptación'] },
+    { id: 'cierre', n: 'Cierre', e: ['Pago y contrato', 'Titularidad', 'Entrega', 'Documentación enviada', 'Comisión cobrada'] },
+    { id: 'vendedores', n: 'Vendedores', e: ['Primer contacto', 'Hoja y guía enviadas', 'Hoja firmada', 'Fotos recibidas', 'Publicado', 'Con interesados', 'Vendido'] }],
+    motivos: ['Precio', 'Financiación denegada', 'Compró otro', 'No contesta', 'Vendió por su cuenta', 'Retira el barco', 'Otro'] },
+  rotulito: { nombre: 'Rotulito', tableros: [
+    { id: 'venta', n: 'Venta', e: ['Nuevo', 'Contactado', 'Presupuesto enviado', 'Aceptado y señal'] },
+    { id: 'proyecto', n: 'Proyecto', e: ['Contenido recibido', 'En desarrollo', 'Revisión del cliente', 'Publicada', 'Cobrada'] }],
+    motivos: ['Precio', 'Sin presupuesto', 'Contrató a otro', 'No contesta', 'Otro'] },
 };
+Object.values(NEGS).forEach((n) => { n.etapas = [...n.tableros.flatMap((t) => t.e), 'Perdido']; });
+const esVendedor = (x) => /vend|captac|hoja|encargo|propietari/i.test(`${x.tipo || ''} ${x.interes || ''} ${x.origen || ''}`) && !/compr|busc/i.test(`${x.tipo || ''}`);
+const etapaInicial = (neg, x) => (neg === 'marine' && esVendedor(x) ? 'Primer contacto' : 'Nuevo');
+// Las etapas antiguas se pasan una vez a las nuevas (queda anotado en el historial)
+const VIEJAS = {
+  marine: (x) => { const v = esVendedor(x); return { 'Sin respuesta': v ? 'Primer contacto' : 'Nuevo', 'Conversación': v ? 'Primer contacto' : 'Contactado', 'Cualificado': v ? 'Primer contacto' : 'Contactado', 'Valoración enviada': 'Primer contacto', 'Hoja enviada': 'Hoja y guía enviadas', 'Encargo firmado': 'Hoja firmada', 'Cerrado': v ? 'Vendido' : 'Comisión cobrada', 'Descartado': 'Perdido' }[x.etapa]; },
+  rotulito: (x) => ({ 'Propuesta enviada': 'Presupuesto enviado', 'Cliente': 'Aceptado y señal' }[x.etapa]),
+};
+function migrar(neg, list) {
+  let n = 0; const d = new Date().toISOString();
+  list.forEach((x) => { if (NEGS[neg].etapas.includes(x.etapa)) return; const nv = (VIEJAS[neg] && VIEJAS[neg](x)) || NEGS[neg].etapas[0];
+    if (nv === 'Perdido') { x.antes = x.antes || etapaInicial(neg, x); if (!x.motivo) { x.motivo = 'Otro'; x.motivoTxt = `Marcado como "${x.etapa}" antes del cambio`; } }
+    x.historial = [{ d, t: `Embudo nuevo: ${x.etapa} → ${nv}` }, ...(x.historial || [])].slice(0, 100); x.etapa = nv; x.desde = d; n++; /* los avisos de días cuentan desde el cambio */ });
+  return n;
+}
 const negToken = (n) => sign('lead-' + n + '-v1').slice(0, 32);
 async function addNegLead(neg, x) {
   const key = 'leads-' + neg; const list = await load(key);
@@ -255,7 +289,7 @@ async function addNegLead(neg, x) {
   const nota = [clip(x.origen, 40), clip(x.interes, 160), clip(x.mensaje, 1500)].filter(Boolean).join(' · ');
   let it = list.find((y) => (k && y.key === k) || (!k && email && y.email === email));
   if (it) { it.historial = [{ d, t: nota || 'Nuevo contacto' }, ...(it.historial || [])].slice(0, 100); it.updated = d; if (ref) it.refs = [...(it.refs || []), ref].slice(-50); if (!it.email && email) it.email = email; }
-  else { it = { id: uid('l'), key: k, nombre: clip(x.nombre, 80) || 'Sin nombre', telefono: tel, email, origen: clip(x.origen, 40), tipo: clip(x.tipo, 30), interes: clip(x.interes, 160), etapa: NEGS[neg].etapas[0], notas: '', created: d, updated: d, historial: [{ d, t: nota || 'Primer contacto' }], refs: ref ? [ref] : [] }; list.unshift(it); }
+  else { it = { id: uid('l'), key: k, nombre: clip(x.nombre, 80) || 'Sin nombre', telefono: tel, email, origen: clip(x.origen, 40), tipo: clip(x.tipo, 30), interes: clip(x.interes, 160), etapa: etapaInicial(neg, x), desde: d, notas: '', created: d, updated: d, historial: [{ d, t: nota || 'Primer contacto' }], refs: ref ? [ref] : [] }; list.unshift(it); }
   await save(key, list.slice(0, 5000)); return true;
 }
 function ical(bookings) {
@@ -689,18 +723,23 @@ async function adminApi(r, req, M, me, url) {
   if (seg[0] === 'neg' && NEGS[seg[1]]) {
     const neg = seg[1], key = 'leads-' + neg;
     if (seg[2] === 'conexion' && M === 'GET') return json({ url: `${url.origin}${BASE}/api/lead/${neg}/${negToken(neg)}`, etapas: NEGS[neg].etapas });
+    if (seg[2] === 'gastos') { const g = await load('gastos-' + neg); if (M === 'PUT') { const o = {}; Object.entries(body || {}).slice(0, 30).forEach(([k, v]) => { const n = Number(v); if (clip(k, 40) && isFinite(n) && n >= 0) o[clip(k, 40)] = Math.round(n * 100) / 100; }); await save('gastos-' + neg, o); return json(o); } return json(Array.isArray(g) ? {} : g); }
     const list = await load(key);
-    if (M === 'GET' && !seg[2]) return json({ etapas: NEGS[neg].etapas, nombre: NEGS[neg].nombre, leads: list });
+    if (migrar(neg, list)) await save(key, list);
+    if (M === 'GET' && !seg[2]) return json({ etapas: NEGS[neg].etapas, tableros: NEGS[neg].tableros, motivos: NEGS[neg].motivos, nombre: NEGS[neg].nombre, leads: list });
     if (M === 'POST' && !seg[2]) { if (!clip(body.nombre, 80) && !body.telefono) return json({ error: 'Pon al menos el nombre o el teléfono' }, 400); await addNegLead(neg, { ...body, origen: body.origen || 'Manual', fecha: new Date().toISOString() }); return json({ ok: true }); }
     const i = list.findIndex((x) => x.id === seg[2]); if (i < 0) return json({ error: 'No existe' }, 404);
     if (M === 'DELETE') { list.splice(i, 1); await save(key, list); return json({ ok: true }); }
     if (M === 'PUT') {
       const it = list[i]; const prev = it.etapa;
-      if ('etapa' in body && NEGS[neg].etapas.includes(body.etapa)) it.etapa = body.etapa;
+      if ('motivo' in body) { it.motivo = NEGS[neg].motivos.includes(body.motivo) ? body.motivo : ''; it.motivoTxt = clip(body.motivoTxt, 200); }
+      if ('etapa' in body && NEGS[neg].etapas.includes(body.etapa)) { if (body.etapa === 'Perdido' && !it.motivo) return json({ error: 'Indica el motivo por el que se ha perdido.' }, 400); it.etapa = body.etapa; }
+      if ('importe' in body) { const n = Number(String(body.importe).replace(',', '.')); it.importe = isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0; }
+      if ('certificado' in body) it.certificado = clip(body.certificado, 40);
       ['notas', 'accion'].forEach((k) => { if (k in body) it[k] = clip(body[k], 4000); });
       ['nombre', 'email', 'origen', 'tipo', 'interes'].forEach((k) => { if (k in body) it[k] = clip(body[k], 200); });
       if ('telefono' in body) { it.telefono = normPhone(body.telefono) || clip(body.telefono, 20); it.key = pkey(it.telefono); }
-      if (prev !== it.etapa) it.historial = [{ d: new Date().toISOString(), t: `Etapa: ${prev} → ${it.etapa} (${me.name})` }, ...(it.historial || [])].slice(0, 100);
+      if (prev !== it.etapa) { const d = new Date().toISOString(); it.desde = d; if (it.etapa === 'Perdido') it.antes = prev; it.fechas = { ...(it.fechas || {}), [it.etapa]: d }; if (it.etapa !== 'Perdido') { it.motivo = ''; it.motivoTxt = ''; } it.historial = [{ d, t: `Etapa: ${prev} → ${it.etapa}${it.etapa === 'Perdido' ? ' (' + [it.motivo, it.motivoTxt].filter(Boolean).join(': ') + ')' : ''} (${me.name})` }, ...(it.historial || [])].slice(0, 100); }
       it.updated = new Date().toISOString(); await save(key, list); return json(it);
     }
   }
@@ -710,7 +749,15 @@ async function adminApi(r, req, M, me, url) {
     if (M === 'PUT' && seg[1]) {
       const cl = await load('clientes'); const k = pkey(seg[1]); if (!k) return json({ error: 'Cliente no válido' }, 400);
       let it = cl.find((x) => x.key === k); if (!it) { it = { key: k }; cl.push(it); }
-      if ('etapa' in body) { if (body.etapa && !ETAPAS.includes(body.etapa)) return json({ error: 'Etapa no válida' }, 400); it.etapa = body.etapa || ''; it.at = new Date().toISOString(); it.by = me.name; }
+      if ('motivo' in body) { it.motivo = MOTIVOS.includes(body.motivo) ? body.motivo : ''; it.motivoTxt = clip(body.motivoTxt, 200); }
+      if ('etapa' in body) { if (body.etapa && !ETAPAS.includes(body.etapa)) return json({ error: 'Etapa no válida' }, 400);
+        if (body.etapa === 'perdido' && !it.motivo) return json({ error: 'Indica el motivo por el que se ha perdido.' }, 400);
+        const d = new Date().toISOString(); it.etapa = body.etapa || ''; it.at = d; it.by = me.name;
+        if (it.etapa) { it.fechas = { ...(it.fechas || {}), [it.etapa]: d }; if (it.etapa !== 'perdido') it.maxr = Math.max(it.maxr || 0, ETAPAS.indexOf(it.etapa)); }
+        if (it.etapa !== 'perdido') { it.motivo = ''; it.motivoTxt = ''; } }
+      if ('banco' in body) it.banco = clip(body.banco, 60);
+      if ('finEstado' in body) it.finEstado = ['', 'en estudio', 'aprobada', 'denegada'].includes(body.finEstado) ? body.finEstado : '';
+      if ('certificado' in body) it.certificado = clip(body.certificado, 40);
       if ('notas' in body) it.notas = clip(body.notas, 4000);
       await save('clientes', cl); return json({ ok: true });
     }
