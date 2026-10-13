@@ -87,7 +87,7 @@ let NEG = 'garage'; try { NEG = localStorage.getItem('pg_neg') || 'garage'; if (
 // Cada negocio con sus colores (Plata Garage: oscuro y naranja; Plata Marine y Rotulito: los de su web)
 const tema = () => { document.documentElement.dataset.neg = NEG; const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = NEG === 'garage' ? '#050505' : '#ffffff'; };
 tema();
-const NAV_OTRO = [['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes'], ['conexion', 'Entrada de leads']];
+const NAV_OTRO = [['leads', 'Leads'], ['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes']];
 const logoTag = (n = NEG) => `<span class="nlg${NEGS[n].dark ? '' : ' w'}"><img src="${NEGS[n].logo}" alt="${NEGS[n].n}"></span>`;
 function shell(active) {
   tema();
@@ -109,7 +109,7 @@ function shell(active) {
   $('#sb').classList.remove('open');
   return $('#mn');
 }
-const home = () => (NEG === 'garage' ? '#leads' : '#resumen');
+const home = () => '#leads';
 function goHome() { if (location.hash === home()) route(); else location.hash = home(); }
 const top = (t, sub = '', right = '') => `<div class="top"><div><h1>${t}</h1>${sub ? `<p>${sub}</p>` : ''}</div><div class="row">${right}</div></div>`;
 const badge = (s) => { const m = { pendiente: 'w', confirmada: 'b', completada: 'ok', cancelada: 'r', contactado: 'b', ofertado: 'o', cerrada: 'ok', 'presupuesto enviado': 'b', aceptado: 'ok', rechazado: 'r', respondido: 'ok' }; return `<span class="bg ${m[s] || 'x'}">${esc(s[0].toUpperCase() + s.slice(1))}</span>`; };
@@ -795,6 +795,23 @@ V.nanalisis = async (m) => {
   };
   draw();
 };
+// Leads de Plata Marine y Rotulito: los nuevos arriba, con teléfono, WhatsApp, mover de etapa y eliminar
+V.nleads = async (m) => {
+  const d = await nApi(); m = shell('leads');
+  const primeras = d.tableros.map((t) => t.e[0]); const finales = d.tableros.map((t) => t.e[t.e.length - 1]);
+  const ord = (a, b) => (b.updated || b.created || '').localeCompare(a.updated || a.created || '');
+  const nuevos = d.leads.filter((c) => primeras.includes(c.etapa)).sort(ord);
+  const marcha = d.leads.filter((c) => !primeras.includes(c.etapa) && c.etapa !== 'Perdido' && !finales.includes(c.etapa)).sort(ord).slice(0, 30);
+  const card = (c) => `<div class="card sec ld"><div class="hd"><div><b>${esc(c.nombre)}</b>${c.telefono ? ` <a href="tel:${esc(c.telefono)}" style="color:var(--mu);font-weight:500;margin-left:6px;text-decoration:none">${esc(c.telefono)}</a>` : ''}<span>${fdt(c.updated || c.created)}${c.origen ? ' · ' + esc(c.origen) : ''}</span></div>${badge(String(c.etapa).toLowerCase())}</div>
+    ${c.interes ? `<p>${esc(c.interes)}</p>` : ''}${c.email ? `<p class="mu sm">${esc(c.email)}</p>` : ''}
+    <div class="row">${c.telefono ? `<a class="btn s" target="_blank" rel="noopener" data-wa="${c.id}" href="${waLink(c.telefono)}">${IC.wa}WhatsApp</a>` : ''}<a class="btn s g" href="#ncliente/${c.id}">Ver ficha</a><select data-mv="${c.id}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsN(d, '')}</select><button class="btn r s" data-del="${c.id}">Eliminar</button></div></div>`;
+  const sec = (t, l, vacio) => `<h3 class="lh">${t} <span>${l.length}</span></h3>${l.length ? l.map(card).join('') : `<p class="mu">${vacio}</p>`}`;
+  m.innerHTML = top(`Leads · ${NEGS[NEG].n}`, 'Los nuevos arriba. Al pulsar WhatsApp, un comprador nuevo pasa a contactado.', `<a class="btn g" href="#clientes">Embudo completo</a>`) +
+    sec('Nuevos sin contestar', nuevos, 'No hay leads nuevos.') + sec('En marcha', marcha, 'Nada en marcha.');
+  m.querySelectorAll('[data-wa]').forEach((a) => (a.onclick = () => { const c = d.leads.find((x) => x.id === a.dataset.wa); if (c && c.etapa === 'Nuevo' && d.etapas.includes('Contactado')) nApi('/' + c.id, { method: 'PUT', body: { etapa: 'Contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
+  m.querySelectorAll('[data-mv]').forEach((el) => (el.onchange = guard(async () => { const c = d.leads.find((x) => x.id === el.dataset.mv); if (!c || !el.value) return; await moverN(d, c, el.value); route(); })));
+  m.querySelectorAll('[data-del]').forEach((b) => (b.onclick = guard(async () => { const c = d.leads.find((x) => x.id === b.dataset.del); if (!c || !confirm(`¿Eliminar a ${c.nombre}? Se borra del embudo.`)) return; await nApi('/' + c.id, { method: 'DELETE' }); toast(`${c.nombre}: eliminado`); route(); })));
+};
 V.ncliente = async (m, id) => {
   const d = await nApi(); const c = d.leads.find((x) => x.id === id); m = shell('clientes');
   if (!c) { m.innerHTML = top('Cliente') + '<div class="card mu">No encontrado.</div>'; return; }
@@ -836,14 +853,14 @@ let lastVis = Date.now();
 document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') { lastVis = Date.now(); return; } const k = (location.hash.slice(1) || '').split('/')[0]; if (Date.now() - lastVis > 5000 && $('#mn') && ['', 'leads', 'resumen', 'clientes', 'reservas'].includes(k)) route(); });
 async function route() {
   const [k, arg] = (location.hash.slice(1) || home().slice(1)).split('/');
-  const fn = NEG === 'garage' ? (V[k] || V.leads) : ({ resumen: V.nresumen, analiticas: V.nanalisis, clientes: V.nclientes, ncliente: V.ncliente, conexion: V.conexion }[k] || V.nresumen);
+  const fn = NEG === 'garage' ? (V[k] || V.leads) : ({ leads: V.nleads, resumen: V.nresumen, analiticas: V.nanalisis, clientes: V.nclientes, ncliente: V.ncliente, conexion: V.conexion }[k] || V.nresumen);
   try { await fn($('#mn'), arg); window.scrollTo(0, 0); } catch (e) { if (e.message !== 'Sesión caducada') { shell(k).innerHTML = `<div class="card">No se ha podido cargar: ${esc(e.message)}</div>`; } }
 }
 let polling = null;
 async function boot() {
   try { const me = await api('/admin/me'); MIS = me.negs || ['garage']; QUIEN_YO = me.id === 'admin' ? 'Juan' : (me.name || me.id); if (!MIS.includes(NEG)) { NEG = MIS[0]; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } } } catch (e) { return; }
   // La app instalada antigua abría en #resumen: en Plata Garage, la primera vez se va a Leads
-  if (PRIMERA) { PRIMERA = false; if (NEG === 'garage' && (location.hash === '#resumen' || !location.hash)) history.replaceState(null, '', location.pathname + '#leads'); }
+  if (PRIMERA) { PRIMERA = false; if (location.hash === '#resumen' || !location.hash) history.replaceState(null, '', location.pathname + '#leads'); }
   if (NEG !== 'garage') { route(); return; }
   try { const s = await api('/admin/summary'); badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes }; route(); if (!polling) { poll(); polling = setInterval(poll, 60000); } } catch (e) { /* login ya mostrado */ }
 }
