@@ -19,6 +19,7 @@ function send(name, p) {
   p = p || {};
   var g = ga(), m = meta();
   if (g) {
+    if (window.rtApp) window.rtApp(name, p);
     var gp = {};
     for (var k in p) gp[k] = p[k];
     window.gtag('event', name === 'lead' ? 'generate_lead' : name, gp);
@@ -80,6 +81,49 @@ function saveEntry() {
 }
 saveEntry();
 document.addEventListener('rt:consent', saveEntry);
+
+/* Contador propio en la app de gestión: visitas y contactos por canal. Solo con consentimiento de analítica,
+   sin cookies propias ni datos personales (página, canal, idioma y tipo de contacto). */
+var APP = 'https://platagarage-prueba.netlify.app/platagarage/api/w/rotulito', visitSent = false;
+var LANG = PAGE.indexOf('/ca/') === 0 || PAGE === '/ca' ? 'ca' : PAGE.indexOf('/en/') === 0 || PAGE === '/en' ? 'en' : 'es';
+var ENTRADA = (function () { try { return !document.referrer || !/(^|\.)rotulito\.com$/.test(new URL(document.referrer).hostname); } catch (_) { return true; } })();
+function canalDe(s, md, r, click) {
+  s = (s || '').toLowerCase(); md = (md || '').toLowerCase(); r = (r || '').toLowerCase();
+  if (click === 'g' || (/google/.test(s) && /cpc|paid|ads/.test(md))) return 'Google Ads';
+  if (/facebook|instagram|meta|ig|fb/.test(s) && /cpc|paid|ads/.test(md)) return 'Meta Ads';
+  if (click === 'f' && !s) return /instagram/.test(r) ? 'Instagram' : 'Facebook';
+  var t = s || r;
+  if (!t) return 'Directo';
+  if (/instagram/.test(t)) return 'Instagram';
+  if (/facebook|fb\.me/.test(t)) return 'Facebook';
+  if (/whatsapp|wa\.me/.test(t)) return 'WhatsApp';
+  if (/cronoshare/.test(t)) return 'Cronoshare';
+  if (/google|bing|duckduckgo|yahoo|ecosia|qwant/.test(t)) return 'Buscador';
+  if (/chatgpt|openai|perplexity|gemini|copilot/.test(t)) return 'Asistentes IA';
+  return t.replace(/^www\./, '').slice(0, 40);
+}
+function canal() {
+  try {
+    var e = sessionStorage.getItem('rt_entry') || '', g = function (k) { var m = new RegExp('(?:^| )' + k + '=([^ ]+)').exec(e); return m ? m[1] : ''; };
+    if (e) return canalDe(g('source'), g('medium'), g('ref'), '');
+  } catch (_) {}
+  var q = new URLSearchParams(location.search), ref = '';
+  try { if (ENTRADA && document.referrer) ref = new URL(document.referrer).hostname; } catch (_) {}
+  return canalDe(q.get('utm_source'), q.get('utm_medium'), ref, q.get('gclid') ? 'g' : q.get('fbclid') ? 'f' : '');
+}
+function app(d) {
+  if (!(window.siteConsent && window.siteConsent.analyticsAllowed())) return false;
+  d.p = PAGE; d.l = LANG; d.c = canal();
+  try { if (navigator.sendBeacon) navigator.sendBeacon(APP, new Blob([JSON.stringify(d)], {type: 'text/plain'})); } catch (_) {}
+  return true;
+}
+window.rtApp = function (name, p) {
+  var m = {whatsapp_click: 'whatsapp', phone_click: 'teléfono', email_click: 'email'}[name];
+  if (m) app({t: 'contacto', m: m}); else if (name === 'lead') app({t: 'lead', m: (p && p.form_id) || 'formulario'});
+};
+function visit() { if (!visitSent && app({t: 'visita', e: ENTRADA ? 1 : 0})) visitSent = true; }
+visit();
+document.addEventListener('rt:consent', visit);
 
 /* Portada: "view_demos" una vez cuando se ve la sección de ejemplos */
 var ej = document.getElementById('ejemplos');
