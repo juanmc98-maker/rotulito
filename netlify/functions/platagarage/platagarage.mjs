@@ -268,7 +268,7 @@ const SW_JS = `// Panel instalable: siempre carga la versión más reciente (sin
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', () => {});
-self.addEventListener('notificationclick', (e) => { e.notification.close(); e.waitUntil(self.clients.matchAll({ type: 'window' }).then((cs) => (cs[0] ? cs[0].focus() : self.clients.openWindow('/platagarage/admin#resumen')))); });
+self.addEventListener('notificationclick', (e) => { e.notification.close(); e.waitUntil(self.clients.matchAll({ type: 'window' }).then((cs) => (cs[0] ? cs[0].focus() : self.clients.openWindow('/platagarage/admin')))); });
 `;
 
 // Aviso de bajada de precio a quien lo pidió en la ficha (con su consentimiento y baja en un clic)
