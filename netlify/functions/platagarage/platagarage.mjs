@@ -199,6 +199,8 @@ Los datos son orientativos y no vinculantes; confírmalos con Plata Garage antes
 const ETAPAS = ['nuevo', 'contactado', 'cita', 'visitado', 'financiera', 'reserva', 'vendido', 'transferencia', 'entregado', 'permiso', 'enviado', 'cerrado', 'perdido'];
 const POSTVENTA = ['vendido', 'transferencia', 'entregado', 'permiso', 'enviado', 'cerrado'];
 const MOTIVOS = ['Precio', 'Financiación denegada', 'Compró otro', 'No contesta', 'Pago en efectivo', 'Otro'];
+// Solo lo que escribió el cliente (sin plantilla, código ni enlaces del portal); si no se distingue, nada
+const msgPortal = (m) => { let t = String(m || ''); if (/<[a-z!]/i.test(t) || /Hola Plata Garage|Tienes un nuevo contacto|Email de coches/i.test(t)) return ''; t = t.replace(/\{[^\n]*\}/g, ' ').replace(/https?:\/\/\S+/g, ' ').replace(/\[[^\]]*\]/g, ' ').replace(/\s+/g, ' ').trim(); return /[{}"<>]/.test(t) ? '' : t.slice(0, 90); };
 const ORIGEN_PG = (leads) => { const p = leads.find((l) => l.tipo === 'portal'); if (!p) return 'Web'; const f = String(p.fuente || ''); return /coches/i.test(f) ? 'Coches.net' : /wallapop/i.test(f) ? 'Wallapop' : (f || 'Portal'); };
 const pkey = (t) => String(t || '').replace(/\D/g, '').slice(-9);
 async function buildClientes() {
@@ -215,7 +217,7 @@ async function buildClientes() {
   t.forEach((x) => add(x, 'tasacion', `Tasación: ${x.marca || ''} ${x.modelo || ''} ${x.anio || ''}`));
   e.forEach((x) => add(x, 'envio', `Envío a ${x.cp || ''} · ${x.cocheNombre || ''}`));
   m.forEach((x) => add(x, 'mensaje', `Mensaje: ${(x.asunto || x.mensaje || '').slice(0, 80)}`));
-  po.forEach((x) => add(x, 'portal', `${x.fuente || 'Portal'}${x.tipoContacto ? ' (' + x.tipoContacto + ')' : ''}: ${x.cocheNombre || ''}${x.mensaje ? ' · ' + x.mensaje.slice(0, 60) : ''}`));
+  po.forEach((x) => { const t = msgPortal(x.mensaje); add(x, 'portal', `${x.fuente || 'Portal'}${x.tipoContacto && x.tipoContacto !== 'Mensaje' ? ' · ' + x.tipoContacto : ''}${t ? ': ' + t : ''}`); });
   bu.forEach((x) => add(x, 'busqueda', `Busca: ${[x.marca, x.modelo].filter(Boolean).join(' ') || 'cualquiera'} hasta ${x.presupuesto || '?'} €`));
   const td = today(); const r = (s) => ETAPAS.indexOf(s);
   const out = [...map.values()].map((c) => {
