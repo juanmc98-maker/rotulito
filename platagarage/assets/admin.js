@@ -334,9 +334,26 @@ function inbox({ key, path, title, sub, states, body }) {
 // Agenda de 7 días a partir de hoy (o de la semana elegida)
 function agenda(m, list, off = 0) {
   const d0 = new Date(); d0.setDate(d0.getDate() + off * 7); const days = [...Array(7)].map((_, i) => { const d = new Date(d0); d.setDate(d.getDate() + i); return d.toISOString().slice(0, 10); });
-  m.innerHTML = top('Reservas', 'Agenda de los próximos 7 días.', `<button class="btn g" id="ap">‹ Anterior</button><button class="btn g" id="an">Siguiente ›</button>`) + `<div class="filt"><button class="on">Agenda semanal</button><button data-f="todas">Lista</button></div>
+  m.innerHTML = top('Reservas', 'Agenda de los próximos 7 días.', `<button class="btn g" id="ap">‹ Anterior</button><button class="btn g" id="an">Siguiente ›</button>`) + `<div class="filt"><button class="on">Agenda semanal</button><button data-mes>Mes</button><button data-f="todas">Lista</button></div>
   <div class="ag">${days.map((d) => { const bs = list.filter((b) => b.fecha === d && b.status !== 'cancelada').sort((a, z) => a.hora.localeCompare(z.hora)); return `<div class="card"><h4>${new Date(d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' })}</h4>${bs.map((b) => `<div class="ev ${b.status}"><b>${b.hora}</b> ${esc(b.nombre)}<span>${esc(b.cocheNombre || b.motivo || '')}</span><div class="row" style="margin-top:6px">${badge(b.status)}<a class="btn g s" target="_blank" rel="noopener" href="${recordatorio(b)}">${IC.wa}Recordar</a></div></div>`).join('') || '<p class="mu sm">Sin citas</p>'}</div>`; }).join('')}</div>`;
   $('#ap').onclick = () => agenda(m, list, off - 1); $('#an').onclick = () => agenda(m, list, off + 1);
+  m.querySelector('[data-f]').onclick = () => (location.hash = '#reservas/todas');
+  m.querySelector('[data-mes]').onclick = () => mes(m, list, 0);
+}
+// Mes completo: cuadrícula de lunes a domingo con las citas de cada día
+function mes(m, list, off = 0) {
+  const n = new Date(); const d0 = new Date(n.getFullYear(), n.getMonth() + off, 1); const y = d0.getFullYear(), mo = d0.getMonth();
+  const pad = (d0.getDay() + 6) % 7, dias = new Date(y, mo + 1, 0).getDate(), hoy = new Date().toLocaleDateString('sv-SE');
+  const iso = (d) => `${y}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const act = list.filter((b) => b.status !== 'cancelada');
+  const celdas = [...Array(pad).fill(''), ...[...Array(dias)].map((_, i) => i + 1)];
+  const tit = d0.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const nMes = act.filter((b) => (b.fecha || '').startsWith(iso(1).slice(0, 7))).length;
+  m.innerHTML = top('Reservas', `${tit[0].toUpperCase() + tit.slice(1)} · ${nMes} cita${nMes === 1 ? '' : 's'}`, `<button class="btn g" id="ap">‹ Anterior</button><button class="btn g" id="an">Siguiente ›</button>`) +
+    `<div class="filt"><button data-sem>Agenda semanal</button><button class="on">Mes</button><button data-f="todas">Lista</button></div>
+    <div class="mes">${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((x) => `<div class="mh">${x}</div>`).join('')}${celdas.map((d) => { if (!d) return '<div class="md v"></div>'; const bs = act.filter((b) => b.fecha === iso(d)).sort((a, z) => a.hora.localeCompare(z.hora)); return `<div class="md${iso(d) === hoy ? ' hoy' : ''}"><b>${d}</b>${bs.map((b) => `<a class="mc ${b.status}" href="#reservas/todas" title="${esc(b.nombre)} · ${esc(b.cocheNombre || b.motivo || '')}">${b.hora} ${esc(String(b.nombre).split(' ')[0])}</a>`).join('')}</div>`; }).join('')}</div>`;
+  $('#ap').onclick = () => mes(m, list, off - 1); $('#an').onclick = () => mes(m, list, off + 1);
+  m.querySelector('[data-sem]').onclick = () => agenda(m, list, 0);
   m.querySelector('[data-f]').onclick = () => (location.hash = '#reservas/todas');
 }
 const bx = (k, v) => `<div class="box2" style="flex:1;min-width:150px"><small>${k}</small>${v}</div>`;
@@ -643,8 +660,9 @@ V.leads = async (m) => {
     sec('Nuevos sin contestar', nuevos, 'No hay leads nuevos.') + sec('Pendientes', pend, 'Nada pendiente.') + sec('En marcha', resto, 'Nada en marcha.');
   m.querySelectorAll('a[data-k]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.k); if (c) a.href = waLink(c.telefono, msgWa(a.dataset.q, cocheDe(c, cars))); if (c && c.etapa === 'nuevo') api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: 'contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
 };
+let CARS_C = [];
 V.cliente = async (m, key) => {
-  const c = (await api('/admin/clientes')).find((x) => x.key === key); m = shell('clientes');
+  const [cl, cs] = await Promise.all([api('/admin/clientes'), api('/admin/cars').catch(() => [])]); CARS_C = cs; const c = cl.find((x) => x.key === key); m = shell('clientes');
   if (!c) { m.innerHTML = top('Cliente') + '<div class="card mu">No encontrado.</div>'; return; }
   const av = c.etapa === 'perdido' ? [] : avisos(c, 'garage', etq); const f = c.fechas || {};
   m.innerHTML = top(esc(c.nombre), `${esc(c.telefono)}${c.email ? ' · ' + esc(c.email) : ''} · ${esc(c.origen)} · última actividad ${fdt(c.last)}`, `<a class="btn g" href="#clientes/${POST_PG.includes(c.etapa) ? 'cierre' : 'venta'}">Volver</a>`) +
@@ -652,7 +670,7 @@ V.cliente = async (m, key) => {
     `<div class="two"><div class="card"><h3 style="margin-bottom:12px">Estado</h3><label>Etapa del embudo<select id="et"><option value="">Automático (ahora: ${etq(c.auto)})</option>${optsPG(c.manual)}</select></label>
     <p class="mu sm">En automático avanza solo con sus citas, su reserva o la venta. Sin movimiento en 45 días pasa a "Perdido" (salvo si ya está vendido).</p>
     ${c.etapa === 'perdido' ? `<p class="sm" style="margin:6px 0 10px">Motivo de pérdida: <b>${esc([c.motivo, c.motivoTxt].filter(Boolean).join(' · ') || 'sin indicar')}</b></p>` : ''}
-    <div class="fg" style="grid-template-columns:1fr 1fr;margin-top:6px"><label>Financiera: banco<input id="bk" value="${esc(c.banco)}" placeholder="Solo si financia"></label><label>Estado de la financiación<select id="fe">${['', 'en estudio', 'aprobada', 'denegada'].map((x) => `<option value="${x}"${x === c.finEstado ? ' selected' : ''}>${x ? x[0].toUpperCase() + x.slice(1) : '—'}</option>`).join('')}</select></label>
+    <div class="fg" style="grid-template-columns:1fr 1fr;margin-top:6px"><label>Financiera${(() => { const own = (cocheDe(c, CARS_C) || {}).owner; const ops = own === 'Juan' ? ['Confia'] : ['Confia', 'Lendrock']; if (c.banco && !ops.includes(c.banco)) ops.push(c.banco); return `<select id="bk"><option value="">No financia</option>${ops.map((o) => `<option${o === c.banco ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>`; })()}</label><label>Estado de la financiación<select id="fe">${['', 'en estudio', 'aprobada', 'denegada'].map((x) => `<option value="${x}"${x === c.finEstado ? ' selected' : ''}>${x ? x[0].toUpperCase() + x.slice(1) : '—'}</option>`).join('')}</select></label>
     <label style="grid-column:1/-1">Nº de certificado de Correos (permiso)<input id="ce" value="${esc(c.certificado)}" placeholder="Al enviar el permiso definitivo"></label></div>
     <label style="margin-top:10px">Notas internas<textarea id="nt" rows="5">${esc(c.notas || '')}</textarea></label><div class="row" style="margin-top:12px"><button class="btn" id="sv">Guardar</button><a class="btn g" target="_blank" rel="noopener" href="${waLink(c.telefono, 'Hola ' + String(c.nombre).split(' ')[0] + ', te escribimos de Plata Garage. ')}">${IC.wa}WhatsApp</a><a class="btn g" href="tel:${esc(c.telefono)}">Llamar</a>${c.email ? `<a class="btn g" href="mailto:${esc(c.email)}">Email</a>` : ''}</div>
     ${Object.keys(f).length ? `<h3 style="margin:18px 0 8px">Fechas de cada paso</h3>${ETAPAS.filter(([k]) => f[k]).map(([k, t]) => `<div class="li"><div><b>${t}</b></div><div class="r">${fdt(f[k])}</div></div>`).join('')}` : ''}</div>
