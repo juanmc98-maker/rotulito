@@ -555,6 +555,7 @@ async function hit(req, context) {
     const g = context?.geo; if (g?.city) inc('city', clip(g.city, 60)); if (g?.country?.code) inc('pais', clip(g.country.code, 4));
     if (b.n) inc('tot', 'nuevas');
   }
+  else if (b.e === 'q') { const q = clip(String(b.q || '').replace(/[^a-z0-9ñ .,€-]/gi, ' ').replace(/\s+/g, ' ').trim(), 80); if (q) { inc('q', q); if (!Number(b.n)) inc('q0', q); } }
   else if (b.e === 'cwv') {
     const tpl = ['home', 'catalogo', 'ficha', 'landing', 'cita', 'otra'].includes(b.t) ? b.t : 'otra';
     const B = { lcp: [1000, 1500, 2000, 2500, 3000, 4000, 6000], inp: [100, 200, 300, 500, 800], cls: [0.05, 0.1, 0.15, 0.25, 0.4] };

@@ -236,10 +236,12 @@ if((m=q.match(/(?:desde|a partir de|del|de|posterior a|>)?\\s*\\b((?:19|20)\\d\\
 const F=[['diesel','Diésel'],['gasoil','Diésel'],['tdi','Diésel'],['gasolina','Gasolina'],['tsi','Gasolina'],['hibrido','Híbrido'],['hybrid','Híbrido'],['electrico','Eléctrico'],['glp','GLP']];F.forEach(([w,v])=>{if(q.includes(w)){o.fuel=v;q=q.split(w).join(' ')}});
 if(/\\bauto(matico)?s?\\b|\\bdsg\\b/.test(q)){o.trans='Automático';q=q.replace(/\\bauto(matico)?s?\\b|\\bdsg\\b/g,' ')}else if(/\\bmanual(es)?\\b/.test(q)){o.trans='Manual';q=q.replace(/\\bmanual(es)?\\b/g,' ')}
 const C=[['suv','SUV'],['todoterreno','SUV'],['4x4','SUV'],['familiar','Familiar'],['ranchera','Familiar'],['compacto','Compacto'],['utilitario','Compacto'],['berlina','Berlina'],['sedan','Berlina'],['monovolumen','Monovolumen'],['coupe','Coupé'],['cabrio','Cabrio'],['descapotable','Cabrio'],['furgoneta','Furgoneta']];C.forEach(([w,v])=>{const r=new RegExp('\\\\b'+w+'s?\\\\b');if(r.test(q)){o.body=v;q=q.replace(r,' ')}});
+const SYN=[['peque(?:no|na|nito)s?','Compacto'],['urbanos?','Compacto'],['ciudad','Compacto'],['grandes?','Familiar|SUV|Monovolumen'],['espacios[oa]s?','Familiar|SUV|Monovolumen'],['familia','Familiar|SUV|Monovolumen'],['maletero','Familiar|SUV|Monovolumen'],['deportivos?','Coupé|Cabrio'],['furgos?','Furgoneta'],['trabajo','Furgoneta']];SYN.forEach(([w,v])=>{const r=new RegExp('\\\\b'+w+'\\\\b');if(r.test(q)){o.bodies=v.split('|');if(!o.body)o.body=v.split('|').join(' / ');q=q.replace(r,' ')}});
+if(/\\b(barat[oa]s?|economic[oa]s?)\\b/.test(q)){o.cheap=1;q=q.replace(/\\b(barat[oa]s?|economic[oa]s?)\\b/g,' ')}
 if((m=q.match(/\\b7\\s*plazas\\b/))){o.seats=7;q=q.replace(m[0],' ')}
-const STOP=new Set(['de','del','la','el','los','las','un','una','con','y','o','para','que','coche','coches','busco','quiero','en','sabadell','segunda','mano','ocasion','por','a','me','km','euros','eur','€','buen','barato','precio','color','plazas']);
+const STOP=new Set(['de','del','la','el','los','las','un','una','con','y','o','para','que','coche','coches','busco','quiero','en','sabadell','segunda','mano','ocasion','por','a','me','km','euros','eur','€','buen','barato','precio','color','plazas','algo','uno','bueno','necesito','tipo','mas','muy','poco','gaste','gastar','consuma','fiable']);
 o.words=q.split(/[^a-z0-9]+/).filter(w=>w.length>1&&!STOP.has(w));return o}
-function nlqMatch(o,d){if(o.kmax&&+d.k>o.kmax)return false;if(o.ymin&&+d.y<o.ymin)return false;if(o.fuel&&!NZ(d.f).startsWith(NZ(o.fuel).slice(0,5)))return false;if(o.trans&&d.t!==o.trans)return false;if(o.body&&d.c!==o.body)return false;if(o.seats&&(+d.e||0)<o.seats)return false;return (o.words||[]).every(w=>d.x.includes(w))}
+function nlqMatch(o,d){if(o.kmax&&+d.k>o.kmax)return false;if(o.ymin&&+d.y<o.ymin)return false;if(o.fuel&&!NZ(d.f).startsWith(NZ(o.fuel).slice(0,5)))return false;if(o.trans&&d.t!==o.trans)return false;if(o.bodies?!o.bodies.includes(d.c):(o.body&&d.c!==o.body))return false;if(o.seats&&(+d.e||0)<o.seats)return false;return (o.words||[]).every(w=>d.x.includes(w))}
 function nlqTxt(o){const p=[];if(o.words&&o.words.length)p.push('«'+o.words.join(' ')+'»');if(o.body)p.push(o.body);if(o.fuel)p.push(o.fuel);if(o.trans)p.push(o.trans.toLowerCase());if(o.pmax)p.push('hasta '+o.pmax.toLocaleString('es-ES')+' €');if(o.kmax)p.push('hasta '+o.kmax.toLocaleString('es-ES')+' km');if(o.ymin)p.push('desde '+o.ymin);if(o.seats)p.push(o.seats+' plazas');return p.length?'Buscando: '+p.join(' · '):''}`;
 
 // Medición propia (sin cookies ni datos personales)
@@ -318,10 +320,14 @@ ${buscaMini({ titulo: 'Ahora mismo no tenemos un coche así', sub: 'El stock cam
   const script = `const g=document.getElementById('g'),cs=[...g.children],v=id=>document.getElementById(id).value;
 ${NLQ_JS}
 let Q={};const qi=document.getElementById('qi');
-function run(){const m=v('m'),f=v('f'),t=v('t'),c=v('c'),p=Math.min(+v('p')||1e9,Q.pmax||1e9),o=v('o');let n=0;
+function run(){const m=v('m'),f=v('f'),t=v('t'),c=v('c'),p=Math.min(+v('p')||1e9,Q.pmax||1e9),o=Q.cheap&&v('o')==='p-'?'p+':v('o');let n=0;
 const k=o[0]==='p'?'p':o[0]==='k'?'k':o[0]==='y'?'y':'s',dir=o[1]==='+'?1:-1;
 cs.sort((a,b)=>{const x=a.dataset[k],y=b.dataset[k];return (k==='s'?x.localeCompare(y):(+x-+y))*dir}).forEach(e=>{const d=e.dataset,ok=(!m||d.m===m)&&(!f||d.f===f)&&(!t||d.t===t)&&(!c||d.c===c)&&+d.p<=p&&nlqMatch(Q,d);e.style.display=ok?'':'none';if(ok)n++;g.appendChild(e)});
-document.getElementById('n').textContent=n+' resultado'+(n===1?'':'s');const z=document.getElementById('z'),zf=z.querySelector('form'),qq=document.getElementById('q').value.trim();z.style.display=n?'none':'';
+let near=0;if(!n&&(document.getElementById('q').value.trim()||m||f||t||c||p<1e9)){
+// Sin coincidencias exactas: enseñamos lo más parecido (cuantos más criterios cumple, antes sale)
+const sc=e=>{const d=e.dataset;let s=0;if(m&&d.m===m)s+=3;if(f&&d.f===f)s+=2;if(t&&d.t===t)s+=2;if(c&&d.c===c)s+=2;if(Q.bodies&&Q.bodies.includes(d.c))s+=3;if(Q.fuel&&NZ(d.f).startsWith(NZ(Q.fuel).slice(0,5)))s+=2;if(Q.trans&&d.t===Q.trans)s+=2;if(p<1e9)s+=+d.p<=p*1.15?2:-1;(Q.words||[]).forEach(w=>{if(d.x.includes(w))s+=2});return s};
+cs.map(e=>[sc(e),e]).sort((a,b)=>b[0]-a[0]||+a[1].dataset.p-+b[1].dataset.p).slice(0,6).forEach(([s,e])=>{e.style.display='';g.prepend(e);near++})}
+document.getElementById('n').innerHTML=near?'<b>No tenemos exactamente eso.</b> Te enseñamos lo más parecido que hay ahora, y si quieres te lo buscamos:':n+' resultado'+(n===1?'':'s');const z=document.getElementById('z'),zf=z.querySelector('form'),qq=document.getElementById('q').value.trim();z.style.display=n?'none':'';
 zf.marca.value=m;zf.combustible.value=f;zf.cambio.value=t;if(p<1e9&&!zf.presupuesto.dataset.u)zf.presupuesto.value=p;zf.mensaje.value='Buscó en el stock: '+[qq,m,f,t,c,p<1e9?'hasta '+p+' €':''].filter(Boolean).join(', ');
 const af=document.getElementById('avf');af.busca.value=[qq,m,f,t,c].filter(Boolean).join(', ').slice(0,120)||'Cualquier coche';af.max.value=p<1e9?p:''}
 document.querySelector('#z input[name=presupuesto]').addEventListener('input',e=>e.target.dataset.u=1);
@@ -330,7 +336,9 @@ f.onsubmit=async e=>{e.preventDefault();const m=f.querySelector('.msg');m.classN
 const fd=new FormData(f);fd.append('origen',location.pathname+location.search);fd.append('canal',window.pgSrc||'');const r=await fetch('${B}/api/alerta',{method:'POST',body:fd});const j=await r.json().catch(()=>({}));if(!r.ok){m.textContent=j.error||'Error';m.className='msg err';return}f.innerHTML='<p class="msg ok" style="display:block">Hecho. Te avisaremos cuando entre un coche así.</p>'}})();
 document.querySelectorAll('.filters select').forEach(s=>s.addEventListener('change',run));
 const qf=document.getElementById('qf');qf.onsubmit=e=>{e.preventDefault();doQ(true)};
-function doQ(push){const q=document.getElementById('q').value.trim();Q=nlq(q);qi.textContent=q?nlqTxt(Q):'';if(push){const u=new URL(location.href);q?u.searchParams.set('q',q):u.searchParams.delete('q');history.replaceState(null,'',u)}run()}
+function doQ(push){const q=document.getElementById('q').value.trim();Q=nlq(q);qi.textContent=q?nlqTxt(Q):'';if(push){const u=new URL(location.href);q?u.searchParams.set('q',q):u.searchParams.delete('q');history.replaceState(null,'',u)}run();
+// Qué busca la gente (anónimo, sin cookies): sirve para saber qué coches buscar y qué falta en la web
+if(q){const n=cs.filter(e=>e.style.display!=='none').length,near=/parecido/.test(document.getElementById('n').textContent);try{navigator.sendBeacon('${B}/api/hit',new Blob([JSON.stringify({e:'q',q:NZ(q).slice(0,80),n:near?0:n})],{type:'application/json'}))}catch(x){}}}
 doQ(false);`;
   return page({ title: 'Coches de segunda mano en Sabadell | Plata Garage', desc: `${cars.length} coches de ocasión en Sabadell con garantía de 12 meses. Filtra por marca, precio y combustible y pide cita.`, on: 'veh', body, script: FORM_JS + script, alert: !vendido, path: '/vehiculos/', noindex: !!q.q || !!vendido });
 }
@@ -494,7 +502,7 @@ export function privacidad() {
 <h2>1. Responsables del tratamiento</h2><p>Los datos que nos facilitas en esta web los tratan, como corresponsables, los profesionales autónomos que operan bajo el nombre comercial «Plata Garage»:</p>${TITULARES}<p>Cada uno trata los datos de los clientes con los que contrata. Contacto para cualquier cuestión de privacidad: info@platagarage.com · ${TEL}.</p>
 <h2>2. Qué datos tratamos y para qué</h2><ul><li><b>Citas, reservas, envíos, tasaciones, "Te lo buscamos" y mensajes:</b> nombre, teléfono, email y lo que nos cuentes en el formulario, para atender tu solicitud y contactarte por teléfono, WhatsApp o email sobre ella. Con tu solicitud guardamos también la página desde la que nos escribes y de dónde llegaste a la web (por ejemplo, Google), para saber qué funciona.</li>
 <li><b>Avisos de coches nuevos:</b> tu email y lo que buscas, para enviarte avisos de coches en stock que encajen. Solo si marcas la casilla, y puedes darte de baja cuando quieras respondiendo a cualquier aviso o escribiendo a info@platagarage.com.</li>
-<li><b>Medición de la web:</b> contamos visitas por página, de dónde llegan (por ejemplo, Google o Facebook), el tipo de dispositivo y la ciudad aproximada, siempre de forma agregada, sin cookies y sin guardar tu IP ni ningún dato que te identifique.</li></ul>
+<li><b>Medición de la web:</b> contamos visitas por página, de dónde llegan (por ejemplo, Google o Facebook), el tipo de dispositivo, la ciudad aproximada y lo que se escribe en el buscador de coches, siempre de forma agregada, sin cookies y sin guardar tu IP ni ningún dato que te identifique.</li></ul>
 <h2>3. Base legal</h2><p>Tu consentimiento al enviar cada formulario o activar los avisos (art. 6.1.a RGPD) y la aplicación de medidas precontractuales a petición tuya (art. 6.1.b RGPD). La medición agregada se basa en nuestro interés legítimo en saber qué funciona en la web (art. 6.1.f RGPD), sin datos personales.</p>
 <h2>4. Conservación</h2><p>Mientras dure la gestión de tu solicitud y, después, durante los plazos legales aplicables. Si no llega a haber operación, borramos los datos como máximo a los 12 meses. Los avisos de coches nuevos, hasta que te des de baja.</p>
 <h2>5. Destinatarios</h2><p>No cedemos tus datos a terceros salvo obligación legal. Usamos proveedores que actúan como encargados del tratamiento: Netlify (alojamiento de la web y de los datos, y envío de los avisos internos por correo) y Google (correo electrónico). Si nos escribes por WhatsApp, se aplican también las condiciones de WhatsApp (Meta).</p>
@@ -596,7 +604,7 @@ export function notFound(msg = 'Esta página no existe o el coche ya no está di
   return page({ noindex: true, title: 'Página no encontrada | Plata Garage', desc: msg, body: `<section><div class="w"><div class="cta"><h2>Vaya…</h2><p class="lead">${esc(msg)}</p><div class="row"><a class="btn" href="${B}/vehiculos/">Ver coches en stock</a></div></div></div></section>` });
 }
 
-const AV = '14';
+const AV = '15';
 export function adminShell() {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Backoffice · Plata Garage</title><link rel="icon" href="${B}/assets/icon-192.png"><link rel="manifest" href="${B}/assets/manifest.webmanifest"><link rel="apple-touch-icon" href="${B}/assets/icon-192.png"><meta name="theme-color" content="#050505"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Plata Garage"><link rel="stylesheet" href="${B}/assets/admin.css?v=${AV}"></head><body><div id="app"></div><script src="${B}/assets/admin.js?v=${AV}"></script></body></html>`;
 }
