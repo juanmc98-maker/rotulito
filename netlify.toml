@@ -1,4 +1,5 @@
-# Copia de pruebas de Plata Garage en Netlify (rotulito.com sigue en GitHub Pages)
+# Copia de pruebas de Plata Garage en Netlify (rotulito.com sigue en GitHub Pages).
+# Los commits con "publicar" se suben de uno en uno y separados para que Netlify no los salte.
 [build]
   publish = "."
   functions = "netlify/functions"
