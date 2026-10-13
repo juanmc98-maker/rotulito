@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pedir cita · Taller Rodamar · Demo de Rotulito</title>
+<meta name="robots" content="noindex,follow">
+<meta name="description" content="Demo de una web con reserva de citas para un negocio ficticio (taller mecánico), hecha por Rotulito.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='14' width='52' height='36' rx='6' fill='%23e4322b'/%3E%3Crect x='12' y='20' width='40' height='24' rx='3' fill='%23fff4d6'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#f2f2ef;--ink:#16181b;--mut:#5d6168;--acc:#ffcc00;--line:#d9d9d3;--card:#fff;--ok:#1f7a3a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.rt-demo{background:#16181b;color:#fff;font-size:14px}.rt-demo .in{max-width:980px;margin:0 auto;padding:8px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.rt-demo a{color:#fff}.rt-demo .go{background:var(--acc);color:#16181b;padding:6px 12px;border-radius:4px;text-decoration:none;font-weight:700}
+.w{max-width:980px;margin:0 auto;padding:0 16px}
+header.top{background:#fff;border-bottom:1px solid var(--line)}header.top .w{display:flex;justify-content:space-between;align-items:center;height:60px}
+.logo{font-weight:800;text-transform:uppercase;letter-spacing:.02em}.logo i{font-style:normal;background:var(--acc);padding:2px 7px;margin-right:6px;border-radius:3px}
+h1{font-size:clamp(26px,5vw,38px);line-height:1.15;margin:28px 0 8px}.sub{color:var(--mut);margin:0 0 22px}
+.step{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:18px;margin:0 0 14px}
+.step h2{font-size:17px;margin:0 0 12px}.step h2 b{display:inline-block;width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;text-align:center;line-height:26px;font-size:14px;margin-right:8px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}.opt{border:1.5px solid var(--line);background:#fff;border-radius:6px;padding:10px 12px;cursor:pointer;font:inherit;text-align:left}
+.opt small{display:block;color:var(--mut)}.opt[aria-pressed=true]{border-color:var(--ink);background:var(--acc)}
+.opt:disabled{opacity:.35;cursor:not-allowed;text-decoration:line-through}
+.days{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}.days .opt{min-width:76px;text-align:center}
+.slots .opt{min-width:72px;text-align:center}
+label{display:block;font-weight:600;margin:0 0 10px}input[type=text],input[type=tel]{display:block;width:100%;margin-top:4px;padding:11px;border:1.5px solid var(--line);border-radius:6px;font:inherit}
+.chk{font-weight:400;display:flex;gap:8px;align-items:flex-start}
+.btn{background:var(--ink);color:#fff;border:0;border-radius:6px;padding:13px 18px;font:inherit;font-weight:700;cursor:pointer}.btn:disabled{opacity:.4;cursor:not-allowed}
+.err{color:#b3261e;font-size:14px;margin:4px 0 10px}.fine{font-size:13px;color:var(--mut)}
+.done{background:#e8f5ec;border:1.5px solid var(--ok);border-radius:6px;padding:18px}
+.tip{background:#fff8d6;border:1px dashed #c9a400;border-radius:6px;padding:12px 14px;font-size:14px;margin:18px 0}
+footer{padding:28px 0;color:var(--mut);font-size:13px}
+</style>
+</head>
+<body>
+<div class="rt-demo" role="note"><div class="in">
+<a class="back" href="/web-con-citas/">← Volver a Rotulito</a>
+<span><b>DEMO</b> · Negocio ficticio. Los datos se guardan solo en tu navegador y no se envían a nadie.</span>
+<a class="go" href="/demo/citas-panel.html">Ver el panel del dueño →</a>
+</div></div>
+<header class="top"><div class="w"><div class="logo"><i>R</i>Taller Rodamar</div><a href="/demo/taller">Volver a la web</a></div></header>
+<main class="w">
+<h1>Pide cita en el taller</h1>
+<p class="sub">Elige qué necesitas, el día y la hora. Te confirmamos por WhatsApp.</p>
+
+<div class="step"><h2><b>1</b>¿Qué necesitas?</h2><div class="opts" id="serv"></div></div>
+<div class="step"><h2><b>2</b>Elige el día</h2><div class="days opts" id="days"></div></div>
+<div class="step"><h2><b>3</b>Elige la hora</h2><div class="slots opts" id="slots"><p class="fine">Primero elige un servicio y un día.</p></div></div>
+<div class="step" id="datos"><h2><b>4</b>Tus datos</h2>
+<label>Nombre<input type="text" id="nombre" autocomplete="name" maxlength="80" placeholder="Usa un nombre inventado"></label>
+<label>Teléfono<input type="tel" id="tel" inputmode="tel" maxlength="15" placeholder="600 000 000"></label>
+<p class="err" id="err" hidden></p>
+<label class="chk"><input type="checkbox" id="priv"> <span>He leído la política de privacidad. <small class="fine">(En una web real, aquí va el enlace y la información de quién trata tus datos.)</small></span></label>
+<button class="btn" id="ok" disabled>Confirmar cita</button>
+</div>
+<div id="res" hidden></div>
+<div class="tip"><b>Esto es lo que ve tu cliente.</b> En el <a href="/demo/citas-panel.html">panel del dueño</a> verás esta cita al momento, podrás marcarla como hecha, anularla o bloquear horas.</div>
+</main>
+<footer><div class="w">Taller Rodamar es un negocio inventado. Demo de <a href="/web-con-citas/">Rotulito</a>.</div></footer>
+<script src="/demo/citas.js"></script>
+<script>
+(function(){var C=window.RTCitas,s=C.load(),sel={serv:null,dia:null,hora:null};
+var $=function(i){return document.getElementById(i)};
+function btn(html,on,dis,pressed){var b=document.createElement('button');b.type='button';b.className='opt';b.innerHTML=html;b.disabled=!!dis;b.setAttribute('aria-pressed',pressed?'true':'false');b.onclick=on;return b}
+function render(){var se=$('serv');se.innerHTML='';C.SERVICIOS.forEach(function(x){se.appendChild(btn(x.n+'<small>'+x.min+' min</small>',function(){sel.serv=x.id;sel.hora=null;render()},false,sel.serv===x.id))});
+var dd=$('days');dd.innerHTML='';var hoy=new Date();for(var i=0;i<14;i++){(function(d){var dia=C.ymd(d),ab=C.abierto(d);var t=d.toLocaleDateString('es-ES',{weekday:'short'})+'<small>'+d.getDate()+'/'+(d.getMonth()+1)+'</small>';dd.appendChild(btn(t,function(){sel.dia=dia;sel.hora=null;render()},!ab,sel.dia===dia))})(C.addDays(hoy,i))}
+var sl=$('slots');if(sel.serv&&sel.dia){sl.innerHTML='';var hs=C.huecos(s,sel.dia,C.serv(sel.serv).min);if(!hs.length)sl.innerHTML='<p class="fine">No quedan horas este día.</p>';hs.forEach(function(h){sl.appendChild(btn(h.h,function(){sel.hora=h.h;render()},!h.libre,sel.hora===h.h))})}
+check()}
+function check(){$('ok').disabled=!(sel.serv&&sel.dia&&sel.hora&&$('priv').checked)}
+$('priv').onchange=check;
+$('ok').onclick=function(){var n=$('nombre').value.trim(),t=$('tel').value.replace(/\D/g,''),e=$('err');
+if(n.length<2){e.textContent='Escribe un nombre.';e.hidden=false;return}
+if(!/^[6789]\d{8}$/.test(t)){e.textContent='Escribe un teléfono español de 9 cifras.';e.hidden=false;return}
+e.hidden=true;s=C.load();var c={id:'c'+Date.now(),dia:sel.dia,hora:sel.hora,serv:sel.serv,nombre:n,tel:t.replace(/(\d{3})(\d{3})(\d{3})/,'$1 $2 $3'),estado:'pendiente',nueva:true};s.citas.push(c);C.save(s);
+$('datos').hidden=true;var r=$('res');r.hidden=false;r.className='done';r.innerHTML='<h2 style="margin:0 0 6px">Cita pedida ✓</h2><p style="margin:0 0 10px">'+C.serv(c.serv).n+' · '+C.fechaLarga(c.dia)+' a las '+c.hora+'.</p><p class="fine" style="margin:0 0 12px">En una web real te llegaría la confirmación por WhatsApp.</p><a class="btn" style="display:inline-block;text-decoration:none" href="/demo/citas-panel.html">Ver cómo le llega al dueño →</a>';
+render()};
+render()})();
+</script>
+</body>
+</html>

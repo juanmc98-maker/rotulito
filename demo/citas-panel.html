@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panel de citas · Taller Rodamar · Demo de Rotulito</title>
+<meta name="robots" content="noindex,follow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='14' width='52' height='36' rx='6' fill='%23e4322b'/%3E%3Crect x='12' y='20' width='40' height='24' rx='3' fill='%23fff4d6'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#f2f2ef;--ink:#16181b;--mut:#5d6168;--acc:#ffcc00;--line:#d9d9d3;--ok:#1f7a3a;--no:#b3261e}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.rt-demo{background:#16181b;color:#fff;font-size:14px}.rt-demo .in{max-width:640px;margin:0 auto;padding:8px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}.rt-demo a{color:#fff}
+.app{max-width:640px;margin:0 auto;padding:0 16px 40px}
+.bar{display:flex;justify-content:space-between;align-items:center;padding:16px 0 8px}.bar h1{font-size:20px;margin:0}.bar small{color:var(--mut);display:block;font-weight:400;font-size:13px}
+.tabs{display:flex;gap:6px;margin:6px 0 14px;overflow-x:auto}.tabs button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap}.tabs button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px}.kpi div{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}.kpi b{display:block;font-size:22px}.kpi span{font-size:12px;color:var(--mut)}
+.day{font-weight:700;margin:18px 0 8px}.day::first-letter{text-transform:uppercase}
+.c{background:#fff;border:1px solid var(--line);border-left:5px solid var(--acc);border-radius:8px;padding:12px;margin:0 0 8px}
+.c.hecha{border-left-color:var(--ok);opacity:.7}.c.anulada{border-left-color:var(--no);opacity:.5}.c .t{display:flex;justify-content:space-between;gap:8px;font-weight:700}.c .m{color:var(--mut);font-size:14px;margin:2px 0 8px}
+.new{background:var(--acc);font-size:11px;padding:1px 6px;border-radius:3px;margin-left:6px;vertical-align:middle}
+.acts{display:flex;gap:6px;flex-wrap:wrap}.acts button,.acts a{font:inherit;font-size:13px;border:1.5px solid var(--line);background:#fff;border-radius:6px;padding:6px 10px;cursor:pointer;color:inherit;text-decoration:none}
+.bl{background:#fdecea;border:1px dashed var(--no);border-radius:8px;padding:10px 12px;margin:0 0 8px;font-size:14px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px;margin:0 0 12px}.card h2{font-size:16px;margin:0 0 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row label{flex:1;min-width:120px;font-size:14px;font-weight:600}.row input{display:block;width:100%;margin-top:4px;padding:9px;border:1.5px solid var(--line);border-radius:6px;font:inherit}
+.btn{background:var(--ink);color:#fff;border:0;border-radius:6px;padding:11px 16px;font:inherit;font-weight:700;cursor:pointer;margin-top:10px}
+.fine{font-size:13px;color:var(--mut)}.empty{color:var(--mut);font-size:14px;padding:6px 0}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s}.toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div class="rt-demo" role="note"><div class="in"><a href="/web-con-citas/">← Rotulito</a><span><b>DEMO</b> · Así lo ve el dueño en su móvil. Datos inventados, solo en tu navegador.</span><a href="/demo/citas.html">Pedir una cita →</a></div></div>
+<div class="app">
+<div class="bar"><h1>Taller Rodamar<small>Panel de citas</small></h1><button class="acts" style="border:0;background:none;padding:0" id="reset" title="Volver a los datos de ejemplo"><span class="fine">Reiniciar demo</span></button></div>
+<div class="kpi"><div><b id="kHoy">0</b><span>citas hoy</span></div><div><b id="kSem">0</b><span>próximos 7 días</span></div><div><b id="kNew">0</b><span>nuevas</span></div></div>
+<div class="tabs" id="tabs"><button data-t="hoy" aria-pressed="true">Hoy</button><button data-t="prox" aria-pressed="false">Próximos días</button><button data-t="bloq" aria-pressed="false">Bloquear horas</button><button data-t="hor" aria-pressed="false">Horario</button></div>
+<div id="view"></div>
+<p class="fine" style="margin-top:22px">En la versión real, el panel tiene acceso con contraseña, las citas se guardan en un servidor en la Unión Europea y cada cita nueva aparece al momento.</p>
+</div>
+<div class="toast" id="toast"></div>
+<script src="/demo/citas.js"></script>
+<script>
+(function(){var C=window.RTCitas,s=C.load(),tab='hoy',$=function(i){return document.getElementById(i)};
+function toast(t){var x=$('toast');x.textContent=t;x.classList.add('on');setTimeout(function(){x.classList.remove('on')},1800)}
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function kpis(){var hoy=C.ymd(new Date()),lim=C.ymd(C.addDays(new Date(),7)),act=s.citas.filter(function(c){return c.estado!=='anulada'});
+$('kHoy').textContent=act.filter(function(c){return c.dia===hoy}).length;$('kSem').textContent=act.filter(function(c){return c.dia>=hoy&&c.dia<=lim}).length;$('kNew').textContent=act.filter(function(c){return c.nueva}).length}
+function cita(c){var sv=C.serv(c.serv),e=c.estado;return '<div class="c '+e+'" data-id="'+c.id+'"><div class="t"><span>'+c.hora+' · '+esc(sv.n)+(c.nueva?'<span class="new">NUEVA</span>':'')+'</span><span class="fine">'+sv.min+' min</span></div><div class="m">'+esc(c.nombre)+' · '+esc(c.tel)+(e!=='pendiente'?' · <b>'+(e==='hecha'?'Hecha':'Anulada')+'</b>':'')+'</div>'+
+(e==='pendiente'?'<div class="acts"><button data-a="hecha">✓ Hecha</button><button data-a="wa">WhatsApp</button><button data-a="anulada">Anular</button></div>':'<div class="acts"><button data-a="pendiente">Deshacer</button></div>')+'</div>'}
+function bloqs(dia){return s.bloqueos.map(function(b,i){return b.dia===dia?'<div class="bl"><span>🔒 '+b.desde+'–'+b.hasta+' · '+esc(b.motivo||'Bloqueado')+'</span><button class="acts" data-b="'+i+'" style="border:0;background:none;color:inherit;cursor:pointer">Quitar</button></div>':''}).join('')}
+function lista(dias){var html='';dias.forEach(function(dia){var cs=s.citas.filter(function(c){return c.dia===dia}).sort(function(a,b){return a.hora<b.hora?-1:1});var b=bloqs(dia);
+html+='<div class="day">'+C.fechaLarga(dia)+'</div>'+b+(cs.length?cs.map(cita).join(''):(b?'':'<div class="empty">Sin citas.</div>'))});return html}
+function render(){kpis();[].forEach.call($('tabs').children,function(b){b.setAttribute('aria-pressed',b.dataset.t===tab?'true':'false')});var v=$('view'),hoy=new Date();
+if(tab==='hoy')v.innerHTML=lista([C.ymd(hoy)]);
+else if(tab==='prox'){var d=[];for(var i=1;i<10;i++){var x=C.addDays(hoy,i);if(C.abierto(x))d.push(C.ymd(x))}v.innerHTML=lista(d)}
+else if(tab==='bloq')v.innerHTML='<div class="card"><h2>Bloquear horas o un día entero</h2><p class="fine" style="margin-top:0">Vacaciones, un recado o un día de mucho trabajo: lo que bloquees deja de ofrecerse en la web al momento.</p><div class="row"><label>Día<input type="date" id="bd" value="'+C.ymd(C.addDays(hoy,1))+'"></label><label>Desde<input type="time" id="bf" value="09:00"></label><label>Hasta<input type="time" id="bt" value="19:00"></label></div><div class="row" style="margin-top:8px"><label>Motivo (solo lo ves tú)<input type="text" id="bm" maxlength="40" placeholder="Vacaciones"></label></div><button class="btn" id="bgo">Bloquear</button></div>'+'<div class="day">Bloqueos activos</div>'+(s.bloqueos.length?s.bloqueos.map(function(b,i){return '<div class="bl"><span>🔒 '+C.fechaLarga(b.dia)+' · '+b.desde+'–'+b.hasta+' · '+esc(b.motivo||'')+'</span><button class="acts" data-b="'+i+'" style="border:0;background:none;color:inherit;cursor:pointer">Quitar</button></div>'}).join(''):'<div class="empty">No hay bloqueos.</div>');
+else v.innerHTML='<div class="card"><h2>Horario de citas</h2><p style="margin:0">Lunes a viernes: 9:00–13:30 y 15:30–19:00<br>Sábado: 9:00–13:30<br>Domingo: cerrado</p><p class="fine">Huecos cada 30 minutos. La duración de cada servicio la pones tú y la web solo ofrece las horas en las que cabe.</p></div>';
+var g=$('bgo');if(g)g.onclick=function(){var dia=$('bd').value,f=$('bf').value,t=$('bt').value;if(!dia||!f||!t||f>=t){toast('Revisa el día y las horas');return}s.bloqueos.push({dia:dia,desde:f,hasta:t,motivo:$('bm').value.trim()});C.save(s);toast('Horas bloqueadas');render()}}
+$('tabs').onclick=function(e){var b=e.target.closest('button');if(!b)return;tab=b.dataset.t;render()};
+$('view').onclick=function(e){var b=e.target.closest('button');if(!b)return;if(b.dataset.b!==undefined){s.bloqueos.splice(+b.dataset.b,1);C.save(s);toast('Bloqueo quitado');render();return}
+var card=b.closest('.c');if(!card)return;var c=s.citas.filter(function(x){return x.id===card.dataset.id})[0],a=b.dataset.a;
+if(a==='wa'){toast('En la real, abre WhatsApp con el cliente');return}c.estado=a;c.nueva=false;C.save(s);toast(a==='hecha'?'Marcada como hecha':a==='anulada'?'Cita anulada: la hora vuelve a quedar libre':'Hecho');render()};
+$('reset').onclick=function(){C.reset();s=C.load();toast('Demo reiniciada');render()};
+render()})();
+</script>
+</body>
+</html>
