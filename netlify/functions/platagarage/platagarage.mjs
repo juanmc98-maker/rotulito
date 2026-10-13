@@ -744,7 +744,7 @@ async function adminApi(r, req, M, me, url) {
     if (!(me.negs || []).includes(negDe(sc))) return json({ error: 'No tienes acceso.' }, 403);
     const all = await load('docs'); const k = `${sc}:${ref}`; const ent = (all[k] = all[k] || { files: [] });
     if (M === 'GET') return json(ent);
-    if (M === 'PUT') { if ('venta' in body) { const n = Number(String(body.venta).replace(',', '.')); ent.venta = isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0; } await save('docs', all); return json(ent); }
+    if (M === 'PUT') { if ('venta' in body) { const n = Number(String(body.venta).replace(',', '.')); ent.venta = isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0; } if ('nota' in body) ent.nota = clip(body.nota, 4000); await save('docs', all); return json(ent); }
     if (M === 'POST') {
       const buf = Buffer.from(String(body.data || ''), 'base64'); if (!buf.length || buf.length > 4.2e6) return json({ error: 'El archivo pesa demasiado (máx. 4 MB). Si es un PDF escaneado, redúcelo antes.' }, 400);
       const mime = /^(application\/pdf|image\/(jpeg|png|webp|heic)|application\/(msword|vnd\.openxmlformats-officedocument\.[\w.]+))$/.test(body.mime || '') ? body.mime : 'application/octet-stream';
