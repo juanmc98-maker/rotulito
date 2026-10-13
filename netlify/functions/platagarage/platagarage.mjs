@@ -594,6 +594,20 @@ ${notas ? `<p style="margin:0 0 14px;color:#a1a1a1">Notas: ${hesc(notas)}</p>` :
   const body = new URLSearchParams({ 'form-name': 'avisos', asunto: subject, tipo, nombre: d.nombre || d.email || '', telefono: d.telefono || '', detalle: lines, panel: `${origin}${BASE}/admin` });
   await fetch(`${origin}${BASE}/assets/avisos.html`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body });
 }
+// Aviso diario al móvil: los seguimientos que tocan hoy en cada negocio (los que llevan más días de la cuenta en su paso)
+const MAXD_S = {
+  garage: { nuevo: 1, contactado: 7, visitado: 3, financiera: 7, reserva: 7, vendido: 3, transferencia: 3, entregado: 15, permiso: 3, enviado: 10 },
+  marine: { 'Nuevo': 1, 'Contactado': 5, 'Visita': 7, 'Oferta': 5, 'Señal': 10, 'Prueba de mar / peritaje': 15, 'Aceptación': 7, 'Pago y contrato': 10, 'Titularidad': 30, 'Entrega': 10, 'Documentación enviada': 15, 'Primer contacto': 2, 'Hoja y guía enviadas': 3, 'Hoja firmada': 7, 'Fotos recibidas': 3, 'Publicado': 30, 'Con interesados': 30 },
+  rotulito: { 'Nuevo': 1, 'Contactado': 3, 'Presupuesto enviado': 5, 'Aceptado y señal': 7, 'Contenido recibido': 5, 'En desarrollo': 10, 'Revisión del cliente': 7, 'Publicada': 15 },
+};
+const diasD = (iso) => (iso ? Math.floor((Date.now() - Date.parse(iso)) / 864e5) : 0);
+export async function diario() {
+  const toca = (neg, L) => L.filter((c) => c.etapa !== 'Perdido' && c.etapa !== 'perdido' && MAXD_S[neg][c.etapa] && diasD(c.desde || c.updated || c.created) > MAXD_S[neg][c.etapa]).sort((a, b) => diasD(b.desde || b.updated) - diasD(a.desde || a.updated));
+  const res = { garage: toca('garage', await buildClientes()), marine: toca('marine', await load('leads-marine')), rotulito: toca('rotulito', await load('leads-rotulito')) };
+  const nom = { garage: 'Plata Garage', marine: 'Plata Marine', rotulito: 'Rotulito' };
+  for (const [neg, L] of Object.entries(res)) if (L.length) await pushAll(neg, `Hoy te toca: ${L.length} seguimiento${L.length > 1 ? 's' : ''} · ${nom[neg]}`, L.slice(0, 4).map((c) => String(c.nombre || '').split(' ')[0]).join(', ') + (L.length > 4 ? '…' : ''), 'hoy-' + neg).catch((e) => console.error('push', e.message));
+  return Object.fromEntries(Object.entries(res).map(([k, v]) => [k, v.length]));
+}
 // Medición propia sin cookies ni datos personales: contadores por día
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|headless|lighthouse|pingdom/i;
 async function bump(group, key, n = 1) {
