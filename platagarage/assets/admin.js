@@ -12,6 +12,9 @@ const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', '
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
 const svg = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const IC = {
+  cartera: svg('<path d="M2 20h20M4 17l2-9h12l2 9M9 8V5h6v3"/>'),
+  trimestre: svg('<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>'),
+  docs: svg('<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/>'),
   resumen: svg('<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'),
   coches: svg('<path d="M5 17h14M5 17a2 2 0 11-4 0 2 2 0 014 0zm14 0a2 2 0 104 0 2 2 0 00-4 0zM3 17v-5l2-5h14l2 5v5"/>'),
   bancos: svg('<path d="M3 21h18M5 21V10M19 21V10M9 21V10M15 21V10M12 3l9 5H3z"/>'),
@@ -75,7 +78,7 @@ function showLogin() {
 }
 
 // ---------- layout ----------
-const NAV = [['leads', 'Leads'], ['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes'], ['coches', 'Coches'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['horarios', 'Horarios'], ['valoraciones', 'Valoraciones'], ['busquedas', 'Te lo buscamos'], ['alertas', 'Alertas'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog'], ['usuarios', 'Usuarios']];
+const NAV = [['leads', 'Leads'], ['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes'], ['coches', 'Coches'], ['trimestre', 'Trimestre'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['horarios', 'Horarios'], ['valoraciones', 'Valoraciones'], ['busquedas', 'Te lo buscamos'], ['alertas', 'Alertas'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog'], ['usuarios', 'Usuarios']];
 let badges = {};
 // Negocio activo: Plata Garage (panel completo), Plata Marine y Rotulito (embudo de clientes)
 const NEGS = { garage: { n: 'Plata Garage', logo: B + '/assets/logo.png', dark: true }, marine: { n: 'Plata Marine', logo: '/img/plata-marine-logo.png' }, rotulito: { n: 'Rotulito', logo: '/assets/rotulito-logo.svg' } };
@@ -99,7 +102,7 @@ function shell(active) {
   const ml = $('#mlg'); if (ml) ml.innerHTML = logoTag();
   $('#sb').innerHTML = `<div class="sbh"><a class="lg" href="#" id="slg">${logoTag()}</a><button class="rb mo" id="sx" aria-label="Cerrar menú">${IC.x}</button></div>
     <div class="negs"${MIS.length < 2 ? ' style="display:none"' : ''}>${MIS.map((k) => `<button data-neg="${k}" class="${k === NEG ? 'on' : ''}" title="${NEGS[k].n}">${NEGS[k].n}</button>`).join('')}</div><small class="sbl">Backoffice</small>` +
-    (NEG === 'garage' ? NAV : NAV_OTRO).map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') +
+    (NEG === 'garage' ? NAV : NEG === 'marine' ? [...NAV_OTRO.slice(0, 1), ['cartera', 'Cartera'], ...NAV_OTRO.slice(1)] : NAV_OTRO).map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') +
     `<div class="sp"></div><a href="${NEG === 'marine' ? 'https://www.platamarine.com/' : NEG === 'rotulito' ? 'https://www.rotulito.com/' : B + '/'}" target="_blank" rel="noopener">${IC.web}Ver web pública</a><small class="mu" style="display:block;font-size:12px;margin:10px 6px 2px">Has entrado como <b>${esc(QUIEN_YO)}</b></small><a href="#" id="pushon">${IC.alertas}<span id="pusht">Avisos en este móvil</span></a><a href="#" id="lo">${IC.out}Cambiar de persona</a>`;
   $('#sx').onclick = () => $('#sb').classList.remove('open');
   $('#sb').querySelectorAll('[data-neg]').forEach((b) => (b.onclick = () => { NEG = b.dataset.neg; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } $('#sb').classList.remove('open'); goHome(); }));
@@ -199,6 +202,91 @@ async function pickBuyer(c) {
 }
 
 // Reduce la foto en el navegador antes de subirla (máx. 1600 px, JPEG)
+// ---------- Documentos privados de cada coche / barco (cifrados en el servidor) ----------
+const TIPOS_DOC = { car: ['Factura de compra', 'Taller', 'ITV', 'Transporte', 'Recambios', 'Limpieza / estética', 'Gestoría', 'Otro gasto', 'Factura de venta', 'Contrato', 'Documentación', 'Foto'], boat: ['Hoja de encargo firmada', 'Documentación del barco', 'Fotos', 'DNI / CIF del vendedor', 'Contrato de compraventa', 'Factura', 'Otro'] };
+const SIN_IMPORTE = ['Factura de venta', 'Contrato', 'Documentación', 'Foto'];
+const fsize = (n) => (n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1e3)) + ' KB');
+const b64 = (file) => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = () => ko(new Error('No se pudo leer ' + file.name)); r.readAsDataURL(file); });
+async function docsBox(el, sc, ref, o = {}) {
+  let ent = await api(`/admin/docs/${sc}/${ref}`); const car = sc === 'car';
+  const draw = () => {
+    const F = ent.files; const compra = F.filter((f) => f.tipo === 'Factura de compra').reduce((a, f) => a + f.importe, 0);
+    const gastos = F.filter((f) => f.tipo !== 'Factura de compra' && !SIN_IMPORTE.includes(f.tipo)).reduce((a, f) => a + f.importe, 0); const venta = ent.venta || o.venta || 0;
+    el.innerHTML = `<div class="card sec"><h3 style="margin-bottom:4px">${IC.docs} Documentos y ${car ? 'gastos' : 'archivos'}</h3><p class="mu sm" style="margin:0 0 12px">Privado: solo se ve con sesión iniciada y se guarda cifrado. Máx. 4 MB por archivo (las fotos se reducen solas).</p>
+      ${car ? `<div class="kp" style="margin-bottom:14px"><div class="card"><span>Compra</span><b>${eur(compra)}</b></div><div class="card"><span>Gastos</span><b>${eur(gastos)}</b></div><div class="card"><span>Venta</span><b>${eur(venta)}</b></div><div class="card"><span>Margen</span><b style="color:${venta - compra - gastos >= 0 ? 'var(--ok)' : 'var(--bad)'}">${venta ? eur(Math.round((venta - compra - gastos) * 100) / 100) : '—'}</b></div></div>
+      <form id="vf" class="row" style="margin-bottom:12px"><label style="flex:1;min-width:200px">Precio final de venta (si no es el de la web)<input name="venta" inputmode="decimal" value="${ent.venta || ''}" placeholder="${o.venta || ''}"></label><button class="btn g s" style="align-self:flex-end">Guardar</button></form>` : ''}
+      <form id="df" class="fg" style="grid-template-columns:2fr 1fr 1fr 1fr auto;align-items:end"><label>Archivo(s)<input type="file" name="f" multiple required accept=".pdf,image/*,.doc,.docx"></label><label>Tipo<select name="tipo">${TIPOS_DOC[sc].map((t) => `<option>${t}</option>`).join('')}</select></label><label>Importe (€)<input name="importe" inputmode="decimal" placeholder="Con IVA si lo lleva"></label><label>Fecha<input type="date" name="fecha" value="${new Date().toLocaleDateString('sv-SE')}"></label><button class="btn s">Subir</button></form>
+      <div style="margin-top:14px">${F.length ? F.map((f) => `<div class="li"><div><a href="${API}/admin/docs/file/${f.id}" target="_blank" rel="noopener" style="color:var(--tx);text-decoration:none"><b>${esc(f.nombre)}</b></a><span>${esc(f.tipo)} · ${fdate(f.fecha)}${f.importe ? ' · ' + eur(f.importe) : ''} · ${fsize(f.size)} · subido por ${esc(f.by || '')}</span></div><div class="r"><a class="btn g s" href="${API}/admin/docs/file/${f.id}?dl=1">Descargar</a> <button class="btn r s" data-dx="${f.id}">Borrar</button></div></div>`).join('') : '<p class="mu">Todavía no hay documentos.</p>'}</div></div>`;
+    const vf = el.querySelector('#vf'); if (vf) vf.onsubmit = guard(async (e) => { e.preventDefault(); ent = await api(`/admin/docs/${sc}/${ref}`, { method: 'PUT', body: { venta: e.target.venta.value } }); toast('Guardado'); draw(); });
+    el.querySelector('#df').onsubmit = guard(async (e) => { e.preventDefault(); const fm = e.target; const files = [...fm.f.files]; const btn = fm.querySelector('button'); btn.disabled = true; btn.textContent = 'Subiendo…';
+      try { for (const file of files) { let data, mime = file.type || 'application/octet-stream', nombre = file.name;
+          if (/^image\//.test(mime) && !/svg/.test(mime)) { const r = await shrink(file, 2000); data = r.data; mime = r.type; nombre = nombre.replace(/\.\w+$/, '') + (mime === 'image/webp' ? '.webp' : '.jpg'); } else data = await b64(file);
+          ent = await api(`/admin/docs/${sc}/${ref}`, { method: 'POST', body: { data, mime, nombre, tipo: fm.tipo.value, importe: files.length === 1 ? fm.importe.value : '', fecha: fm.fecha.value } }); }
+        toast(files.length > 1 ? `${files.length} archivos subidos` : 'Subido'); } finally { draw(); } });
+    el.querySelectorAll('[data-dx]').forEach((b) => (b.onclick = guard(async () => { const f = ent.files.find((x) => x.id === b.dataset.dx); if (!confirm(`¿Borrar "${f.nombre}"? No se puede deshacer.`)) return; ent = await api(`/admin/docs/${sc}/${ref}/${f.id}`, { method: 'DELETE' }); toast('Borrado'); draw(); })));
+  };
+  draw();
+}
+const slug = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+// ZIP sin compresión hecho en el navegador (para mandar las facturas del trimestre a la gestoría)
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return (u) => { let c = 0xffffffff; for (let i = 0; i < u.length; i++) c = t[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }; })();
+function zip(files) { // files: [{name, data: Uint8Array}]
+  const enc = new TextEncoder(); const parts = []; const cen = []; let off = 0;
+  const le = (n, b) => { const a = new Uint8Array(b); for (let i = 0; i < b; i++) a[i] = (n >>> (8 * i)) & 255; return a; };
+  for (const f of files) { const nm = enc.encode(f.name); const crc = CRC(f.data); const sz = f.data.length;
+    const h = [le(0x04034b50, 4), le(20, 2), le(0x0800, 2), le(0, 2), le(0, 2), le(0x21, 2), le(crc, 4), le(sz, 4), le(sz, 4), le(nm.length, 2), le(0, 2), nm];
+    const hl = h.reduce((a, x) => a + x.length, 0); parts.push(...h, f.data);
+    cen.push(le(0x02014b50, 4), le(20, 2), le(20, 2), le(0x0800, 2), le(0, 2), le(0, 2), le(0x21, 2), le(crc, 4), le(sz, 4), le(sz, 4), le(nm.length, 2), le(0, 2), le(0, 2), le(0, 2), le(0, 2), le(0, 4), le(off, 4), nm); off += hl + sz; }
+  const cl = cen.reduce((a, x) => a + x.length, 0);
+  return new Blob([...parts, ...cen, le(0x06054b50, 4), le(0, 2), le(0, 2), le(files.length, 2), le(files.length, 2), le(cl, 4), le(off, 4), le(0, 2)], { type: 'application/zip' });
+}
+V.trimestre = async (m, arg) => {
+  const now = new Date(); const [y0, q0] = (arg || '').split('-').map(Number); const y = y0 || now.getFullYear(), q = q0 || Math.floor(now.getMonth() / 3) + 1;
+  const d = await api(`/admin/trimestre?y=${y}&q=${q}`); m = shell('trimestre');
+  const prev = q === 1 ? `${y - 1}-4` : `${y}-${q - 1}`, next = q === 4 ? `${y + 1}-1` : `${y}-${q + 1}`;
+  const grupos = ['Cristina', 'Juan', ''].map((o) => [o, d.rows.filter((r) => (r.owner || '') === o)]).filter(([, l]) => l.length);
+  const tot = (l, k) => l.reduce((a, r) => a + (r[k] || 0), 0);
+  const falta = d.rows.filter((r) => !r.compra || !r.files.some((f) => f.tipo === 'Factura de venta'));
+  m.innerHTML = top(`Trimestre ${q}T ${y}`, `Coches vendidos del ${fdate(d.ini)} al ${fdate(new Date(Date.parse(d.fin) - DIA).toISOString().slice(0, 10))}: compra, gastos, venta y margen (REBU). Para revisar y mandar a la gestoría.`, `<a class="btn g" href="#trimestre/${prev}">‹ Anterior</a><a class="btn g" href="#trimestre/${next}">Siguiente ›</a>`) +
+    (falta.length ? `<div class="card sec hl"><b>Falta documentación:</b> ${falta.map((r) => `<a href="#coche/${r.id}" style="color:var(--or)">${esc(r.coche)}</a> (${[!r.compra && 'factura de compra', !r.files.some((f) => f.tipo === 'Factura de venta') && 'factura de venta'].filter(Boolean).join(' y ')})`).join(' · ')}</div>` : '') +
+    (grupos.length ? grupos.map(([o, l]) => `<div class="card sec"><h3 style="margin-bottom:10px">${o ? 'Coches de ' + esc(o) : 'Sin dueño asignado'} · ${l.length}</h3><div class="tw"><table><thead><tr><th>Coche</th><th>Vendido</th><th style="text-align:right">Compra</th><th style="text-align:right">Gastos</th><th style="text-align:right">Venta</th><th style="text-align:right">Margen</th><th style="text-align:right">Docs</th></tr></thead><tbody>${l.map((r) => `<tr><td><a href="#coche/${r.id}" style="color:var(--tx)">${esc(r.coche)} ${r.year || ''}</a></td><td>${fdate(r.vendido)}</td><td style="text-align:right">${eur(r.compra)}</td><td style="text-align:right">${eur(r.gastos)}</td><td style="text-align:right">${eur(r.venta)}</td><td style="text-align:right"><b>${eur(r.margen)}</b></td><td style="text-align:right">${r.files.length}</td></tr>`).join('')}<tr><td colspan="2"><b>Total</b></td><td style="text-align:right"><b>${eur(tot(l, 'compra'))}</b></td><td style="text-align:right"><b>${eur(tot(l, 'gastos'))}</b></td><td style="text-align:right"><b>${eur(tot(l, 'venta'))}</b></td><td style="text-align:right"><b>${eur(Math.round(tot(l, 'margen') * 100) / 100)}</b></td><td></td></tr></tbody></table></div>
+      <div class="row" style="margin-top:12px"><button class="btn s" data-zip="${esc(o)}">Descargar ZIP para la gestoría</button></div></div>`).join('') : '<div class="card mu">No hay coches vendidos en este trimestre.</div>') +
+    `<p class="mu sm">El margen es venta − compra − gastos, a título orientativo: la gestoría lo revisa antes de presentar nada.</p>`;
+  m.querySelectorAll('[data-zip]').forEach((b) => (b.onclick = guard(async () => {
+    const o = b.dataset.zip; const l = d.rows.filter((r) => (r.owner || '') === o); b.disabled = true; b.textContent = 'Preparando…';
+    try { const files = []; const enc = new TextEncoder();
+      const csv = '﻿' + [['Coche', 'Año', 'Vendido', 'Compra', 'Gastos', 'Venta', 'Margen'], ...l.map((r) => [r.coche, r.year, r.vendido, r.compra, r.gastos, r.venta, r.margen])].map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
+      files.push({ name: `resumen-${q}T${y}.csv`, data: enc.encode(csv) });
+      for (const r of l) for (const f of r.files) { const res = await fetch(`${API}/admin/docs/file/${f.id}`, { credentials: 'same-origin' }); if (!res.ok) continue; files.push({ name: `${slug(r.coche)}/${f.tipo} - ${f.nombre}`.replace(/[\\:*?"<>|]/g, ''), data: new Uint8Array(await res.arrayBuffer()) }); }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(zip(files)); a.download = `plata-garage-${q}T${y}${o ? '-' + slug(o) : ''}.zip`; a.click(); toast('ZIP listo');
+    } finally { b.disabled = false; b.textContent = 'Descargar ZIP para la gestoría'; } })));
+};
+// ---------- Plata Marine: cartera de barcos con hoja de encargo firmada ----------
+const camposBarco = (b = {}) => `<div class="fg"><label>Barco *<input name="barco" required value="${esc(b.barco || '')}" placeholder="Marca, modelo y año"></label><label>Estado<select name="estado">${['En venta', 'Reservado', 'Vendido', 'Retirado'].map((x) => `<option${x === (b.estado || 'En venta') ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+  <label>Vendedor<input name="vendedor" value="${esc(b.vendedor || '')}"></label><label>Teléfono<input name="telefono" inputmode="tel" value="${esc(b.telefono || '')}"></label><label>Email<input name="email" type="email" value="${esc(b.email || '')}"></label><label>Zona<input name="zona" value="${esc(b.zona || '')}" placeholder="p. ej. Costa Brava"></label>
+  <label>Precio de venta (€)<input name="precio" inputmode="decimal" value="${b.precio || ''}"></label><label>Comisión pactada (€)<input name="comision" inputmode="decimal" value="${b.comision || ''}"></label><label>Fecha de firma<input type="date" name="firma" value="${esc(b.firma || '')}"></label><label>Fin del encargo<input type="date" name="fin" value="${esc(b.fin || '')}"></label>
+  <label style="grid-column:1/-1">Ficha en la web<input name="web" value="${esc(b.web || '')}" placeholder="www.platamarine.com/barcos/…"></label><label style="grid-column:1/-1">Notas<textarea name="notas" rows="3">${esc(b.notas || '')}</textarea></label></div>`;
+const linkWeb = (u) => (u ? `https://${String(u).replace(/^https?:\/\//, '')}` : '');
+V.cartera = async (m) => {
+  const list = await api('/admin/cartera'); m = shell('cartera');
+  const act = list.filter((b) => !['Vendido', 'Retirado'].includes(b.estado)); const com = act.reduce((a, b) => a + (+b.comision || 0), 0);
+  const vence = (b) => b.fin && Date.parse(b.fin) - Date.now() < 15 * DIA;
+  m.innerHTML = top('Cartera · Plata Marine', 'Barcos con hoja de encargo firmada: datos, ficha de la web y toda su documentación.', '<button class="btn" id="nb">+ Añadir barco</button>') +
+    `<div class="kp"><div class="card"><span>En cartera</span><b>${act.length}</b></div><div class="card"><span>Comisiones en cartera</span><b>${eur(com)}</b></div><div class="card"><span>Vendidos</span><b>${list.filter((b) => b.estado === 'Vendido').length}</b></div><div class="card"><span>Encargos que vencen en 15 días</span><b>${act.filter(vence).length}</b></div></div>` +
+    (list.length ? list.map((b) => `<a class="card sec ld" href="#barco/${b.id}" style="display:block;color:inherit;text-decoration:none"><div class="hd"><div><b>${esc(b.barco)}</b>${b.telefono ? ` <span style="display:inline;color:var(--mu)">${esc(b.vendedor || '')} · ${esc(b.telefono)}</span>` : ''}<span>${b.zona ? esc(b.zona) + ' · ' : ''}${b.precio ? eur(b.precio) : 'Sin precio'}${b.comision ? ' · comisión ' + eur(b.comision) : ''}</span></div>${badge(String(b.estado || 'En venta').toLowerCase())}</div>
+      <p class="mu sm">${b.firma ? 'Firmado el ' + fdate(b.firma) : 'Sin fecha de firma'}${b.fin ? ` · encargo hasta el ${fdate(b.fin)}${vence(b) ? ' <b style="color:var(--or)">(vence pronto)</b>' : ''}` : ''}${b.web ? ' · ' + esc(String(b.web).replace(/^https?:\/\//, '')) : ''}</p></a>`).join('') : '<div class="card mu">Todavía no hay barcos en la cartera.</div>');
+  $('#nb').onclick = () => { const dm = modal(`<h3 style="margin-bottom:12px">Añadir barco a la cartera</h3><form id="bf">${camposBarco()}<div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="btn g" id="bc">Cancelar</button><button class="btn">Añadir</button></div></form>`);
+    dm.querySelector('#bc').onclick = () => dm.remove();
+    dm.querySelector('#bf').onsubmit = guard(async (e) => { e.preventDefault(); const b = await api('/admin/cartera', { method: 'POST', body: Object.fromEntries(new FormData(e.target)) }); dm.remove(); location.hash = '#barco/' + b.id; }); };
+};
+V.barco = async (m, id) => {
+  const b = await api('/admin/cartera/' + id); m = shell('cartera');
+  m.innerHTML = top(esc(b.barco), `${esc(b.vendedor || '')}${b.telefono ? ' · ' + esc(b.telefono) : ''}${b.web ? ` · <a href="${esc(linkWeb(b.web))}" target="_blank" rel="noopener" style="color:var(--or)">${esc(String(b.web).replace(/^https?:\/\//, ''))}</a>` : ''}`, `<a class="btn g" href="#cartera">Volver</a>${b.telefono ? `<a class="btn g" target="_blank" rel="noopener" href="${waLink(b.telefono)}">${IC.wa}WhatsApp</a>` : ''}`) +
+    `<form id="bf" class="card sec"><h3 style="margin-bottom:12px">Datos del encargo</h3>${camposBarco(b)}<div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" class="btn r s" id="bd">Quitar de la cartera</button><button class="btn">Guardar</button></div></form><div id="docs"></div>`;
+  $('#bf').onsubmit = guard(async (e) => { e.preventDefault(); await api('/admin/cartera/' + id, { method: 'PUT', body: Object.fromEntries(new FormData(e.target)) }); toast('Guardado'); route(); });
+  $('#bd').onclick = guard(async () => { if (!confirm('¿Quitar este barco de la cartera? Sus documentos se quedan guardados.')) return; await api('/admin/cartera/' + id, { method: 'DELETE' }); location.hash = '#cartera'; });
+  docsBox($('#docs'), 'boat', id, {});
+};
 function shrink(file, max = 1600) {
   return new Promise((ok, ko) => {
     const img = new Image(); const u = URL.createObjectURL(file);
@@ -244,6 +332,7 @@ V.coche = async (m, id) => {
   const add = guard(async (files) => { const dz = $('#dz'); dz.textContent = 'Subiendo…'; await upload(files, (u) => { imgs.push(u); }); drawImgs(); toast('Fotos subidas'); });
   $('#fi').onchange = (e) => add([...e.target.files]);
   drawImgs();
+  if (!isNew) { const dv = document.createElement('div'); m.appendChild(dv); docsBox(dv, 'car', c.id, { venta: c.price, owner: c.owner }); }
   $('#cf').onsubmit = guard(async (e) => {
     e.preventDefault(); const f = e.target, b = f.querySelector('button[type=submit]'); b.disabled = true;
     try {
@@ -860,7 +949,7 @@ let lastVis = Date.now();
 document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') { lastVis = Date.now(); return; } const k = (location.hash.slice(1) || '').split('/')[0]; if (Date.now() - lastVis > 5000 && $('#mn') && ['', 'leads', 'resumen', 'clientes', 'reservas'].includes(k)) route(); });
 async function route() {
   const [k, arg] = (location.hash.slice(1) || home().slice(1)).split('/');
-  const fn = NEG === 'garage' ? (V[k] || V.leads) : ({ leads: V.nleads, resumen: V.nresumen, analiticas: V.nanalisis, clientes: V.nclientes, ncliente: V.ncliente, conexion: V.conexion }[k] || V.nresumen);
+  const fn = NEG === 'garage' ? (V[k] || V.leads) : ({ leads: V.nleads, cartera: V.cartera, barco: V.barco, resumen: V.nresumen, analiticas: V.nanalisis, clientes: V.nclientes, ncliente: V.ncliente, conexion: V.conexion }[k] || V.nresumen);
   try { await fn($('#mn'), arg); window.scrollTo(0, 0); } catch (e) { if (e.message !== 'Sesión caducada') { shell(k).innerHTML = `<div class="card">No se ha podido cargar: ${esc(e.message)}</div>`; } }
 }
 let polling = null;
