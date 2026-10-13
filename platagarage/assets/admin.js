@@ -221,12 +221,13 @@ const CDN_PDF = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/';
 let _pdf, _ocr;
 const pdfLib = async () => { if (!_pdf) { _pdf = await import(CDN_PDF + 'pdf.min.mjs'); _pdf.GlobalWorkerOptions.workerSrc = CDN_PDF + 'pdf.worker.min.mjs'; } return _pdf; };
 const ocrLib = () => _ocr || (_ocr = new Promise((ok, ko) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'; sc.onload = () => ok(window.Tesseract); sc.onerror = () => ko(new Error('No se pudo cargar el lector')); document.head.appendChild(sc); }));
+const conTiempo = (p, ms) => Promise.race([p, new Promise((_, ko) => setTimeout(() => ko(new Error('tiempo')), ms))]);
 async function textoDoc(blob, mime) {
   let canvas = null;
   if (/pdf/.test(mime)) { const lib = await pdfLib(); const doc = await lib.getDocument({ data: await blob.arrayBuffer() }).promise; let t = '';
     for (let i = 1; i <= Math.min(doc.numPages, 4); i++) { const tc = await (await doc.getPage(i)).getTextContent(); t += tc.items.map((x) => x.str).join(' ') + '\n'; }
     if (t.replace(/\s/g, '').length > 60) return t;
-    const pg = await doc.getPage(1); const vp = pg.getViewport({ scale: 2 }); canvas = document.createElement('canvas'); canvas.width = vp.width; canvas.height = vp.height; await pg.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+    const pg = await doc.getPage(1); const vp = pg.getViewport({ scale: 2 }); canvas = document.createElement('canvas'); canvas.width = vp.width; canvas.height = vp.height; await pg.render({ canvasContext: canvas.getContext('2d'), viewport: vp, intent: 'print' }).promise;
   } else if (!/^image\//.test(mime)) return '';
   const T = await ocrLib(); const r = await T.recognize(canvas || blob, 'spa'); return r.data.text || '';
 }
@@ -259,7 +260,7 @@ async function docsBox(el, sc, ref, o = {}) {
       <form id="df" class="fg" style="grid-template-columns:2fr 1fr 1fr 1fr auto;align-items:end"><label>Archivo(s) o carpeta<input type="file" name="f" multiple accept=".pdf,image/*,.doc,.docx"><a href="#" class="sm" id="dcar" style="color:var(--or)">o elegir una carpeta entera</a><input type="file" name="d" webkitdirectory multiple hidden></label><label>Tipo<select name="tipo"><option value="">Automático (según el nombre)</option>${TIPOS_DOC[sc].map((t) => `<option>${t}</option>`).join('')}</select></label><label>Importe (€)<input name="importe" inputmode="decimal" placeholder="Con IVA si lo lleva"></label><label>Fecha<input type="date" name="fecha" value="${new Date().toLocaleDateString('sv-SE')}"></label><button class="btn s">Subir</button></form>
       <div style="margin-top:14px">${F.length ? F.map((f) => `<div class="li"><div><a href="${API}/admin/docs/file/${f.id}" target="_blank" rel="noopener" style="color:var(--tx);text-decoration:none"><b>${esc(f.nombre)}</b></a><span>${esc(f.tipo)} · ${fdate(f.fecha)}${f.importe ? ' · ' + eur(f.importe) : ''} · ${fsize(f.size)} · subido por ${esc(f.by || '')}</span></div><div class="r"><button class="btn g s" data-de="${f.id}">Editar</button> <a class="btn g s" href="${API}/admin/docs/file/${f.id}?dl=1">Descargar</a> <button class="btn r s" data-dx="${f.id}">Borrar</button></div></div>`).join('') : '<p class="mu">Todavía no hay documentos.</p>'}</div></div>`;
     const lr = el.querySelector('#lr'); if (lr) lr.onclick = guard(async () => { const pend = ent.files.filter((f) => !f.importe && /pdf|image/.test(f.mime)); if (!pend.length) return toast('No hay documentos sin importe');
-      let n = 0; for (const f of pend) { lr.textContent = `Leyendo ${++n}/${pend.length}…`; try { const blob = await fetch(`${API}/admin/docs/file/${f.id}`, { credentials: 'same-origin' }).then((r) => r.blob()); const tx = await textoDoc(blob, f.mime); const a2 = leerImportes(tx); if (!a2.importe) continue;
+      let n = 0; for (const f of pend) { lr.textContent = `Leyendo ${++n}/${pend.length}…`; try { const blob = await fetch(`${API}/admin/docs/file/${f.id}`, { credentials: 'same-origin' }).then((r) => r.blob()); const tx = await conTiempo(textoDoc(blob, f.mime), 90000); const a2 = leerImportes(tx); if (!a2.importe) continue;
         let tipo = f.tipo; if (/Documentación|Foto/.test(tipo)) { const t2 = tipoAuto(sc, f.nombre + ' ' + tx.slice(0, 1500), 'application/pdf'); if (t2 !== 'Documentación') tipo = t2; }
         ent = await api(`/admin/docs/${sc}/${ref}/${f.id}`, { method: 'PATCH', body: { importe: a2.importe, iva: a2.iva ?? '', fecha: a2.fecha || f.fecha, tipo } }); } catch (er) { /* sigue con el siguiente */ } }
       toast('Importes leídos: revísalos'); draw(); });
@@ -270,7 +271,7 @@ async function docsBox(el, sc, ref, o = {}) {
           if (/^image\//.test(mime) && !/svg/.test(mime)) { const r = await shrink(file, 2000); data = r.data; mime = r.type; nombre = nombre.replace(/\.\w+$/, '') + (mime === 'image/webp' ? '.webp' : '.jpg'); } else data = await b64(file);
           let tipo = fm.tipo.value || tipoAuto(sc, file.name, file.type), auto = {};
           const manual = files.length === 1 && fm.importe.value;
-          if (car && !manual && !SIN_IMPORTE.includes(tipo) && /pdf|image/.test(file.type)) { btn.textContent = 'Leyendo ' + file.name.slice(0, 18) + '…'; try { const tx = await textoDoc(file, file.type); auto = leerImportes(tx); if (!fm.tipo.value && /Documentación|Foto/.test(tipo)) { const t2 = tipoAuto(sc, tx.slice(0, 1500), 'application/pdf'); if (auto.importe && t2 !== 'Documentación') tipo = t2; } } catch (er) { auto = {}; } btn.textContent = 'Subiendo…'; }
+          if (car && !manual && !SIN_IMPORTE.includes(tipo) && /pdf|image/.test(file.type)) { btn.textContent = 'Leyendo ' + file.name.slice(0, 18) + '…'; try { const tx = await conTiempo(textoDoc(file, file.type), 90000); auto = leerImportes(tx); if (!fm.tipo.value && /Documentación|Foto/.test(tipo)) { const t2 = tipoAuto(sc, tx.slice(0, 1500), 'application/pdf'); if (auto.importe && t2 !== 'Documentación') tipo = t2; } } catch (er) { auto = {}; } btn.textContent = 'Subiendo…'; }
           ent = await api(`/admin/docs/${sc}/${ref}`, { method: 'POST', body: { data, mime, nombre, tipo, importe: manual ? fm.importe.value : auto.importe || '', iva: auto.iva ?? '', fecha: auto.fecha || fm.fecha.value } }); }
         toast(files.length > 1 ? `${files.length} archivos subidos` : 'Subido'); } finally { draw(); } });
     const dc = el.querySelector('#dcar'); dc.onclick = (e) => { e.preventDefault(); el.querySelector('#df').d.click(); };
