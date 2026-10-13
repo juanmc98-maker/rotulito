@@ -80,6 +80,7 @@ let badges = {};
 // Negocio activo: Plata Garage (panel completo), Plata Marine y Rotulito (embudo de clientes)
 const NEGS = { garage: { n: 'Plata Garage', logo: B + '/assets/logo.png', dark: true }, marine: { n: 'Plata Marine', logo: '/img/plata-marine-logo.png' }, rotulito: { n: 'Rotulito', logo: '/assets/rotulito-logo.svg' } };
 let MIS = ['garage'];
+let QUIEN_YO = ''; // quién ha entrado (se muestra en el menú)
 let PRIMERA = true; // primera carga de la app
 let NEG = 'garage'; try { NEG = localStorage.getItem('pg_neg') || 'garage'; if (!NEGS[NEG]) NEG = 'garage'; } catch (e) { /* sin almacenamiento */ }
 // Cada negocio con sus colores (Plata Garage: oscuro y naranja; Plata Marine y Rotulito: los de su web)
@@ -98,11 +99,11 @@ function shell(active) {
   $('#sb').innerHTML = `<div class="sbh"><a class="lg" href="#" id="slg">${logoTag()}</a><button class="rb mo" id="sx" aria-label="Cerrar menú">${IC.x}</button></div>
     <div class="negs"${MIS.length < 2 ? ' style="display:none"' : ''}>${MIS.map((k) => `<button data-neg="${k}" class="${k === NEG ? 'on' : ''}" title="${NEGS[k].n}">${NEGS[k].n}</button>`).join('')}</div><small class="sbl">Backoffice</small>` +
     (NEG === 'garage' ? NAV : NAV_OTRO).map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') +
-    `<div class="sp"></div><a href="${NEG === 'marine' ? 'https://www.platamarine.com/' : NEG === 'rotulito' ? 'https://www.rotulito.com/' : B + '/'}" target="_blank" rel="noopener">${IC.web}Ver web pública</a><a href="#" id="lo">${IC.out}Cerrar sesión</a>`;
+    `<div class="sp"></div><a href="${NEG === 'marine' ? 'https://www.platamarine.com/' : NEG === 'rotulito' ? 'https://www.rotulito.com/' : B + '/'}" target="_blank" rel="noopener">${IC.web}Ver web pública</a><small class="mu" style="display:block;font-size:12px;margin:10px 6px 2px">Has entrado como <b>${esc(QUIEN_YO)}</b></small><a href="#" id="lo">${IC.out}Cambiar de persona</a>`;
   $('#sx').onclick = () => $('#sb').classList.remove('open');
   $('#sb').querySelectorAll('[data-neg]').forEach((b) => (b.onclick = () => { NEG = b.dataset.neg; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } $('#sb').classList.remove('open'); goHome(); }));
   $('#slg').onclick = (e) => { e.preventDefault(); $('#sb').classList.remove('open'); goHome(); };
-  $('#lo').onclick = guard(async (e) => { e.preventDefault(); await fetch(API + '/logout'); showLogin(); });
+  $('#lo').onclick = guard(async (e) => { e.preventDefault(); await fetch(API + '/logout'); history.replaceState(null, '', location.pathname); showLogin(); });
   $('#sb').classList.remove('open');
   return $('#mn');
 }
@@ -403,12 +404,15 @@ V.usuarios = async (m) => {
   <div class="s3"><span class="mu sm">Negocios a los que entra</span><div class="row" style="margin-top:6px"><label class="chk"><input type="checkbox" name="n_garage" checked>Plata Garage</label><label class="chk"><input type="checkbox" name="n_marine">Plata Marine</label><label class="chk"><input type="checkbox" name="n_rotulito">Rotulito</label></div></div>
   <label class="s2">Contraseña (mín. 12, con letras y números)<input name="password" type="password" required minlength="12" autocomplete="new-password"></label><div style="align-self:end"><button class="btn">Crear usuario</button></div></form></div>
   <div class="tw"><table><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead><tbody>${us.map((u) => `<tr data-id="${u.id}"><td><b>${esc(u.name)}</b></td><td>${esc(u.user)}</td><td>${u.role === 'admin' ? 'Administrador' : 'Editor'}<br><span class="mu sm">${(u.negs || []).map((n) => NEGS[n]?.n || n).join(', ')}</span></td><td>${u.disabled ? '<span class="bg r">Desactivado</span>' : '<span class="bg ok">Activo</span>'}</td>
-  <td><div class="acts"><button class="btn g s" data-a="pw">Cambiar contraseña</button><button class="btn g s" data-a="dis">${u.disabled ? 'Activar' : 'Desactivar'}</button><button class="btn r s" data-a="del">Borrar</button></div></td></tr>`).join('') || '<tr><td colspan="5" class="mu">Todavía no hay usuarios: crea uno para Cristina y otro para ti.</td></tr>'}</tbody></table></div>
-  <p class="mu sm" style="margin-top:12px">Al cambiar la contraseña o desactivar a alguien, se cierran sus sesiones abiertas. La contraseña maestra de Netlify (usuario "admin") queda solo para emergencias.</p>`;
+  <td><div class="acts"><button class="btn g s" data-a="pw">Cambiar contraseña</button><button class="btn g s" data-a="ses">Cerrar sus sesiones</button><button class="btn g s" data-a="dis">${u.disabled ? 'Activar' : 'Desactivar'}</button><button class="btn r s" data-a="del">Borrar</button></div></td></tr>`).join('') || '<tr><td colspan="5" class="mu">Todavía no hay usuarios: crea uno para Cristina y otro para ti.</td></tr>'}</tbody></table></div>
+  <p class="mu sm" style="margin-top:12px">Al cambiar la contraseña o desactivar a alguien, se cierran sus sesiones abiertas. La contraseña maestra de Netlify (usuario "admin") queda solo para emergencias.</p>
+  <p class="sm" style="margin-top:8px">Las sesiones duran mientras se usen (se renuevan solas). Si se pierde un móvil: <button class="btn r s" id="cadm">Cerrar todas las sesiones de Juan (contraseña maestra)</button></p>`;
+  $('#cadm').onclick = guard(async () => { if (!confirm('Se cerrarán todas las sesiones abiertas con la contraseña maestra, también la tuya. ¿Seguir?')) return; await api('/admin/users/admin-sesiones', { method: 'PUT' }); showLogin(); });
   $('#uf').onsubmit = guard(async (e) => { e.preventDefault(); const f = e.target; const b = Object.fromEntries(new FormData(f)); b.negs = ['garage', 'marine', 'rotulito'].filter((n) => f['n_' + n].checked); await api('/admin/users', { method: 'POST', body: b }); toast('Usuario creado'); route(); });
   m.querySelectorAll('[data-a]').forEach((b) => (b.onclick = guard(async () => {
     const id = b.closest('tr').dataset.id, u = us.find((x) => x.id === id), a = b.dataset.a;
     if (a === 'pw') { const pw = prompt('Nueva contraseña para ' + u.name + ' (mín. 12, con letras y números):'); if (!pw) return; await api('/admin/users/' + id, { method: 'PUT', body: { password: pw } }); toast('Contraseña cambiada'); }
+    if (a === 'ses') { if (!confirm('¿Cerrar la sesión de ' + u.name + ' en todos sus dispositivos? Tendrá que volver a poner su contraseña.')) return; await api('/admin/users/' + id, { method: 'PUT', body: { cerrar: true } }); toast('Sesiones de ' + u.name + ' cerradas'); }
     if (a === 'dis') await api('/admin/users/' + id, { method: 'PUT', body: { disabled: !u.disabled } });
     if (a === 'del') { if (!confirm('¿Borrar el usuario ' + u.name + '?')) return; await api('/admin/users/' + id, { method: 'DELETE' }); }
     route();
@@ -504,8 +508,9 @@ function cocheDe(c, cars) {
   }
   return null;
 }
-// Texto provisional: se cambia por el de la respuesta rápida de WhatsApp cuando Juan lo pase
-const msgWa = (quien, car) => car ? `Hola, soy ${quien} de Plata Garage. Te escribo por el ${car.brand} ${car.model} por el que preguntaste. Aquí lo tienes con todas las fotos y los datos: ${WEB}/vehiculos/${car.slug}` : `Hola, soy ${quien} de Plata Garage. He visto tu mensaje, ¿en qué te puedo ayudar?`;
+// Respuesta rápida de WhatsApp de Cristina y Juan (la misma que tienen guardada en WhatsApp Business); el saludo va según la hora de Madrid (hasta las 12:30, buenos días)
+const saludo = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('es-ES', { hour: 'numeric', minute: 'numeric', hourCycle: 'h23', timeZone: 'Europe/Madrid' }).formatToParts(new Date()).map((x) => [x.type, Number(x.value)])); return p.hour * 60 + p.minute < 12 * 60 + 30 ? 'Buenos días' : 'Buenas tardes'; }; // corte a las 12:30
+const msgWa = (quien, car) => `${saludo()}, Soy ${quien} de Plata Garage. He recibido un mensaje interesado en este vehículo${car ? `\n${WEB}/vehiculos/${car.slug}` : ''}`;
 V.leads = async (m) => {
   const [all, cars] = await Promise.all([api('/admin/clientes'), api('/admin/cars')]); m = shell('leads');
   const nuevos = all.filter((c) => c.etapa === 'nuevo');
@@ -513,14 +518,14 @@ V.leads = async (m) => {
   const resto = all.filter((c) => !nuevos.includes(c) && !pend.includes(c) && !['vendido', 'perdido'].includes(c.etapa)).slice(0, 20);
   badges.leads = nuevos.length || ''; 
   const card = (c) => { const car = cocheDe(c, cars); const own = car?.owner || ''; const l = c.leads[0] || {};
-    const bt = (q) => `<a class="btn s${own && own !== q ? ' g' : (!own && q !== 'Cristina' ? ' g' : '')}" target="_blank" rel="noopener" data-k="${c.key}" href="${waLink(c.telefono, msgWa(q, car))}">${IC.wa}Soy ${q}</a>`;
+    const bt = (q) => `<a class="btn s${own && own !== q ? ' g' : (!own && q !== 'Cristina' ? ' g' : '')}" target="_blank" rel="noopener" data-k="${c.key}" data-q="${q}" href="${waLink(c.telefono, msgWa(q, car))}">${IC.wa}Soy ${q}</a>`;
     return `<div class="card sec ld"><div class="hd"><div><b>${esc(c.nombre)}</b><span>${fdt(c.last)}</span></div>${badge(etq(c.etapa).toLowerCase())}</div>
       <p>${esc(l.resumen || '')}</p>${car ? `<p class="mu sm">Coche: <a href="${WEB}/vehiculos/${car.slug}" target="_blank" rel="noopener" style="color:var(--or)">${esc(car.brand)} ${esc(car.model)} (${car.year || ''})</a>${own ? ' · de ' + esc(own) : ''}</p>` : ''}
       <div class="row">${bt('Cristina')}${bt('Juan')}<a class="btn s g" href="#cliente/${c.key}">Ver ficha</a></div></div>`; };
   const sec = (t, l, vacio) => `<h3 class="lh">${t} <span>${l.length}</span></h3>${l.length ? l.map(card).join('') : `<p class="mu">${vacio}</p>`}`;
   m.innerHTML = top('Leads', 'Los nuevos arriba. Al pulsar "Soy Cristina" o "Soy Juan" se abre WhatsApp con el mensaje escrito y el lead pasa a contactado.', `<a class="btn g" href="#clientes">Embudo completo</a>`) +
     sec('Nuevos sin contestar', nuevos, 'No hay leads nuevos.') + sec('Pendientes', pend, 'Nada pendiente.') + sec('En marcha', resto, 'Nada en marcha.');
-  m.querySelectorAll('a[data-k]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.k); if (c && c.etapa === 'nuevo') api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: 'contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
+  m.querySelectorAll('a[data-k]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.k); if (c) a.href = waLink(c.telefono, msgWa(a.dataset.q, cocheDe(c, cars))); if (c && c.etapa === 'nuevo') api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: 'contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
 };
 V.cliente = async (m, key) => {
   const c = (await api('/admin/clientes')).find((x) => x.key === key); m = shell('clientes');
@@ -594,7 +599,7 @@ async function route() {
 }
 let polling = null;
 async function boot() {
-  try { const me = await api('/admin/me'); MIS = me.negs || ['garage']; if (!MIS.includes(NEG)) { NEG = MIS[0]; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } } } catch (e) { return; }
+  try { const me = await api('/admin/me'); MIS = me.negs || ['garage']; QUIEN_YO = me.id === 'admin' ? 'Juan' : (me.name || me.id); if (!MIS.includes(NEG)) { NEG = MIS[0]; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } } } catch (e) { return; }
   // La app instalada antigua abría en #resumen: en Plata Garage, la primera vez se va a Leads
   if (PRIMERA) { PRIMERA = false; if (NEG === 'garage' && (location.hash === '#resumen' || !location.hash)) history.replaceState(null, '', location.pathname + '#leads'); }
   if (NEG !== 'garage') { route(); return; }
