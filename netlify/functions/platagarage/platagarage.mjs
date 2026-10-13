@@ -769,7 +769,8 @@ async function adminApi(r, req, M, me, url) {
     const y = Number(url.searchParams.get('y')) || new Date().getFullYear(), q = Math.min(4, Math.max(1, Number(url.searchParams.get('q')) || 1));
     const ini = `${y}-${String((q - 1) * 3 + 1).padStart(2, '0')}-01`, fin = `${q === 4 ? y + 1 : y}-${String(q === 4 ? 1 : q * 3 + 1).padStart(2, '0')}-01`;
     const [cars, all] = await Promise.all([load('cars'), load('docs')]);
-    const rows = cars.filter((c) => c.sold && c.soldAt && c.soldAt.slice(0, 10) >= ini && c.soldAt.slice(0, 10) < fin).map((c) => {
+    const DESDE = '2026-10-13'; // las ventas anteriores a la app ya están declaradas: no entran
+    const rows = cars.filter((c) => c.sold && c.soldAt && c.soldAt.slice(0, 10) >= DESDE && c.soldAt.slice(0, 10) >= ini && c.soldAt.slice(0, 10) < fin).map((c) => {
       const e = all['car:' + c.id] || { files: [] }; const compra = e.files.filter((f) => f.tipo === 'Factura de compra').reduce((a, f) => a + f.importe, 0);
       const gastos = e.files.filter((f) => !['Factura de compra', 'Factura de venta', 'Contrato', 'Documentación', 'Foto'].includes(f.tipo)).reduce((a, f) => a + f.importe, 0);
       const venta = e.venta || c.price || 0;
@@ -863,6 +864,10 @@ async function adminApi(r, req, M, me, url) {
       if ('motivo' in body) { it.motivo = MOTIVOS.includes(body.motivo) ? body.motivo : ''; it.motivoTxt = clip(body.motivoTxt, 200); }
       if ('etapa' in body) { if (body.etapa && !ETAPAS.includes(body.etapa)) return json({ error: 'Etapa no válida' }, 400);
         if (body.etapa === 'perdido' && !it.motivo) return json({ error: 'Indica el motivo por el que se ha perdido.' }, 400);
+        if (body.etapa === 'cerrado') { // No se cierra el expediente sin la factura de venta subida en el coche
+          const [cars, docs] = await Promise.all([load('cars'), load('docs')]); const car = cars.find((c) => c.buyer === k);
+          if (!car) return json({ error: 'Para cerrar, asigna antes este cliente como comprador en la ficha del coche.' }, 400);
+          if (!((docs['car:' + car.id] || {}).files || []).some((f) => f.tipo === 'Factura de venta')) return json({ error: `Falta la factura de venta del ${car.brand} ${car.model}: súbela en Documentos del coche para poder cerrar.` }, 400); }
         const d = new Date().toISOString(); it.etapa = body.etapa || ''; it.at = d; it.by = me.name;
         if (it.etapa) { it.fechas = { ...(it.fechas || {}), [it.etapa]: d }; if (it.etapa !== 'perdido') it.maxr = Math.max(it.maxr || 0, ETAPAS.indexOf(it.etapa)); }
         if (it.etapa !== 'perdido') { it.motivo = ''; it.motivoTxt = ''; } }
