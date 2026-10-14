@@ -1,4 +1,4 @@
-# Copia de pruebas de Plata Garage en Netlify (rotulito.com sigue en GitHub Pages).
+# Web de Plata Garage en Netlify (en la raíz del dominio) (rotulito.com sigue en GitHub Pages).
 # Los commits con "publicar" se suben de uno en uno y separados para que Netlify no los salte.
 [build]
   publish = "."
@@ -11,8 +11,3 @@
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
 
-[[redirects]]
-  from = "/"
-  to = "/platagarage/"
-  status = 302
-  force = true
