@@ -4,6 +4,17 @@
 var ID = 'G-CF5DB927SM', PIXEL_ID = '1099906935714974', KEY = 'rt_privacy_v2', OLD = 'rt_consent';
 var VERSION = '2026-10-13', MAX_AGE = 365 * 86400000;
 var analyticsAllowed = false, adsAllowed = false, loaded = false, pixelLoaded = false, box, opener;
+/* Visitas propias: abrir la web una vez con ?soyjuan marca este navegador y deja de medirlo (GA4, Clarity, Meta y contador propio). ?soyjuan=0 lo desactiva. */
+var OWNER = false;
+try {
+var oq = new URLSearchParams(location.search);
+if (oq.has('soyjuan')) {
+if (oq.get('soyjuan') === '0') localStorage.removeItem('rt_owner'); else localStorage.setItem('rt_owner', '1');
+oq.delete('soyjuan'); var oqs = oq.toString();
+history.replaceState(null, '', location.pathname + (oqs ? '?' + oqs : '') + location.hash);
+}
+OWNER = localStorage.getItem('rt_owner') === '1';
+} catch (_) {}
 var LANG = location.pathname.indexOf('/ca/') === 0 ? 'ca' : (location.pathname.indexOf('/en/') === 0 ? 'en' : 'es');
 var T = {
 es: { aria: 'Preferencias de cookies', cfg: '<p><strong>Configurar cookies</strong></p><label class="opt"><input type="checkbox" data-opt="analytics"> <span><b>Analítica</b> (Google Analytics y Microsoft Clarity): cuántas visitas tiene la web, qué se lee y cómo se navega, para mejorarla.</span></label><label class="opt"><input type="checkbox" data-opt="ads"> <span><b>Publicidad</b> (Google Ads y Meta): medir si nuestros anuncios funcionan.</span></label><div class="choices"><button type="button" data-choice="back">Volver</button><button type="button" data-choice="save">Guardar mi elección</button></div>', html: '<p><strong>Tú decides sobre las cookies.</strong> Con tu permiso, medimos las visitas con Google Analytics y Microsoft Clarity y, si lo aceptas, usamos cookies de publicidad para medir la eficacia de nuestros anuncios (Google Ads y Meta/Facebook). Puedes usar la web y los formularios aunque lo rechaces todo. Guardamos tu elección durante 12 meses. <a href="/cookies.html">Política de cookies</a>.</p><div class="choices"><button type="button" data-choice="reject">Rechazar todo</button><button type="button" data-choice="config">Configurar</button><button type="button" data-choice="all">Aceptar todo</button></div>' },
@@ -70,6 +81,7 @@ if (clarityLoaded) return; clarityLoaded = true;
 window.clarity('consentv2', {ad_Storage: 'denied', analytics_Storage: 'granted'});
 }
 function applyConsent() {
+if (OWNER) { analyticsAllowed = false; adsAllowed = false; window.__pmAnalyticsAllowed = false; window.__pmAdsAllowed = false; window['ga-disable-' + ID] = true; return; }
 window.gtag('consent', 'update', {
 analytics_storage: analyticsAllowed ? 'granted' : 'denied',
 ad_storage: adsAllowed ? 'granted' : 'denied',
