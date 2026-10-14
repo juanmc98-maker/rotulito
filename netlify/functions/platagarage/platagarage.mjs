@@ -21,7 +21,7 @@ const db = () => store('platagarage');
 const media = () => store('platagarage-media');
 
 // ---------- datos ----------
-const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'gastos-marine': {}, 'gastos-rotulito': {}, pushsubs: [], vapid: {}, docs: {}, 'cartera-marine': [] };
+const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'gastos-marine': {}, 'gastos-rotulito': {}, pushsubs: [], vapid: {}, docs: {}, 'cartera-marine': [], 'demandas-marine': [], 'holded-neg': {} };
 async function load(key) {
   const v = await db().get(key, { type: 'json' });
   if (v == null) { const d = structuredClone(DEFAULTS[key]); await db().setJSON(key, d); return d; }
@@ -296,7 +296,9 @@ async function addNegLead(neg, x) {
   let it = list.find((y) => (k && y.key === k) || (!k && email && y.email === email));
   if (it) { it.historial = [{ d, t: nota || 'Nuevo contacto' }, ...(it.historial || [])].slice(0, 100); it.updated = d; if (ref) it.refs = [...(it.refs || []), ref].slice(-50); if (!it.email && email) it.email = email; }
   else { it = { id: uid('l'), key: k, nombre: clip(x.nombre, 80) || 'Sin nombre', telefono: tel, email, origen: clip(x.origen, 40), tipo: clip(x.tipo, 30), interes: clip(x.interes, 160), etapa: etapaInicial(neg, x), desde: d, notas: '', created: d, updated: d, historial: [{ d, t: nota || 'Primer contacto' }], refs: ref ? [ref] : [] }; list.unshift(it); }
-  await save(key, list.slice(0, 5000)); return true;
+  await save(key, list.slice(0, 5000));
+  if (neg === 'marine' && /alerta|que-barco|busco/i.test(`${x.origen || ''} ${x.tipo || ''}`)) await addDemanda(x, it.id).catch((e) => console.error('demanda', e.message));
+  return true;
 }
 function ical(bookings) {
   const e = (s) => String(s || '').replace(/[\\;,]/g, (c) => '\\' + c).replace(/\n/g, '\\n');
@@ -413,6 +415,77 @@ export default async (req, context) => {
   }
 };
 const sub500 = (p) => (p.includes('/api/') ? json({ error: 'Error interno. Inténtalo de nuevo.' }, 500) : html(V.notFound('Ha habido un error. Prueba de nuevo en un momento.'), 500));
+
+
+// ---------- Plata Marine: demandas de compradores ("Te busco barco" y alertas de la web) y cruce con la cartera ----------
+// Como las "demandas" de un CRM inmobiliario: criterios del comprador + cruce automático con los barcos en venta.
+const TIPOS_B = ['velero', 'open', 'sundeck', 'walkaround', 'cabinado', 'pilothouse', 'fly', 'rib', 'moto-agua'];
+const TIPO_TXT = { velero: 'Velero', open: 'Open', sundeck: 'Sundeck / bowrider', walkaround: 'Walkaround', cabinado: 'Cabinado', pilothouse: 'Pilothouse', fly: 'Fly', rib: 'Semirrígida', 'moto-agua': 'Moto de agua' };
+const ZONAS_B = { barcelona: 'Barcelona', maresme: 'Maresme', 'costa-brava': 'Costa Brava', garraf: 'Garraf y Tarragona', delta: 'Delta del Ebro', baleares: 'Baleares', valencia: 'C. Valenciana', galicia: 'Galicia' };
+const numB = (v) => { const n = Number(String(v ?? '').replace(/\s|€/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')); return isFinite(n) && n > 0 ? n : 0; };
+function parseDemanda(txt) { // texto libre de la alerta de la web (ES/CA/EN/FR) → criterios
+  const t = String(txt || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); const c = {};
+  const T = [['velero', /velero|veler\b|sailboat|sailing|voilier/], ['rib', /semirrigid|semirigid|neumatic|pneumati|\brib\b/], ['fly', /flybridge|\bfly\b/], ['pilothouse', /pilothouse/], ['walkaround', /walk ?around/], ['sundeck', /sundeck|bowrider/], ['cabinado', /cabinad|cabinat|cruiser|cabin/], ['open', /\bopen\b|consola central|console centrale|centre console|center console/], ['moto-agua', /moto de agua|moto d'aigua|jet ?ski|scooter/]];
+  const tp = T.find(([, r]) => r.test(t)); if (tp) c.tipo = tp[0];
+  const m = t.match(/(eslora|length|longueur)[^|]*/); const e = m ? m[0] : '';
+  if (e) { const ns = (e.match(/\d+(?:[.,]\d+)?/g) || []).map((x) => Number(x.replace(',', '.'))); if (/hasta|fins|up to|jusqu|menos|less/.test(e) && ns[0]) c.esloraMax = ns[0]; else if (/mas de|mes de|over|more|plus de/.test(e) && ns[0]) c.esloraMin = ns[0]; else if (ns.length >= 2) { c.esloraMin = ns[0]; c.esloraMax = ns[1]; } }
+  const pm = t.match(/(presupuesto|pressupost|budget)[^|]*/); const pr = pm ? pm[0] : '';
+  if (pr) { const ns = (pr.match(/\d{1,3}(?:[.,\s]\d{3})+|\d+/g) || []).map((x) => Number(x.replace(/[.,\s]/g, '')) * (/\d\s*k\b/.test(pr) ? 1000 : 1)); if (/menos|menys|less|under|moins/.test(pr) && ns[0]) c.presuMax = ns[0]; else if (/mas de|mes de|over|more|plus de/.test(pr) && ns[0]) c.presuMin = ns[0]; else if (ns.length >= 2) { c.presuMin = ns[0]; c.presuMax = ns[1]; } }
+  const Z = [['barcelona', /barcelona/], ['maresme', /maresme/], ['costa-brava', /costa brava/], ['garraf', /garraf|tarragon/], ['delta', /delta|ebre|ebro/], ['baleares', /balear|baleares|mallorca|ibiza|menorca/]];
+  const zm = t.match(/(zona|zone|area)[^|]*/); const zt = zm ? zm[0] : t; const z = Z.find(([, r]) => r.test(zt)); if (z) c.zona = z[0];
+  return c;
+}
+const ZONA_DE = { cataluna: ['barcelona', 'maresme', 'costa-brava', 'garraf', 'delta'], baleares: ['baleares'], valencia: ['valencia'], galicia: ['galicia'] };
+async function inventarioWeb() { // barcos publicados en www.platamarine.com (fuente: inventario.js), guardado 6 h
+  const c = await db().get('inv-web', { type: 'json' }).catch(() => null); if (c && Date.now() - c.t < 6 * 36e5) return c.boats;
+  try { const js = await (await fetch('https://www.platamarine.com/inventario.js', { signal: AbortSignal.timeout(6000) })).text();
+    const a = js.indexOf('boats:'), b = js.indexOf('\n    ]', a); const arr = js.slice(js.indexOf('[', a), b + 6);
+    const boats = JSON.parse(arr.replace(/\/\/[^\n]*/g, '').replace(/([{,]\s*)([a-zA-Z_]+)\s*:/g, '$1"$2":').replace(/'/g, '"').replace(/,\s*([\]}])/g, '$1'));
+    await db().setJSON('inv-web', { t: Date.now(), boats }); return boats;
+  } catch (e) { console.error('inventario', e.message); return (c && c.boats) || []; }
+}
+async function barcosEnVenta() {
+  const [cart, web] = await Promise.all([load('cartera-marine'), inventarioWeb()]); const out = []; const vistos = new Set();
+  for (const b of cart) { if (['Vendido', 'Retirado'].includes(b.estado)) continue; const sl = (String(b.web || '').match(/barcos\/([a-z0-9-]+)/) || [])[1]; const w = sl && web.find((x) => x.slug === sl); if (sl) vistos.add(sl);
+    out.push({ key: 'c:' + b.id, id: b.id, nombre: b.barco, precio: b.precio || (w && w.price) || 0, eslora: b.eslora || (w && w.length) || 0, tipos: b.tipo ? [b.tipo] : (w ? (w.kind === 'vela' ? ['velero'] : w.kind === 'moto-agua' ? ['moto-agua'] : w.types || []) : []), titulo: b.titulo !== undefined && b.titulo !== '' ? Number(b.titulo) : (w ? w.title : null), zona: b.zonaKey || (w && (w.area || w.zone)) || '', zonaTxt: b.zona || '', url: w ? 'https://www.platamarine.com/barcos/' + w.slug : b.web || '', reservado: b.estado === 'Reservado' || (w && w.status === 'reserved'), cartera: true }); }
+  for (const w of web) { if (vistos.has(w.slug) || w.status === 'sold') continue; out.push({ key: 'w:' + w.slug, nombre: w.name + (w.year ? ' (' + w.year + ')' : ''), precio: w.price || 0, eslora: w.length || 0, tipos: w.kind === 'vela' ? ['velero'] : w.kind === 'moto-agua' ? ['moto-agua'] : w.types || [], titulo: w.title, zona: w.area || w.zone || '', zonaTxt: (w.d && w.d.es || '').split(' · ').pop(), url: 'https://www.platamarine.com/barcos/' + w.slug, reservado: w.status === 'reserved', cartera: false }); }
+  return out;
+}
+function cruce(d, b) { // % de encaje y por qué (los motivos que lo descartan del todo van en "no")
+  const c = d.criterios || {}; let pts = 0, max = 0; const si = [], no = [], ojo = [];
+  if (c.tipo) { max += 30; if (b.tipos.includes(c.tipo) || (c.tipo === 'cabinado' && b.tipos.some((x) => ['walkaround', 'pilothouse', 'fly'].includes(x)))) { pts += 30; si.push(TIPO_TXT[c.tipo]); } else if (!b.tipos.length) { pts += 12; ojo.push('tipo sin dato'); } else no.push('otro tipo'); }
+  if (c.presuMax || c.presuMin) { max += 30; const p = b.precio; if (!p) { pts += 12; ojo.push('precio sin dato'); } else if (c.presuMax && p > c.presuMax * 1.15) no.push('se pasa de presupuesto'); else if (c.presuMin && p < c.presuMin * 0.7) { pts += 10; ojo.push('muy por debajo de su presupuesto'); } else if (c.presuMax && p > c.presuMax) { pts += 20; ojo.push('algo por encima (negociable)'); } else { pts += 30; si.push('dentro de presupuesto'); } }
+  if (c.esloraMin || c.esloraMax) { max += 20; const e = b.eslora; if (!e) { pts += 8; ojo.push('eslora sin dato'); } else if ((c.esloraMin && e < c.esloraMin - 0.6) || (c.esloraMax && e > c.esloraMax + 0.6)) no.push('otra eslora'); else { pts += 20; si.push(e + ' m'); } }
+  if (c.titulo !== undefined && c.titulo !== '' && c.titulo !== null) { max += 10; if (b.titulo == null) { pts += 5; ojo.push('titulación sin dato'); } else if (b.titulo <= Number(c.titulo)) { pts += 10; si.push('puede llevarlo'); } else no.push('necesita más titulación'); }
+  if (c.zona) { max += 10; const ok = b.zona === c.zona || (ZONA_DE[b.zona] || []).includes(c.zona) || (c.zona === 'costa-brava' && b.zona === 'costa-brava'); if (ok) { pts += 10; si.push('en su zona'); } else { pts += 3; ojo.push('otra zona'); } }
+  const pct = max ? Math.round(pts / max * 100) : 50; return { pct: no.length ? Math.min(pct, 40) : pct, si, no, ojo };
+}
+async function demandasCon(list) {
+  const barcos = await barcosEnVenta();
+  return list.map((d) => { const cr = barcos.map((b) => ({ b, ...cruce(d, b) })).filter((x) => !x.no.length && x.pct >= 60).sort((a, z) => z.pct - a.pct);
+    const prop = new Set(d.propuestos || []), desc = new Set(d.descartados || []);
+    return { ...d, cruces: cr.filter((x) => !prop.has(x.b.key) && !desc.has(x.b.key)), propuestosB: barcos.filter((b) => prop.has(b.key)), nBarcos: barcos.length }; });
+}
+async function addDemanda(x, leadId) { // desde una alerta de la web o desde un lead
+  const list = await load('demandas-marine'); const tel = normPhone(x.telefono) || clip(x.telefono, 20); const crit = parseDemanda([x.interes, x.mensaje, x.detail].filter(Boolean).join(' | '));
+  const it = list.find((d) => d.estado !== 'Cerrada' && ((leadId && d.leadId === leadId) || (tel && d.telefono === tel)));
+  if (it) { it.criterios = { ...it.criterios, ...crit }; it.updated = new Date().toISOString(); } else list.unshift({ id: uid('d'), leadId: leadId || '', nombre: clip(x.nombre, 80) || 'Sin nombre', telefono: tel, origen: clip(x.origen, 40) || 'Web', estado: 'Activa', criterios: crit, notas: clip(x.mensaje, 1000), propuestos: [], descartados: [], created: new Date().toISOString() });
+  await save('demandas-marine', list.slice(0, 2000)); return true;
+}
+async function avisarCruces(b) { // al entrar o cambiar un barco de la cartera: aviso al móvil con los compradores que encajan
+  const ds = (await load('demandas-marine')).filter((d) => d.estado === 'Activa'); if (!ds.length) return;
+  const barco = (await barcosEnVenta()).find((x) => x.key === 'c:' + b.id); if (!barco) return;
+  const ok = ds.filter((d) => { const r = cruce(d, barco); return !r.no.length && r.pct >= 60 && !(d.descartados || []).includes(barco.key) && !(d.propuestos || []).includes(barco.key); });
+  if (ok.length) await pushAll('marine', `${ok.length} comprador${ok.length > 1 ? 'es encajan' : ' encaja'} con ${clip(b.barco, 40)}`, ok.slice(0, 4).map((d) => String(d.nombre).split(' ')[0]).join(', ') + (ok.length > 4 ? '…' : ''), 'cruce-' + b.id).catch((e) => console.error('push', e.message));
+}
+
+// ---------- Trimestre de Plata Marine y Rotulito: facturas emitidas en Holded (API v1, solo lectura) ----------
+const HV1 = async (path) => { const r = await fetch('https://api.holded.com/api/invoicing/v1' + path, { headers: { key: process.env.HOLDED_TOKEN, Accept: 'application/json' }, signal: AbortSignal.timeout(15000) }); const t = await r.text(); let d; try { d = JSON.parse(t); } catch { d = t.slice(0, 300); } return { ok: r.ok, status: r.status, d }; };
+const negFactura = (f) => { const t = [f.desc, f.notes, ...(f.tags || []), ...(f.products || []).flatMap((p) => [p.name, p.desc])].join(' ').toLowerCase();
+  if (/matr[ií]cula|bastidor|\bkm\b|rebu|veh[ií]culo|coche|turismo/.test(t)) return 'garage';
+  if (/barco|embarcaci|n[aá]utic|eslora|velero|lancha|semirr|yate|brok|intermediaci|comisi[oó]n|honorarios/.test(t)) return 'marine';
+  if (/\bweb\b|p[aá]gina|dominio|hosting|mantenimiento|dise[nñ]o|landing|seo|rotulito/.test(t)) return 'rotulito'; return ''; };
+const EMPRESA = /\b(s\.?\s?l\.?\s?u?\.?|s\.?\s?a\.?\s?u?\.?|sociedad|s\.?\s?coop|s\.?\s?l\.?\s?p\.?|ltd|gmbh|sarl|sas|c\.?\s?b\.?)\s*$/i;
 
 // ---------- API ----------
 async function api(r, req, M, ip, url, context) {
@@ -828,16 +901,57 @@ async function adminApi(r, req, M, me, url) {
     });
     return json({ y, q, ini, fin, rows });
   }
+  // Demandas de compradores de Plata Marine y su cruce con los barcos en venta
+  if (seg[0] === 'demandas') {
+    if (!(me.negs || []).includes('marine')) return json({ error: 'No tienes acceso.' }, 403);
+    const list = await load('demandas-marine');
+    if (M === 'GET' && !seg[1]) return json({ demandas: await demandasCon(list), tipos: TIPO_TXT, zonas: ZONAS_B });
+    if (seg[1] === 'barco' && M === 'GET') { const b = (await barcosEnVenta()).find((x) => x.key === decodeURIComponent(seg[2] || '')); if (!b) return json({ barco: null, demandas: [] });
+      return json({ barco: b, demandas: list.filter((d) => d.estado === 'Activa').map((d) => ({ id: d.id, nombre: d.nombre, telefono: d.telefono, ...cruce(d, b), propuesto: (d.propuestos || []).includes(b.key), descartado: (d.descartados || []).includes(b.key) })).filter((x) => !x.no.length && x.pct >= 60 && !x.descartado).sort((a, z) => z.pct - a.pct) }); }
+    if (seg[1] === 'importar' && M === 'POST') { const leads = await load('leads-marine'); let n = 0;
+      for (const l of leads) { if (!/alerta|que-barco|busco/i.test(`${l.origen || ''} ${l.tipo || ''}`) || l.etapa === 'Perdido' || list.some((d) => d.leadId === l.id)) continue;
+        await addDemanda({ nombre: l.nombre, telefono: l.telefono, origen: l.origen, interes: l.interes, mensaje: (l.historial || []).map((h) => h.t).join(' | ') }, l.id); n++; }
+      return json({ ok: true, nuevas: n }); }
+    const campos = (d, b) => { if ('nombre' in b) d.nombre = clip(b.nombre, 80) || 'Sin nombre'; if ('telefono' in b) d.telefono = normPhone(b.telefono) || clip(b.telefono, 20); if ('notas' in b) d.notas = clip(b.notas, 2000);
+      if ('estado' in b) d.estado = ['Activa', 'Pausada', 'Cerrada'].includes(b.estado) ? b.estado : 'Activa'; if ('leadId' in b) d.leadId = clip(b.leadId, 40);
+      if (b.criterios) { const c = b.criterios, o = {}; if (TIPOS_B.includes(c.tipo)) o.tipo = c.tipo; ['presuMin', 'presuMax'].forEach((k) => { const n = numB(c[k]); if (n) o[k] = n; }); ['esloraMin', 'esloraMax'].forEach((k) => { const n = Number(String(c[k] || '').replace(',', '.')); if (isFinite(n) && n > 0 && n < 100) o[k] = n; }); if (['0', '1', '2', '3', '4'].includes(String(c.titulo))) o.titulo = Number(c.titulo); if (ZONAS_B[c.zona]) o.zona = c.zona; d.criterios = o; }
+      const marca = (k, v, on) => { const s = new Set(d[k] || []); on ? s.add(v) : s.delete(v); d[k] = [...s].slice(-200); };
+      if (b.proponer) { marca('propuestos', clip(b.proponer, 80), true); marca('descartados', clip(b.proponer, 80), false); d.historial = [{ d: new Date().toISOString(), t: 'Propuesto: ' + clip(b.nombreBarco, 80) }, ...(d.historial || [])].slice(0, 100); }
+      if (b.descartar) { marca('descartados', clip(b.descartar, 80), true); marca('propuestos', clip(b.descartar, 80), false); }
+      if (b.recuperar) { marca('descartados', clip(b.recuperar, 80), false); marca('propuestos', clip(b.recuperar, 80), false); } return d; };
+    if (M === 'POST' && !seg[1]) { const d = campos({ id: uid('d'), estado: 'Activa', origen: clip(body.origen, 40) || 'Manual', propuestos: [], descartados: [], criterios: {}, created: new Date().toISOString() }, body); list.unshift(d); await save('demandas-marine', list); return json(d); }
+    const i = list.findIndex((x) => x.id === seg[1]); if (i < 0) return json({ error: 'No existe' }, 404);
+    if (M === 'GET') return json({ ...(await demandasCon([list[i]]))[0], tipos: TIPO_TXT, zonas: ZONAS_B });
+    if (M === 'PUT') { campos(list[i], body); list[i].updated = new Date().toISOString(); await save('demandas-marine', list); return json(list[i]); }
+    if (M === 'DELETE') { list.splice(i, 1); await save('demandas-marine', list); return json({ ok: true }); }
+  }
+  // Trimestre de Plata Marine y Rotulito: facturas emitidas en Holded (solo lectura; la gestoría tiene la última palabra)
+  if (seg[0] === 'ntrimestre') {
+    const neg = seg[1]; if (!['marine', 'rotulito'].includes(neg) || !(me.negs || []).includes(neg)) return json({ error: 'No tienes acceso.' }, 403);
+    if (me.role !== 'admin') return json({ error: 'Solo Juan puede ver su facturación.' }, 403);
+    if (!process.env.HOLDED_TOKEN) return json({ error: 'Falta la clave de Holded en Netlify (HOLDED_TOKEN).' }, 400);
+    const map = await load('holded-neg');
+    if (seg[2] === 'clasificar' && M === 'PUT') { const id = clip(body.id, 40); if (!id) return json({ error: 'Falta la factura' }, 400); map[id] = ['marine', 'rotulito', 'garage', ''].includes(body.neg) ? body.neg : ''; await save('holded-neg', map); return json({ ok: true }); }
+    if (seg[2] === 'pdf' && M === 'GET') { const r = await HV1('/documents/invoice/' + encodeURIComponent(seg[3] || '') + '/pdf'); if (!r.ok || !r.d || !r.d.data) return json({ error: 'Holded no devolvió el PDF (' + r.status + ')' }, 502); return new Response(Buffer.from(r.d.data, 'base64'), { headers: { 'Content-Type': 'application/pdf' } }); }
+    const y = Number(url.searchParams.get('y')) || new Date().getFullYear(), q = Math.min(4, Math.max(1, Number(url.searchParams.get('q')) || 1));
+    const off = (m) => (m >= 3 && m <= 9 ? 7200 : 3600); /* hora de Madrid */ const ini = Date.UTC(y, (q - 1) * 3, 1) / 1000 - off((q - 1) * 3), fin = Date.UTC(q === 4 ? y + 1 : y, q === 4 ? 0 : q * 3, 1) / 1000 - off(q === 4 ? 0 : q * 3);
+    const r = await HV1(`/documents/invoice?starttmp=${ini}&endtmp=${fin - 1}&sort=created-asc`); if (!r.ok || !Array.isArray(r.d)) return json({ error: r.status === 401 ? 'Holded no acepta la clave (401). Revisa HOLDED_TOKEN en Netlify.' : 'Holded no responde (' + r.status + ')' }, 502);
+    const rows = r.d.filter((f) => f.docNumber).map((f) => { const base = Number(f.subtotal) || 0, iva = Number(f.tax) || 0, total = Number(f.total) || 0;
+      const ret = Math.round(((f.products || []).reduce((a, p) => a + (Number(p.price) || 0) * (Number(p.units) || 1) * (1 - (Number(p.discount) || 0) / 100) * (Number(p.retention) || 0) / 100, 0) || Math.max(0, base + iva - total)) * 100) / 100;
+      const auto = negFactura(f), n = f.id in map ? map[f.id] : auto;
+      return { id: f.id, num: f.docNumber || '(borrador)', fecha: new Date((f.date || 0) * 1000).toISOString().slice(0, 10), cliente: f.contactName || '', base, iva, ret, total, neg: n, auto: !(f.id in map), empresa: EMPRESA.test(String(f.contactName || '').trim()), concepto: clip((f.products || []).map((p) => p.name).join(' · ') || f.desc, 160) }; });
+    return json({ y, q, rows: rows.filter((x) => x.neg === neg), otras: rows.filter((x) => x.neg === ''), total: rows.length });
+  }
   // Cartera de barcos de Plata Marine (barcos con hoja de encargo firmada)
   if (seg[0] === 'cartera') {
     if (!(me.negs || []).includes('marine')) return json({ error: 'No tienes acceso.' }, 403);
     const list = await load('cartera-marine');
     if (M === 'GET' && !seg[1]) return json(list);
-    const campos = (o, b) => { ['barco', 'vendedor', 'telefono', 'email', 'zona', 'web', 'notas'].forEach((f) => { if (f in b) o[f] = clip(b[f], f === 'notas' ? 3000 : 200); }); ['precio', 'comision'].forEach((f) => { if (f in b) { const n = Number(String(b[f]).replace(/\./g, '').replace(',', '.')); o[f] = isFinite(n) && n > 0 ? n : 0; } }); ['firma', 'fin'].forEach((f) => { if (f in b) o[f] = /^\d{4}-\d{2}-\d{2}$/.test(b[f] || '') ? b[f] : ''; }); if ('estado' in b) o.estado = ['En venta', 'Reservado', 'Vendido', 'Retirado'].includes(b.estado) ? b.estado : 'En venta'; return o; };
-    if (M === 'POST' && !seg[1]) { if (!clip(body.barco, 200)) return json({ error: 'Pon el nombre del barco' }, 400); const o = campos({ id: uid('b'), estado: 'En venta', created: new Date().toISOString() }, body); list.unshift(o); await save('cartera-marine', list); return json(o); }
+    const campos = (o, b) => { ['barco', 'vendedor', 'telefono', 'email', 'zona', 'web', 'notas'].forEach((f) => { if (f in b) o[f] = clip(b[f], f === 'notas' ? 3000 : 200); }); ['precio', 'comision'].forEach((f) => { if (f in b) { const n = Number(String(b[f]).replace(/\./g, '').replace(',', '.')); o[f] = isFinite(n) && n > 0 ? n : 0; } }); ['firma', 'fin'].forEach((f) => { if (f in b) o[f] = /^\d{4}-\d{2}-\d{2}$/.test(b[f] || '') ? b[f] : ''; }); if ('estado' in b) o.estado = ['En venta', 'Reservado', 'Vendido', 'Retirado'].includes(b.estado) ? b.estado : 'En venta'; if ('tipo' in b) o.tipo = TIPOS_B.includes(b.tipo) ? b.tipo : ''; if ('eslora' in b) { const n = Number(String(b.eslora).replace(',', '.')); o.eslora = isFinite(n) && n > 0 && n < 100 ? n : 0; } if ('titulo' in b) o.titulo = ['0', '1', '2', '3', '4'].includes(String(b.titulo)) ? Number(b.titulo) : ''; if ('zonaKey' in b) o.zonaKey = ZONAS_B[b.zonaKey] ? b.zonaKey : ''; return o; };
+    if (M === 'POST' && !seg[1]) { if (!clip(body.barco, 200)) return json({ error: 'Pon el nombre del barco' }, 400); const o = campos({ id: uid('b'), estado: 'En venta', created: new Date().toISOString() }, body); list.unshift(o); await save('cartera-marine', list); await avisarCruces(o).catch(() => {}); return json(o); }
     const i = list.findIndex((x) => x.id === seg[1]); if (i < 0) return json({ error: 'No existe' }, 404);
     if (M === 'GET') return json(list[i]);
-    if (M === 'PUT') { campos(list[i], body); list[i].updated = new Date().toISOString(); await save('cartera-marine', list); return json(list[i]); }
+    if (M === 'PUT') { const antes = [list[i].precio, list[i].estado].join('|'); campos(list[i], body); list[i].updated = new Date().toISOString(); await save('cartera-marine', list); if (antes !== [list[i].precio, list[i].estado].join('|')) await avisarCruces(list[i]).catch(() => {}); return json(list[i]); }
     if (M === 'DELETE') { list.splice(i, 1); await save('cartera-marine', list); return json({ ok: true }); }
   }
   if (seg[0] === 'upload' && M === 'POST') {
