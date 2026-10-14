@@ -480,8 +480,8 @@ async function avisarCruces(b) { // al entrar o cambiar un barco de la cartera: 
 }
 
 // ---------- Trimestre de Plata Marine y Rotulito: facturas emitidas en Holded (API v1, solo lectura) ----------
-const HV1 = async (path) => { const r = await fetch('https://api.holded.com/api/invoicing/v1' + path, { headers: { key: process.env.HOLDED_TOKEN, Accept: 'application/json' }, signal: AbortSignal.timeout(15000) }); const t = await r.text(); let d; try { d = JSON.parse(t); } catch { d = t.slice(0, 300); } return { ok: r.ok, status: r.status, d }; };
-const negFactura = (f) => { const t = [f.desc, f.notes, ...(f.tags || []), ...(f.products || []).flatMap((p) => [p.name, p.desc])].join(' ').toLowerCase();
+const HV2 = async (path, raw) => { const r = await fetch('https://api.holded.com/api/v2' + path, { headers: { Authorization: 'Bearer ' + process.env.HOLDED_TOKEN, Accept: raw ? 'application/pdf' : 'application/json' }, signal: AbortSignal.timeout(15000) }); if (raw) return r; const t = await r.text(); let d; try { d = JSON.parse(t); } catch { d = t.slice(0, 300); } return { ok: r.ok, status: r.status, d }; };
+const negFactura = (f) => { const t = [f.description, ...(f.tags || []), ...(f.lines || []).flatMap((p) => [p.name, p.description])].join(' ').toLowerCase();
   if (/matr[ií]cula|bastidor|\bkm\b|rebu|veh[ií]culo|coche|turismo/.test(t)) return 'garage';
   if (/barco|embarcaci|n[aá]utic|eslora|velero|lancha|semirr|yate|brok|intermediaci|comisi[oó]n|honorarios/.test(t)) return 'marine';
   if (/\bweb\b|p[aá]gina|dominio|hosting|mantenimiento|dise[nñ]o|landing|seo|rotulito/.test(t)) return 'rotulito'; return ''; };
@@ -932,14 +932,19 @@ async function adminApi(r, req, M, me, url) {
     if (!process.env.HOLDED_TOKEN) return json({ error: 'Falta la clave de Holded en Netlify (HOLDED_TOKEN).' }, 400);
     const map = await load('holded-neg');
     if (seg[2] === 'clasificar' && M === 'PUT') { const id = clip(body.id, 40); if (!id) return json({ error: 'Falta la factura' }, 400); map[id] = ['marine', 'rotulito', 'garage', ''].includes(body.neg) ? body.neg : ''; await save('holded-neg', map); return json({ ok: true }); }
-    if (seg[2] === 'pdf' && M === 'GET') { const r = await HV1('/documents/invoice/' + encodeURIComponent(seg[3] || '') + '/pdf'); if (!r.ok || !r.d || !r.d.data) return json({ error: 'Holded no devolvió el PDF (' + r.status + ')' }, 502); return new Response(Buffer.from(r.d.data, 'base64'), { headers: { 'Content-Type': 'application/pdf' } }); }
+    if (seg[2] === 'pdf' && M === 'GET') { const r = await HV2('/invoices/' + encodeURIComponent(seg[3] || '') + '/pdf', true); if (!r.ok) return json({ error: 'Holded no devolvió el PDF (' + r.status + ')' }, 502); return new Response(await r.arrayBuffer(), { headers: { 'Content-Type': 'application/pdf' } }); }
     const y = Number(url.searchParams.get('y')) || new Date().getFullYear(), q = Math.min(4, Math.max(1, Number(url.searchParams.get('q')) || 1));
-    const off = (m) => (m >= 3 && m <= 9 ? 7200 : 3600); /* hora de Madrid */ const ini = Date.UTC(y, (q - 1) * 3, 1) / 1000 - off((q - 1) * 3), fin = Date.UTC(q === 4 ? y + 1 : y, q === 4 ? 0 : q * 3, 1) / 1000 - off(q === 4 ? 0 : q * 3);
-    const r = await HV1(`/documents/invoice?starttmp=${ini}&endtmp=${fin - 1}&sort=created-asc`); if (!r.ok || !Array.isArray(r.d)) return json({ error: r.status === 401 ? 'Holded no acepta la clave (401). Revisa HOLDED_TOKEN en Netlify.' : 'Holded no responde (' + r.status + ')' }, 502);
-    const rows = r.d.filter((f) => f.docNumber).map((f) => { const base = Number(f.subtotal) || 0, iva = Number(f.tax) || 0, total = Number(f.total) || 0;
-      const ret = Math.round(((f.products || []).reduce((a, p) => a + (Number(p.price) || 0) * (Number(p.units) || 1) * (1 - (Number(p.discount) || 0) / 100) * (Number(p.retention) || 0) / 100, 0) || Math.max(0, base + iva - total)) * 100) / 100;
+    const pad = (n) => String(n).padStart(2, '0'); const ini = `${y}-${pad((q - 1) * 3 + 1)}-01`, fin = `${y}-${pad(q * 3)}-${q === 1 || q === 4 ? 31 : 30}`;
+    const all = []; let cursor = '';
+    for (let i = 0; i < 20; i++) { const r = await HV2(`/invoices?limit=200&approval_status=approved&start_date=${ini}&end_date=${fin}&sort=date${cursor ? '&cursor=' + encodeURIComponent(cursor) : ''}`);
+      if (!r.ok || !r.d || !Array.isArray(r.d.items)) return json({ error: r.status === 401 ? 'Holded no acepta la clave (401). Revisa HOLDED_TOKEN en Netlify.' : r.status === 403 ? 'La clave de Holded no tiene permiso para leer facturas (403).' : 'Holded no responde (' + r.status + ')', det: typeof r.d === 'string' ? r.d.slice(0, 200) : r.d && (r.d.message || r.d.error || r.d.info) }, 502);
+      all.push(...r.d.items); if (!r.d.has_more || !r.d.cursor) break; cursor = r.d.cursor; }
+    const n2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
+    const rows = all.filter((f) => f.document_number && f.status !== 'cancelled').map((f) => { const iva = n2(f.tax), total = n2(f.total);
+      const ret = n2((f.lines || []).reduce((a, p) => a + (Number(p.price) || 0) * (Number(p.units) || 1) * (1 - (Number(p.discount) || 0) / 100) * (Number(p.retention) || 0) / 100, 0));
+      const base = n2(total - iva + ret); /* total = base + IVA − retención */
       const auto = negFactura(f), n = f.id in map ? map[f.id] : auto;
-      return { id: f.id, num: f.docNumber || '(borrador)', fecha: new Date((f.date || 0) * 1000).toISOString().slice(0, 10), cliente: f.contactName || '', base, iva, ret, total, neg: n, auto: !(f.id in map), empresa: EMPRESA.test(String(f.contactName || '').trim()), concepto: clip((f.products || []).map((p) => p.name).join(' · ') || f.desc, 160) }; });
+      return { id: f.id, num: f.document_number, fecha: f.date || '', cliente: f.contact_name || '', base: n2(base), iva, ret, total, neg: n, auto: !(f.id in map), empresa: EMPRESA.test(String(f.contact_name || '').trim()), concepto: clip((f.lines || []).map((p) => p.name).filter(Boolean).join(' · ') || f.description, 160) }; });
     return json({ y, q, rows: rows.filter((x) => x.neg === neg), otras: rows.filter((x) => x.neg === ''), total: rows.length });
   }
   // Cartera de barcos de Plata Marine (barcos con hoja de encargo firmada)
