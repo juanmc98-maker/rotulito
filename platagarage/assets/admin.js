@@ -82,7 +82,7 @@ const NAV = [['leads', 'Leads'], ['resumen', 'Resumen'], ['analiticas', 'Analít
 let badges = {};
 // Negocio activo: Plata Garage (panel completo), Plata Marine y Rotulito (embudo de clientes)
 const NEGS = { garage: { n: 'Plata Garage', logo: B + '/assets/logo.png', dark: true }, marine: { n: 'Plata Marine', logo: '/img/plata-marine-logo.png' }, rotulito: { n: 'Rotulito', logo: '/assets/rotulito-logo.svg' } };
-let MIS = ['garage'];
+let MIS = ['garage']; let ROL = ''; const ME_ADMIN = () => ROL === 'admin';
 let QUIEN_YO = ''; // quién ha entrado (se muestra en el menú)
 let PRIMERA = true; // primera carga de la app
 let NEG = 'garage'; try { NEG = localStorage.getItem('pg_neg') || 'garage'; if (!NEGS[NEG]) NEG = 'garage'; } catch (e) { /* sin almacenamiento */ }
@@ -91,6 +91,7 @@ let NEG = 'garage'; try { NEG = localStorage.getItem('pg_neg') || 'garage'; if (
 const tema = () => { document.documentElement.dataset.neg = NEG; const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = NEG === 'garage' ? '#050505' : '#ffffff'; };
 tema();
 const NAV_OTRO = [['leads', 'Leads'], ['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes']];
+IC.demandas = IC.busquedas; IC.visitas = IC.web;
 const logoTag = (n = NEG) => `<span class="nlg${NEGS[n].dark ? '' : ' w'}"><img src="${NEGS[n].logo}" alt="${NEGS[n].n}"></span>`;
 function shell(active) {
   tema();
@@ -102,7 +103,7 @@ function shell(active) {
   const ml = $('#mlg'); if (ml) ml.innerHTML = logoTag();
   $('#sb').innerHTML = `<div class="sbh"><a class="lg" href="#" id="slg">${logoTag()}</a><button class="rb mo" id="sx" aria-label="Cerrar menú">${IC.x}</button></div>
     <div class="negs"${MIS.length < 2 ? ' style="display:none"' : ''}>${MIS.map((k) => `<button data-neg="${k}" class="${k === NEG ? 'on' : ''}" title="${NEGS[k].n}">${NEGS[k].n}</button>`).join('')}</div><small class="sbl">Backoffice</small>` +
-    (NEG === 'garage' ? NAV : NEG === 'marine' ? [...NAV_OTRO.slice(0, 1), ['cartera', 'Cartera'], ...NAV_OTRO.slice(1)] : NAV_OTRO).map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') +
+    (NEG === 'garage' ? NAV : NEG === 'marine' ? [...NAV_OTRO.slice(0, 1), ['cartera', 'Cartera'], ['demandas', 'Demandas'], ...NAV_OTRO.slice(1), ['visitas', 'Visitas web'], ...(ME_ADMIN() ? [['trimestre', 'Trimestre']] : [])] : [...NAV_OTRO, ['visitas', 'Visitas web'], ...(ME_ADMIN() ? [['trimestre', 'Trimestre']] : [])]).map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') +
     `<div class="sp"></div><a href="${NEG === 'marine' ? 'https://www.platamarine.com/' : NEG === 'rotulito' ? 'https://www.rotulito.com/' : B + '/'}" target="_blank" rel="noopener">${IC.web}Ver web pública</a><small class="mu" style="display:block;font-size:12px;margin:10px 6px 2px">Has entrado como <b>${esc(QUIEN_YO)}</b></small><a href="#" id="pushon">${IC.alertas}<span id="pusht">Avisos en este móvil</span></a><a href="#" id="lo">${IC.out}Cambiar de persona</a>`;
   $('#sx').onclick = () => $('#sb').classList.remove('open');
   $('#sb').querySelectorAll('[data-neg]').forEach((b) => (b.onclick = () => { NEG = b.dataset.neg; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } $('#sb').classList.remove('open'); goHome(); }));
@@ -341,6 +342,8 @@ V.trimestre = async (m, arg) => {
 const camposBarco = (b = {}) => `<div class="fg"><label>Barco *<input name="barco" required value="${esc(b.barco || '')}" placeholder="Marca, modelo y año"></label><label>Estado<select name="estado">${['En venta', 'Reservado', 'Vendido', 'Retirado'].map((x) => `<option${x === (b.estado || 'En venta') ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
   <label>Vendedor<input name="vendedor" value="${esc(b.vendedor || '')}"></label><label>Teléfono<input name="telefono" inputmode="tel" value="${esc(b.telefono || '')}"></label><label>Email<input name="email" type="email" value="${esc(b.email || '')}"></label><label>Zona<input name="zona" value="${esc(b.zona || '')}" placeholder="p. ej. Costa Brava"></label>
   <label>Precio de venta (€)<input name="precio" inputmode="decimal" value="${b.precio || ''}"></label><label>Honorarios pactados (€, sin IVA)<input name="comision" inputmode="decimal" value="${b.comision || ''}"></label><label>Fecha de firma<input type="date" name="firma" value="${esc(b.firma || '')}"></label><label>Fin del encargo<input type="date" name="fin" value="${esc(b.fin || '')}"></label>
+  <label>Tipo (para el cruce)<select name="tipo"><option value="">— de la ficha web —</option>${Object.entries(TIPOS_B).map(([k, t]) => `<option value="${k}"${b.tipo === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label><label>Eslora (m)<input name="eslora" inputmode="decimal" value="${b.eslora || ''}" placeholder="p. ej. 8,4"></label>
+  <label>Titulación mínima<select name="titulo"><option value="">— de la ficha web —</option>${TITULOS_B.map((t, i) => `<option value="${i}"${b.titulo === i ? ' selected' : ''}>${t}</option>`).join('')}</select></label><label>Zona (para el cruce)<select name="zonaKey"><option value="">—</option>${Object.entries(ZONAS_BB).map(([k, t]) => `<option value="${k}"${b.zonaKey === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
   <label style="grid-column:1/-1">Ficha en la web<input name="web" value="${esc(b.web || '')}" placeholder="www.platamarine.com/barcos/…"></label><label style="grid-column:1/-1">Notas<textarea name="notas" rows="3">${esc(b.notas || '')}</textarea></label></div>`;
 const linkWeb = (u) => (u ? `https://${String(u).replace(/^https?:\/\//, '')}` : '');
 V.cartera = async (m) => {
@@ -362,7 +365,15 @@ V.barco = async (m, id) => {
   $('#bf').onsubmit = guard(async (e) => { e.preventDefault(); await api('/admin/cartera/' + id, { method: 'PUT', body: Object.fromEntries(new FormData(e.target)) }); toast('Guardado'); route(); });
   $('#bd').onclick = guard(async () => { if (!confirm('¿Quitar este barco de la cartera? Sus documentos se quedan guardados.')) return; await api('/admin/cartera/' + id, { method: 'DELETE' }); location.hash = '#cartera'; });
   docsBox($('#docs'), 'boat', id, {});
+  encajanBox(id);
 };
+async function encajanBox(id) { // compradores con demanda activa que encajan con este barco
+  const box = document.createElement('div'); box.className = 'card sec'; box.innerHTML = '<h3 style="margin-bottom:4px">Compradores que encajan</h3><p class="mu sm">Buscando…</p>'; $('#mn').appendChild(box);
+  try { const r = await api('/admin/demandas/barco/' + encodeURIComponent('c:' + id));
+    box.innerHTML = `<h3 style="margin-bottom:4px">Compradores que encajan · ${r.demandas.length}</h3><p class="mu sm" style="margin-bottom:10px">Demandas activas que cuadran con este barco. Tú decides a quién se lo ofreces según su gusto.</p>` +
+      (r.demandas.length ? r.demandas.map((d) => `<div class="li"><div><a href="#demanda/${d.id}" style="color:var(--tx)"><b>${esc(d.nombre)}</b></a><span class="mu sm"> · ${d.pct} %${d.propuesto ? ' · ya propuesto' : ''}</span><br><span class="sm">${[...d.si, ...d.ojo.map((x) => '⚠ ' + x)].map(esc).join(' · ')}</span></div><div class="r">${d.telefono ? `<a class="btn g s" target="_blank" rel="noopener" href="${waLink(d.telefono)}">${IC.wa}</a>` : ''}</div></div>`).join('') : '<p class="mu">Ninguna demanda activa encaja ahora mismo.</p>');
+  } catch (e) { box.innerHTML = '<h3>Compradores que encajan</h3><p class="mu">' + esc(e.message) + '</p>'; }
+}
 function shrink(file, max = 1600) {
   return new Promise((ok, ko) => {
     const img = new Image(); const u = URL.createObjectURL(file);
@@ -590,7 +601,7 @@ V.alertas = async (m) => {
 
 // Analíticas de las webs de Plata Marine y Rotulito (contador propio de sus webs, solo con consentimiento de analítica)
 const analiticasWeb = async (m, arg) => {
-  const dias = +arg || 30; const st = await api(`/admin/stats?neg=${NEG}&dias=${dias}`); m = shell('analiticas');
+  const dias = +arg || 30; const st = await api(`/admin/stats?neg=${NEG}&dias=${dias}`); m = shell('visitas');
   const sum = (g) => { const o = {}; st.forEach((d) => Object.entries(d[g] || {}).forEach(([k, v]) => (o[k] = (o[k] || 0) + v))); return Object.entries(o).sort((a, b) => b[1] - a[1]); };
   const T = Object.fromEntries(sum('tot')); const max = Math.max(1, ...st.map((d) => (d.tot || {}).visitas || 0));
   const tbl = (rows, f = (x) => esc(x), n = 10) => `<table>${rows.slice(0, n).map(([k, v]) => `<tr><td>${f(k)}</td><td style="text-align:right"><b>${v}</b></td></tr>`).join('') || `<tr><td class="mu">Sin datos todavía.</td></tr>`}</table>`;
@@ -599,7 +610,7 @@ const analiticasWeb = async (m, arg) => {
   const canal = (() => { const vis = Object.fromEntries(sum('src')), con = Object.fromEntries(sum('contactosrc')), le = Object.fromEntries(sum('leadsrc')); const ks = [...new Set([...Object.keys(vis), ...Object.keys(con), ...Object.keys(le)])].sort((a, b) => ((le[b] || 0) + (con[b] || 0)) - ((le[a] || 0) + (con[a] || 0)) || (vis[b] || 0) - (vis[a] || 0));
     return ks.length ? `<table><tr><td class="mu sm">Canal</td><td class="mu sm" style="text-align:right">Visitas</td><td class="mu sm" style="text-align:right">Contactos</td><td class="mu sm" style="text-align:right">Formularios</td></tr>${ks.slice(0, 12).map((k) => `<tr><td>${esc(k)}</td><td style="text-align:right">${vis[k] || 0}</td><td style="text-align:right">${con[k] || 0}</td><td style="text-align:right"><b>${le[k] || 0}</b></td></tr>`).join('')}</table>` : '<p class="mu">Sin datos todavía.</p>'; })();
   const marine = NEG === 'marine';
-  m.innerHTML = top('Analíticas', `Visitas y contactos de ${marine ? 'www.platamarine.com' : 'www.rotulito.com'}, solo de quien acepta la analítica y sin datos personales.`, `<div class="filt" style="margin:0">${[7, 30, 90].map((d) => `<button data-d="${d}" class="${d === dias ? 'on' : ''}">${d} días</button>`).join('')}</div>`) +
+  m.innerHTML = top('Visitas web', `Visitas y contactos de ${marine ? 'www.platamarine.com' : 'www.rotulito.com'}, solo de quien acepta la analítica y sin datos personales.`, `<div class="filt" style="margin:0">${[7, 30, 90].map((d) => `<button data-d="${d}" class="${d === dias ? 'on' : ''}">${d} días</button>`).join('')}</div>`) +
   `<div class="kp"><div class="card"><span>Visitas (entradas a la web)</span><b>${nf(T.nuevas || 0)}</b></div><div class="card"><span>Páginas vistas</span><b>${nf(T.visitas || 0)}</b></div><div class="card"><span>Contactos (WhatsApp, teléfono, email)</span><b>${T.contacto || 0}</b></div><div class="card"><span>Formularios enviados</span><b>${T.lead || 0}</b></div>${marine ? `<div class="card"><span>Altas a novedades</span><b>${T.novedades || 0}</b></div>` : ''}</div>
   <div class="card sec"><h3 style="margin-bottom:14px">Páginas vistas por día</h3><div style="display:flex;align-items:flex-end;gap:3px;height:140px">${st.map((d) => { const v = (d.tot || {}).visitas || 0; return `<div title="${fdate(d.d)}: ${v}" style="flex:1;background:var(--or);opacity:${v ? 1 : .15};height:${Math.max(2, v / max * 100)}%;border-radius:3px 3px 0 0"></div>`; }).join('')}</div></div>
   <div class="two"><div class="card"><h3 style="margin-bottom:4px">Qué canal trae clientes</h3><p class="mu sm" style="margin-bottom:10px">Visitas, contactos y formularios por origen.</p>${canal}</div>${card('Contactos por tipo', '', sum('ev'), evf)}</div>
@@ -611,11 +622,10 @@ const analiticasWeb = async (m, arg) => {
   <div class="two" style="margin-top:16px">${card('Páginas más vistas', '', sum('pv'))}${card('Idioma', '', sum('lang'), (k) => ({ es: 'Castellano', ca: 'Catalán', en: 'Inglés', fr: 'Francés' }[k] || esc(k)))}</div>
   <div class="two" style="margin-top:16px">${card('Ciudades (aproximadas)', '', sum('city'))}${card('Dispositivos', '', sum('dev'))}</div>
   <p class="mu sm" style="margin-top:14px">Solo cuenta a quien acepta la analítica en el aviso de cookies, así que es menos que Google Analytics. No se guarda la IP ni nada que identifique a nadie; de lo que se escribe en el buscador se quitan los números largos.</p>`;
-  m.querySelectorAll('[data-d]').forEach((b) => (b.onclick = () => (location.hash = '#analiticas/' + b.dataset.d)));
+  m.querySelectorAll('[data-d]').forEach((b) => (b.onclick = () => (location.hash = '#visitas/' + b.dataset.d)));
 };
 
 V.analiticas = async (m, arg) => {
-  if (NEG !== 'garage') return analiticasWeb(m, arg);
   const dias = +arg || 30; const [st, cars, cls] = await Promise.all([api('/admin/stats?dias=' + dias), api('/admin/cars'), api('/admin/clientes').catch(() => [])]); m = shell('analiticas');
   const sum = (g) => { const o = {}; st.forEach((d) => Object.entries(d[g] || {}).forEach(([k, v]) => (o[k] = (o[k] || 0) + v))); return Object.entries(o).sort((a, b) => b[1] - a[1]); };
   const tot = st.reduce((a, d) => a + ((d.tot || {}).visitas || 0), 0); const ent = st.reduce((a, d) => a + ((d.tot || {}).nuevas || 0), 0); const ev = Object.fromEntries(sum('ev'));
@@ -1070,6 +1080,14 @@ V.ncliente = async (m, id) => {
   $('#sv').onclick = guard(async () => { await nApi('/' + id, { method: 'PUT', body: datos() }); toast('Guardado'); route(); });
   $('#et').onchange = guard(async () => { try { Object.assign(c, await nApi('/' + id, { method: 'PUT', body: datos() })); await moverN(d, c, $('#et').value); } finally { route(); } });
   $('#del').onclick = guard(async () => { if (!confirm('¿Borrar este cliente del embudo?')) return; await nApi('/' + id, { method: 'DELETE' }); location.hash = '#clientes'; });
+  if (NEG === 'marine') { // comprador que busca barco → su demanda, cruzada con la cartera
+    const r = await api('/admin/demandas').catch(() => ({ demandas: [] })); const dm = r.demandas.find((x) => x.leadId === id || (c.telefono && x.telefono === c.telefono));
+    const box = document.createElement('div'); box.className = 'card sec';
+    box.innerHTML = dm ? `<h3 style="margin-bottom:4px">Busca barco</h3><p class="sm">${esc(resumenDem(dm.criterios))}</p><div class="row" style="margin-top:10px"><a class="btn s" href="#demanda/${dm.id}">Ver demanda · ${dm.cruces.length} encaja${dm.cruces.length === 1 ? '' : 'n'}</a></div>`
+      : `<h3 style="margin-bottom:4px">¿Busca barco?</h3><p class="mu sm">Crea su demanda y la app la cruza con tu cartera y la web.</p><div class="row" style="margin-top:10px"><button class="btn s" id="cdm">Crear demanda</button></div>`;
+    $('#mn').appendChild(box);
+    if ($('#cdm')) $('#cdm').onclick = guard(async () => { const d2 = await api('/admin/demandas', { method: 'POST', body: { nombre: c.nombre, telefono: c.telefono, leadId: id, notas: c.interes || '', origen: c.origen || 'Lead' } }); location.hash = '#demanda/' + d2.id; });
+  }
 };
 V.conexion = async (m) => {
   const c = await nApi('/conexion'); m = shell('conexion');
@@ -1079,6 +1097,77 @@ V.conexion = async (m) => {
   $('#cc').onclick = () => navigator.clipboard.writeText($('#cu').value).then(() => toast('Copiado'));
 };
 
+
+// ---------- Plata Marine: demandas de compradores ("Te busco barco" + alertas) cruzadas con los barcos en venta ----------
+const TIPOS_B = { velero: 'Velero', open: 'Open', sundeck: 'Sundeck / bowrider', walkaround: 'Walkaround', cabinado: 'Cabinado', pilothouse: 'Pilothouse', fly: 'Fly', rib: 'Semirrígida', 'moto-agua': 'Moto de agua' };
+const TITULOS_B = ['Sin titulación', 'Licencia de Navegación', 'PNB', 'PER', 'Patrón o Capitán de Yate'];
+const ZONAS_BB = { barcelona: 'Barcelona', maresme: 'Maresme', 'costa-brava': 'Costa Brava', garraf: 'Garraf y Tarragona', delta: 'Delta del Ebro', baleares: 'Baleares', valencia: 'C. Valenciana', galicia: 'Galicia' };
+const resumenDem = (c = {}) => [c.tipo && TIPOS_B[c.tipo], (c.esloraMin || c.esloraMax) && `${c.esloraMin ? c.esloraMin + '–' : 'hasta '}${c.esloraMax || '…'} m`, (c.presuMin || c.presuMax) && `${c.presuMin ? eur(c.presuMin) + ' – ' : 'hasta '}${c.presuMax ? eur(c.presuMax) : '…'}`, c.zona && ZONAS_BB[c.zona], c.titulo !== undefined && TITULOS_B[c.titulo]].filter(Boolean).join(' · ') || 'Sin criterios todavía';
+const formDem = (d = {}) => { const c = d.criterios || {}; const o = (obj, v, vacio) => `<option value="">${vacio}</option>` + Object.entries(obj).map(([k, t]) => `<option value="${k}"${String(v ?? '') === String(k) ? ' selected' : ''}>${t}</option>`).join('');
+  return `<div class="fg"><label>Nombre *<input name="nombre" required value="${esc(d.nombre || '')}"></label><label>Teléfono<input name="telefono" inputmode="tel" value="${esc(d.telefono || '')}"></label>
+  <label>Tipo de barco<select name="tipo">${o(TIPOS_B, c.tipo, 'Cualquiera')}</select></label><label>Zona<select name="zona">${o(ZONAS_BB, c.zona, 'Cualquiera')}</select></label>
+  <label>Eslora mínima (m)<input name="esloraMin" inputmode="decimal" value="${c.esloraMin || ''}"></label><label>Eslora máxima (m)<input name="esloraMax" inputmode="decimal" value="${c.esloraMax || ''}"></label>
+  <label>Presupuesto desde (€)<input name="presuMin" inputmode="numeric" value="${c.presuMin || ''}"></label><label>Presupuesto hasta (€)<input name="presuMax" inputmode="numeric" value="${c.presuMax || ''}"></label>
+  <label>Su titulación<select name="titulo">${o(Object.fromEntries(TITULOS_B.map((t, i) => [i, t])), c.titulo, 'No lo sé')}</select></label><label>Estado<select name="estado">${['Activa', 'Pausada', 'Cerrada'].map((x) => `<option${x === (d.estado || 'Activa') ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+  <label style="grid-column:1/-1">Gustos y lo que ya tiene (para filtrar tú)<textarea name="notas" rows="3" placeholder="p. ej. quiere mesa en popa, poco cabinado, nada llamativo">${esc(d.notas || '')}</textarea></label></div>`; };
+const datosDem = (f) => { const v = Object.fromEntries(new FormData(f)); return { nombre: v.nombre, telefono: v.telefono, notas: v.notas, estado: v.estado, criterios: { tipo: v.tipo, zona: v.zona, esloraMin: v.esloraMin, esloraMax: v.esloraMax, presuMin: v.presuMin, presuMax: v.presuMax, titulo: v.titulo } }; };
+V.demandas = async (m, arg) => {
+  const r = await api('/admin/demandas'); m = shell('demandas'); const est = arg || 'Activa';
+  const L = r.demandas.filter((d) => (d.estado || 'Activa') === est); const nCr = r.demandas.filter((d) => d.estado === 'Activa' && d.cruces.length).length;
+  m.innerHTML = top('Demandas · Plata Marine', 'Lo que buscan tus compradores (Te busco barco y alertas de la web), cruzado al momento con los barcos en venta.', '<button class="btn" id="nd">+ Nueva demanda</button>') +
+    `<div class="kp"><div class="card"><span>Activas</span><b>${r.demandas.filter((d) => d.estado === 'Activa').length}</b></div><div class="card"><span>Con barcos que encajan</span><b>${nCr}</b></div><div class="card"><span>Barcos en venta cruzados</span><b>${r.demandas[0] ? r.demandas[0].nBarcos : '—'}</b></div></div>
+    <div class="filt">${['Activa', 'Pausada', 'Cerrada'].map((x) => `<button data-e="${x}" class="${x === est ? 'on' : ''}">${x}s</button>`).join('')}<button id="imp" class="g">Traer alertas de Leads</button></div>` +
+    (L.length ? L.map((d) => `<a class="card sec ld" href="#demanda/${d.id}" style="display:block;color:inherit;text-decoration:none"><div class="hd"><div><b>${esc(d.nombre)}</b><span>${esc(resumenDem(d.criterios))}</span></div>${d.cruces.length ? `<span class="bd" style="position:static;background:var(--or);color:#fff;padding:4px 10px;border-radius:999px;white-space:nowrap">${d.cruces.length} encaja${d.cruces.length > 1 ? 'n' : ''}</span>` : ''}</div>
+      <p class="mu sm" style="margin:6px 0 0">${esc(d.origen || '')}${(d.propuestos || []).length ? ` · ${d.propuestos.length} propuesto${d.propuestos.length > 1 ? 's' : ''}` : ''}${d.cruces[0] ? ` · mejor: ${esc(d.cruces[0].b.nombre)} (${d.cruces[0].pct} %)` : ''}</p></a>`).join('') : `<div class="card mu">No hay demandas ${est.toLowerCase()}s.</div>`);
+  m.querySelectorAll('[data-e]').forEach((b) => (b.onclick = () => (location.hash = '#demandas/' + b.dataset.e)));
+  $('#imp').onclick = guard(async () => { const x = await api('/admin/demandas/importar', { method: 'POST', body: {} }); toast(x.nuevas ? `${x.nuevas} demanda${x.nuevas > 1 ? 's' : ''} nueva${x.nuevas > 1 ? 's' : ''}` : 'No había alertas nuevas'); route(); });
+  $('#nd').onclick = () => { const dm = modal(`<h3 style="margin-bottom:12px">Nueva demanda</h3><form id="df">${formDem()}<div class="row" style="justify-content:flex-end;margin-top:12px"><button type="button" class="btn g" id="dc">Cancelar</button><button class="btn">Guardar y cruzar</button></div></form>`);
+    dm.querySelector('#dc').onclick = () => dm.remove();
+    dm.querySelector('#df').onsubmit = guard(async (e) => { e.preventDefault(); const d = await api('/admin/demandas', { method: 'POST', body: datosDem(e.target) }); dm.remove(); location.hash = '#demanda/' + d.id; }); };
+};
+V.demanda = async (m, id) => {
+  const d = await api('/admin/demandas/' + id); m = shell('demandas');
+  const filaB = (b, extra) => `<div class="li" style="align-items:flex-start"><div style="min-width:0"><b>${esc(b.nombre)}</b>${b.reservado ? ' <span class="mu sm">(reservado)</span>' : ''}<br><span class="sm">${[b.precio && eur(b.precio), b.eslora && b.eslora + ' m', b.zonaTxt].filter(Boolean).map(esc).join(' · ')}${b.cartera ? '' : ' · <span class="mu">solo en la web</span>'}</span>${extra || ''}</div><div class="r" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${b.url ? `<a class="btn g s" target="_blank" rel="noopener" href="${esc(b.url)}">Ficha</a>` : ''}${b.cartera && b.id ? `<a class="btn g s" href="#barco/${b.id}">Cartera</a>` : ''}</div></div>`;
+  m.innerHTML = top(esc(d.nombre), `${esc(resumenDem(d.criterios))}${d.origen ? ' · ' + esc(d.origen) : ''}`, `<a class="btn g" href="#demandas">Volver</a>${d.telefono ? `<a class="btn g" target="_blank" rel="noopener" href="${waLink(d.telefono)}">${IC.wa}WhatsApp</a>` : ''}`) +
+    `<div class="card sec"><h3 style="margin-bottom:4px">Barcos que encajan · ${d.cruces.length}</h3><p class="mu sm" style="margin-bottom:10px">De tu cartera y de la web, ordenados por encaje. Marca "Propuesto" cuando se lo ofrezcas o "No le va" para que no vuelva a salir.</p>` +
+    (d.cruces.length ? d.cruces.map((x) => filaB(x.b, `<br><span class="sm"><b style="color:var(--or)">${x.pct} %</b> ${[...x.si, ...x.ojo.map((o) => '⚠ ' + o)].map(esc).join(' · ')}</span><div class="row" style="margin-top:8px;gap:6px"><button class="btn s" data-p="${esc(x.b.key)}" data-n="${esc(x.b.nombre)}">Propuesto</button><button class="btn g s" data-x="${esc(x.b.key)}">No le va</button></div>`)).join('') : '<p class="mu">Ahora mismo no hay ningún barco en venta que encaje. Cuando entre uno en la cartera, te llegará un aviso al móvil.</p>') + '</div>' +
+    ((d.propuestosB || []).length ? `<div class="card sec"><h3 style="margin-bottom:10px">Ya propuestos · ${d.propuestosB.length}</h3>${d.propuestosB.map((b) => filaB(b, `<div class="row" style="margin-top:8px"><button class="btn g s" data-r="${esc(b.key)}">Quitar</button></div>`)).join('')}</div>` : '') +
+    `<form id="df" class="card sec"><h3 style="margin-bottom:12px">Qué busca</h3>${formDem(d)}<div class="row" style="justify-content:space-between;margin-top:12px"><button type="button" class="btn r s" id="dd">Borrar</button><button class="btn">Guardar y volver a cruzar</button></div></form>` +
+    ((d.historial || []).length ? `<div class="card sec"><h3 style="margin-bottom:10px">Historial</h3>${d.historial.map((h) => `<div class="li"><div>${esc(h.t)}</div><div class="r">${fdt(h.d)}</div></div>`).join('')}</div>` : '') +
+    ((d.descartados || []).length ? `<p class="mu sm">${d.descartados.length} barco${d.descartados.length > 1 ? 's' : ''} marcado${d.descartados.length > 1 ? 's' : ''} como "No le va". <a href="#" id="rec" style="color:var(--or)">Volver a mostrarlos</a></p>` : '');
+  const put = (b) => api('/admin/demandas/' + id, { method: 'PUT', body: b });
+  m.querySelectorAll('[data-p]').forEach((b) => (b.onclick = guard(async () => { await put({ proponer: b.dataset.p, nombreBarco: b.dataset.n }); toast('Marcado como propuesto'); route(); })));
+  m.querySelectorAll('[data-x]').forEach((b) => (b.onclick = guard(async () => { await put({ descartar: b.dataset.x }); route(); })));
+  m.querySelectorAll('[data-r]').forEach((b) => (b.onclick = guard(async () => { await put({ recuperar: b.dataset.r }); route(); })));
+  if ($('#rec')) $('#rec').onclick = guard(async (e) => { e.preventDefault(); for (const k of d.descartados) await put({ recuperar: k }); route(); });
+  $('#df').onsubmit = guard(async (e) => { e.preventDefault(); await put(datosDem(e.target)); toast('Guardado'); route(); });
+  $('#dd').onclick = guard(async () => { if (!confirm('¿Borrar esta demanda?')) return; await api('/admin/demandas/' + id, { method: 'DELETE' }); location.hash = '#demandas'; });
+};
+// ---------- Trimestre de Plata Marine y Rotulito (facturas emitidas en Holded) ----------
+V.ntrimestre = async (m, arg) => {
+  const now = new Date(); const [y0, q0] = (arg || '').split('-').map(Number); const y = y0 || now.getFullYear(), q = q0 || Math.floor(now.getMonth() / 3) + 1;
+  m = shell('trimestre'); m.innerHTML = top(`Trimestre ${q}T ${y} · ${NEGS[NEG].n}`, 'Leyendo tus facturas de Holded…');
+  const d = await api(`/admin/ntrimestre/${NEG}?y=${y}&q=${q}`);
+  const prev = q === 1 ? `${y - 1}-4` : `${y}-${q - 1}`, next = q === 4 ? `${y + 1}-1` : `${y}-${q + 1}`; const t = (k) => Math.round(d.rows.reduce((a, r) => a + (r[k] || 0), 0) * 100) / 100;
+  const avisoRet = d.rows.filter((r) => r.empresa && !r.ret);
+  const selNeg = (r) => `<select data-c="${esc(r.id)}" aria-label="Negocio de la factura ${esc(r.num)}"><option value="marine"${r.neg === 'marine' ? ' selected' : ''}>Plata Marine</option><option value="rotulito"${r.neg === 'rotulito' ? ' selected' : ''}>Rotulito</option><option value="garage"${r.neg === 'garage' ? ' selected' : ''}>Coches</option><option value=""${!r.neg ? ' selected' : ''}>Sin asignar</option></select>`;
+  const tabla = (l) => l.map((r) => `<div class="li" style="display:block;padding:12px 0"><div class="row" style="justify-content:space-between;gap:8px;align-items:flex-start"><div style="min-width:0"><b>${esc(r.num)}</b>&nbsp; <span class="mu sm">${fdate(r.fecha)}</span><br>${esc(r.cliente)}${r.empresa ? ' <span class="mu sm">(empresa)</span>' : ''}${r.concepto ? `<br><span class="mu sm">${esc(r.concepto)}</span>` : ''}</div><b style="white-space:nowrap">${eur(r.total)}</b></div>
+    <div class="row" style="justify-content:space-between;gap:8px;margin-top:8px;flex-wrap:wrap"><span class="sm">Base ${eur(r.base)} · IVA ${eur(r.iva)}${r.ret ? ' · Retención ' + eur(r.ret) : ''}</span>${selNeg(r)}</div></div>`).join('');
+  m.innerHTML = top(`Trimestre ${q}T ${y} · ${NEGS[NEG].n}`, 'Facturas emitidas en Holded en el trimestre: base, IVA y retención. Para revisar y mandar a la gestoría.', `<a class="btn g" href="#trimestre/${prev}">‹ Anterior</a><a class="btn g" href="#trimestre/${next}">Siguiente ›</a>`) +
+    (avisoRet.length ? `<div class="card sec hl"><b>Facturas a empresa sin retención:</b> ${avisoRet.map((r) => esc(r.num + ' · ' + r.cliente)).join(' · ')}. Consulta a Josep si debían llevar retención de IRPF antes de presentar el trimestre.</div>` : '') +
+    `<div class="kp"><div class="card"><span>Facturas</span><b>${d.rows.length}</b></div><div class="card"><span>Base (para el 130)</span><b>${eur(t('base'))}</b></div><div class="card"><span>IVA repercutido (303)</span><b>${eur(t('iva'))}</b></div><div class="card"><span>Retenciones que te han hecho</span><b>${eur(t('ret'))}</b></div></div>` +
+    `<div class="card sec"><h3 style="margin-bottom:10px">Facturas de ${esc(NEGS[NEG].n)}</h3>${d.rows.length ? tabla(d.rows) + `<div class="row" style="margin-top:12px"><button class="btn s" id="zp">Descargar ZIP para la gestoría</button></div>` : '<p class="mu">No hay facturas de este negocio en el trimestre.</p>'}</div>` +
+    (d.otras.length ? `<div class="card sec"><h3 style="margin-bottom:4px">Sin asignar · ${d.otras.length}</h3><p class="mu sm" style="margin-bottom:10px">No sé de qué negocio son por el concepto. Elige el negocio y se queda guardado.</p>${tabla(d.otras)}</div>` : '') +
+    `<p class="mu sm">Datos leídos de Holded, solo lectura: aquí no se crea ni se cambia ninguna factura. Los gastos y los modelos los revisa la gestoría, que tiene la última palabra.</p>`;
+  m.querySelectorAll('[data-c]').forEach((s) => (s.onchange = guard(async () => { await api(`/admin/ntrimestre/${NEG}/clasificar`, { method: 'PUT', body: { id: s.dataset.c, neg: s.value } }); toast('Guardado'); route(); })));
+  if ($('#zp')) $('#zp').onclick = guard(async () => { const b = $('#zp'); b.disabled = true; b.textContent = 'Preparando…';
+    try { const files = []; const enc = new TextEncoder();
+      const csv = '﻿' + [['Factura', 'Fecha', 'Cliente', 'Concepto', 'Base', 'IVA', 'Retención', 'Total'], ...d.rows.map((r) => [r.num, r.fecha, r.cliente, r.concepto, r.base, r.iva, r.ret, r.total])].map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
+      files.push({ name: `facturas-emitidas-${q}T${y}.csv`, data: enc.encode(csv) });
+      for (const r of d.rows) { const res = await fetch(`${API}/admin/ntrimestre/${NEG}/pdf/${encodeURIComponent(r.id)}`, { credentials: 'same-origin' }); if (res.ok) files.push({ name: `${String(r.num).replace(/[\\/:*?"<>|]/g, '-')} - ${slug(r.cliente)}.pdf`, data: new Uint8Array(await res.arrayBuffer()) }); }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(zip(files)); a.download = `${slug(NEGS[NEG].n)}-${q}T${y}.zip`; a.click(); toast('ZIP listo');
+    } finally { b.disabled = false; b.textContent = 'Descargar ZIP para la gestoría'; } });
+};
 // ---------- router ----------
 // Deslizar hacia abajo desde arriba del todo para actualizar (como en otras apps)
 (() => {
@@ -1093,12 +1182,12 @@ let lastVis = Date.now();
 document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') { lastVis = Date.now(); return; } const k = (location.hash.slice(1) || '').split('/')[0]; if (Date.now() - lastVis > 5000 && $('#mn') && ['', 'leads', 'resumen', 'clientes', 'reservas'].includes(k)) route(); });
 async function route() {
   const [k, arg] = (location.hash.slice(1) || home().slice(1)).split('/');
-  const fn = NEG === 'garage' ? (V[k] || V.leads) : ({ leads: V.nleads, cartera: V.cartera, barco: V.barco, resumen: V.nresumen, analiticas: V.nanalisis, clientes: V.nclientes, ncliente: V.ncliente, conexion: V.conexion }[k] || V.nresumen);
+  const fn = NEG === 'garage' ? (V[k] || V.leads) : ({ leads: V.nleads, cartera: V.cartera, barco: V.barco, demandas: NEG === 'marine' ? V.demandas : null, demanda: NEG === 'marine' ? V.demanda : null, visitas: analiticasWeb, trimestre: V.ntrimestre, resumen: V.nresumen, analiticas: V.nanalisis, clientes: V.nclientes, ncliente: V.ncliente, conexion: V.conexion }[k] || V.nresumen);
   try { await fn($('#mn'), arg); window.scrollTo(0, 0); } catch (e) { if (e.message !== 'Sesión caducada') { shell(k).innerHTML = `<div class="card">No se ha podido cargar: ${esc(e.message)}</div>`; } }
 }
 let polling = null;
 async function boot() {
-  try { const me = await api('/admin/me'); MIS = me.negs || ['garage']; QUIEN_YO = me.id === 'admin' ? 'Juan' : (me.name || me.id); if (!MIS.includes(NEG)) { NEG = MIS[0]; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } } } catch (e) { return; }
+  try { const me = await api('/admin/me'); MIS = me.negs || ['garage']; ROL = me.role || ''; QUIEN_YO = me.id === 'admin' ? 'Juan' : (me.name || me.id); if (!MIS.includes(NEG)) { NEG = MIS[0]; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } } } catch (e) { return; }
   // La app instalada antigua abría en #resumen: en Plata Garage, la primera vez se va a Leads
   if (PRIMERA) { PRIMERA = false; if (location.hash === '#resumen' || !location.hash) history.replaceState(null, '', location.pathname + '#leads'); }
   if (NEG !== 'garage') { route(); return; }
