@@ -588,7 +588,34 @@ V.alertas = async (m) => {
   });
 };
 
+// Analíticas de las webs de Plata Marine y Rotulito (contador propio de sus webs, solo con consentimiento de analítica)
+const analiticasWeb = async (m, arg) => {
+  const dias = +arg || 30; const st = await api(`/admin/stats?neg=${NEG}&dias=${dias}`); m = shell('analiticas');
+  const sum = (g) => { const o = {}; st.forEach((d) => Object.entries(d[g] || {}).forEach(([k, v]) => (o[k] = (o[k] || 0) + v))); return Object.entries(o).sort((a, b) => b[1] - a[1]); };
+  const T = Object.fromEntries(sum('tot')); const max = Math.max(1, ...st.map((d) => (d.tot || {}).visitas || 0));
+  const tbl = (rows, f = (x) => esc(x), n = 10) => `<table>${rows.slice(0, n).map(([k, v]) => `<tr><td>${f(k)}</td><td style="text-align:right"><b>${v}</b></td></tr>`).join('') || `<tr><td class="mu">Sin datos todavía.</td></tr>`}</table>`;
+  const card = (t, d, rows, f) => `<div class="card"><h3 style="margin-bottom:4px">${t}</h3>${d ? `<p class="mu sm" style="margin-bottom:10px">${d}</p>` : ''}${tbl(rows, f)}</div>`;
+  const evf = (k) => { const [t, mm] = k.split('|'); return `${{ contacto: 'Contacto', lead: 'Formulario', novedades: 'Novedades' }[t] || esc(t)} · ${esc(mm)}`; };
+  const canal = (() => { const vis = Object.fromEntries(sum('src')), con = Object.fromEntries(sum('contactosrc')), le = Object.fromEntries(sum('leadsrc')); const ks = [...new Set([...Object.keys(vis), ...Object.keys(con), ...Object.keys(le)])].sort((a, b) => ((le[b] || 0) + (con[b] || 0)) - ((le[a] || 0) + (con[a] || 0)) || (vis[b] || 0) - (vis[a] || 0));
+    return ks.length ? `<table><tr><td class="mu sm">Canal</td><td class="mu sm" style="text-align:right">Visitas</td><td class="mu sm" style="text-align:right">Contactos</td><td class="mu sm" style="text-align:right">Formularios</td></tr>${ks.slice(0, 12).map((k) => `<tr><td>${esc(k)}</td><td style="text-align:right">${vis[k] || 0}</td><td style="text-align:right">${con[k] || 0}</td><td style="text-align:right"><b>${le[k] || 0}</b></td></tr>`).join('')}</table>` : '<p class="mu">Sin datos todavía.</p>'; })();
+  const marine = NEG === 'marine';
+  m.innerHTML = top('Analíticas', `Visitas y contactos de ${marine ? 'www.platamarine.com' : 'www.rotulito.com'}, solo de quien acepta la analítica y sin datos personales.`, `<div class="filt" style="margin:0">${[7, 30, 90].map((d) => `<button data-d="${d}" class="${d === dias ? 'on' : ''}">${d} días</button>`).join('')}</div>`) +
+  `<div class="kp"><div class="card"><span>Visitas (entradas a la web)</span><b>${nf(T.nuevas || 0)}</b></div><div class="card"><span>Páginas vistas</span><b>${nf(T.visitas || 0)}</b></div><div class="card"><span>Contactos (WhatsApp, teléfono, email)</span><b>${T.contacto || 0}</b></div><div class="card"><span>Formularios enviados</span><b>${T.lead || 0}</b></div>${marine ? `<div class="card"><span>Altas a novedades</span><b>${T.novedades || 0}</b></div>` : ''}</div>
+  <div class="card sec"><h3 style="margin-bottom:14px">Páginas vistas por día</h3><div style="display:flex;align-items:flex-end;gap:3px;height:140px">${st.map((d) => { const v = (d.tot || {}).visitas || 0; return `<div title="${fdate(d.d)}: ${v}" style="flex:1;background:var(--or);opacity:${v ? 1 : .15};height:${Math.max(2, v / max * 100)}%;border-radius:3px 3px 0 0"></div>`; }).join('')}</div></div>
+  <div class="two"><div class="card"><h3 style="margin-bottom:4px">Qué canal trae clientes</h3><p class="mu sm" style="margin-bottom:10px">Visitas, contactos y formularios por origen.</p>${canal}</div>${card('Contactos por tipo', '', sum('ev'), evf)}</div>
+  ${marine ? `<div class="two" style="margin-top:16px">${card('Lo que buscan en los filtros', 'Combinaciones de filtros del catálogo de barcos.', sum('filtro'))}${card('Filtros sin ningún barco', 'Lo que piden y no tienes en cartera: pistas de qué barcos captar.', sum('filtro0'))}</div>
+  <div class="two" style="margin-top:16px">${card('Lo que escriben en el buscador', '', sum('q'))}${card('Búsquedas sin resultado', '', sum('q0'))}</div>
+  <div class="two" style="margin-top:16px">${card('Barcos más vistos', '', sum('boat'))}${card('¿Qué te falta para decidirte?', 'Respuestas de las fichas.', sum('falta'))}</div>`
+  : `<div class="card sec" style="margin-top:16px"><h3 style="margin-bottom:4px">Embudo de la web</h3><p class="mu sm" style="margin-bottom:12px">De la visita al formulario, los últimos ${dias} días.</p>${(() => { const E = Object.fromEntries(sum('embudo')); const pasos = [['Entradas a la web', T.nuevas || 0], ['Vieron el precio', E.precio || 0], ['Vieron los ejemplos', E.demos || 0], ['Empezaron el formulario', E.form_inicio || 0], ['Lo dejaron a medias', E.form_abandono || 0], ['Enviaron el formulario', T.lead || 0]]; const mx = Math.max(1, ...pasos.map((p) => p[1]));
+    return pasos.map(([t, v]) => `<div style="margin:6px 0"><div class="row" style="justify-content:space-between"><span>${t}</span><b>${nf(v)}</b></div><div style="height:8px;border-radius:6px;background:var(--line);margin-top:4px"><div style="height:8px;border-radius:6px;background:var(--or);width:${Math.max(1, Math.round((v / mx) * 100))}%"></div></div></div>`).join(''); })()}</div>`}
+  <div class="two" style="margin-top:16px">${card('Páginas más vistas', '', sum('pv'))}${card('Idioma', '', sum('lang'), (k) => ({ es: 'Castellano', ca: 'Catalán', en: 'Inglés', fr: 'Francés' }[k] || esc(k)))}</div>
+  <div class="two" style="margin-top:16px">${card('Ciudades (aproximadas)', '', sum('city'))}${card('Dispositivos', '', sum('dev'))}</div>
+  <p class="mu sm" style="margin-top:14px">Solo cuenta a quien acepta la analítica en el aviso de cookies, así que es menos que Google Analytics. No se guarda la IP ni nada que identifique a nadie; de lo que se escribe en el buscador se quitan los números largos.</p>`;
+  m.querySelectorAll('[data-d]').forEach((b) => (b.onclick = () => (location.hash = '#analiticas/' + b.dataset.d)));
+};
+
 V.analiticas = async (m, arg) => {
+  if (NEG !== 'garage') return analiticasWeb(m, arg);
   const dias = +arg || 30; const [st, cars, cls] = await Promise.all([api('/admin/stats?dias=' + dias), api('/admin/cars'), api('/admin/clientes').catch(() => [])]); m = shell('analiticas');
   const sum = (g) => { const o = {}; st.forEach((d) => Object.entries(d[g] || {}).forEach(([k, v]) => (o[k] = (o[k] || 0) + v))); return Object.entries(o).sort((a, b) => b[1] - a[1]); };
   const tot = st.reduce((a, d) => a + ((d.tot || {}).visitas || 0), 0); const ent = st.reduce((a, d) => a + ((d.tot || {}).nuevas || 0), 0); const ev = Object.fromEntries(sum('ev'));
