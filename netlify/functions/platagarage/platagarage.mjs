@@ -557,10 +557,14 @@ async function api(r, req, M, ip, url, context) {
     const carRef = (slug) => { const c = cars.find((x) => x.slug === slug); return c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' ') } : {}; };
     if (r === '/cita') {
       const fecha = clip(f.fecha, 10), hora = clip(f.hora, 5);
-      if (!(await freeSlots(fecha)).includes(hora)) return json({ error: 'Esa hora ya no está disponible. Elige otra.' }, 409);
+      const libres = await freeSlots(fecha); let propuesta = false;
+      if (!libres.includes(hora)) { // hora propuesta por el cliente: queda pendiente de que la confirmemos
+        const t0 = today(); if (f.flex !== '1' || !/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha < t0 || fecha > addDays(t0, 60) || !/^(09|1\d|20):(00|15|30|45)$/.test(hora) || hora > '20:00') return json({ error: 'Esa hora ya no está disponible. Elige otra.' }, 409);
+        const ahora = new Intl.DateTimeFormat('es-ES', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()); if (fecha === t0 && hora <= ahora) return json({ error: 'Esa hora ya ha pasado. Elige otra.' }, 409);
+        propuesta = true; }
       const motivo = clip(f.motivo, 60) || 'Ver un coche en concreto';
       const list = await load('bookings');
-      list.unshift({ ...base, tipo: motivo === 'Reservar este coche' ? 'reserva' : 'cita', fecha, hora, motivo, mensaje: clip(f.mensaje, 1000), ...carRef(f.coche) });
+      list.unshift({ ...base, tipo: motivo === 'Reservar este coche' ? 'reserva' : 'cita', fecha, hora, motivo, ...(propuesta ? { propuesta: true } : {}), mensaje: clip(f.mensaje, 1000), ...carRef(f.coche) });
       await save('bookings', list);
       out.ref = base.id; out.k = sign('ref|' + base.id).slice(0, 16);
     } else if (r === '/tasacion') {
@@ -645,10 +649,10 @@ async function pushAll(neg, title, body, tag, only) {
 }
 async function notify(tipo, d, origin) {
   if (!origin) return;
-  { const T = { cita: d.tipo === 'reserva' || d.motivo === 'Reservar este coche' ? 'Nueva reserva' : 'Nueva cita', tasacion: 'Nueva tasación', envio: 'Nuevo envío', mensaje: 'Nuevo mensaje', busqueda: 'Te lo buscamos', alerta: 'Nueva alerta' }; await pushAll('garage', `${T[tipo] || 'Nuevo aviso'} · Plata Garage`, [d.nombre || d.email, d.cocheNombre].filter(Boolean).join(' · ') || 'Ábrelo en la app', tipo).catch((e) => console.error('push', e.message)); }
+  { const T = { cita: (d.tipo === 'reserva' || d.motivo === 'Reservar este coche' ? 'Nueva reserva' : 'Nueva cita') + (d.flex === '1' ? ' (hora propuesta, confirmar)' : ''), tasacion: 'Nueva tasación', envio: 'Nuevo envío', mensaje: 'Nuevo mensaje', busqueda: 'Te lo buscamos', alerta: 'Nueva alerta' }; await pushAll('garage', `${T[tipo] || 'Nuevo aviso'} · Plata Garage`, [d.nombre || d.email, d.cocheNombre].filter(Boolean).join(' · ') || 'Ábrelo en la app', tipo).catch((e) => console.error('push', e.message)); }
   // Mismo formato que el aviso del panel anterior: tarjeta oscura con logo, tabla de datos, notas y botón al backoffice
   const diaL = d.fecha ? new Date(d.fecha + 'T12:00:00Z').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
-  const F = [['Cliente', d.nombre], ['Email', d.email], ['Teléfono', d.telefono], ['Día', diaL], ['Hora', d.hora], ['Motivo', d.motivo], ['Coche de interés', d.cocheNombre], ['Código postal', d.cp], ['Asunto', d.asunto], ['Su coche', [d.marca, d.modelo, d.anio].filter(Boolean).join(' ')], ['Kilómetros', d.km], ['Combustible', d.combustible], ['Cambio', d.cambio], ['Estado', d.estado], ['ITV', d.itv], ['Presupuesto', d.presupuesto ? d.presupuesto + ' €' : ''], ['Busca', d.busca], ['Máximo', d.max ? d.max + ' €' : '']].filter(([, v]) => v != null && v !== '');
+  const F = [['Cliente', d.nombre], ['Email', d.email], ['Teléfono', d.telefono], ['Día', diaL], ['Hora', d.hora ? d.hora + (d.flex === '1' ? ' (propuesta por el cliente: confirmar disponibilidad)' : '') : ''], ['Motivo', d.motivo], ['Coche de interés', d.cocheNombre], ['Código postal', d.cp], ['Asunto', d.asunto], ['Su coche', [d.marca, d.modelo, d.anio].filter(Boolean).join(' ')], ['Kilómetros', d.km], ['Combustible', d.combustible], ['Cambio', d.cambio], ['Estado', d.estado], ['ITV', d.itv], ['Presupuesto', d.presupuesto ? d.presupuesto + ' €' : ''], ['Busca', d.busca], ['Máximo', d.max ? d.max + ' €' : '']].filter(([, v]) => v != null && v !== '');
   const notas = d.mensaje || d.notas || '';
   const panel = `${origin}${BASE}/admin`;
   const H1 = { cita: d.tipo === 'reserva' || d.motivo === 'Reservar este coche' ? 'Nueva solicitud de reserva' : 'Nueva cita reservada', tasacion: 'Nueva solicitud de tasación', envio: 'Nueva solicitud de envío', mensaje: 'Nuevo mensaje', busqueda: 'Nueva petición "Te lo buscamos"', alerta: 'Nueva alerta de stock' }[tipo] || 'Nuevo aviso';
