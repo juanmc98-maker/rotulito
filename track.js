@@ -5,6 +5,8 @@
    - email_click    → GA4 "email_click" {placement}    · (Meta: nada)
    - view_demo(s)   → GA4 igual                          · Meta "ViewContent"
    - lead           → GA4 "generate_lead"                · Meta "Lead"   (solo tras {ok:true} del servidor, una vez por envío)
+   - view_price     → GA4 "view_price" (se ve la sección de precio, una vez por página)
+   - form_abandon   → GA4 "form_abandon" (empezó el formulario y se fue sin enviarlo; sin ningún dato de lo escrito)
    placement: cabecera | hero | flotante | contacto | footer | demo-<nombre> …
    Un clic en WhatsApp o en el teléfono NO es una conversación ni una venta: es intención de contacto.
    La página de gracias no envía conversión propia (solo page_view), así no se duplica el lead.
@@ -119,7 +121,9 @@ function app(d) {
 }
 window.rtApp = function (name, p) {
   var m = {whatsapp_click: 'whatsapp', phone_click: 'teléfono', email_click: 'email'}[name];
+  var em = {view_price: 'precio', view_demos: 'demos', form_start: 'form_inicio', form_abandon: 'form_abandono'}[name];
   if (m) app({t: 'contacto', m: m}); else if (name === 'lead') app({t: 'lead', m: (p && p.form_id) || 'formulario'});
+  else if (em) app({t: 'embudo', m: em});
 };
 function visit() { if (!visitSent && app({t: 'visita', e: ENTRADA ? 1 : 0})) visitSent = true; }
 visit();
@@ -133,4 +137,20 @@ if (ej && 'IntersectionObserver' in window) {
   }, {threshold: 0.3});
   io.observe(ej);
 }
+
+/* Embudo: "ha visto el precio" y, en la portada (sin #ejemplos), "ha visto los trabajos". Una vez por página. */
+function once(el, name, p) {
+  if (!el || !('IntersectionObserver' in window)) return;
+  var ob = new IntersectionObserver(function (es) { if (es[0].isIntersecting) { ob.disconnect(); window.rtTrack(name, p); } }, {threshold: 0.3});
+  ob.observe(el);
+}
+once(document.getElementById('pagas') || document.getElementById('precio'), 'view_price', {content_name: 'precio'});
+if (!ej) once(document.getElementById('trabajos'), 'view_demos', {content_name: 'trabajos'});
+
+/* Formulario empezado y no enviado: al salir de la página, una sola vez (no se envía nada de lo escrito) */
+var fStarted = false, fAband = false;
+if (fm) fm.addEventListener('focusin', function () { fStarted = true; });
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden' && fStarted && !leadSent && !fAband) { fAband = true; window.rtTrack('form_abandon', {form_id: 'contacto'}); }
+});
 })();
