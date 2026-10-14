@@ -722,6 +722,8 @@ async function hit(req, context) {
     const B = { lcp: [1000, 1500, 2000, 2500, 3000, 4000, 6000], inp: [100, 200, 300, 500, 800], cls: [0.05, 0.1, 0.15, 0.25, 0.4] };
     for (const m of ['lcp', 'inp', 'cls']) { const v = Number(b[m]); if (!Number.isFinite(v) || v < 0) continue; const i = B[m].findIndex((x) => v <= x); inc('cwv', `${tpl}|${m}|${i < 0 ? B[m].length : i}`); }
   }
+  else if (b.e === 'cmp') { const par = String(b.c || '').split('+').map((x) => clip(x, 120)).filter(Boolean).slice(0, 3); if (par.length > 1) { inc('tot', 'comparaciones'); inc('cmppar', par.join('+')); } }
+  else if (b.e === 'cmpc') { inc('tot', 'cmpcontacto'); inc('cmpk', b.k === 'wa' ? 'WhatsApp' : 'Pedir cita'); if (b.c) inc('cmpcar', clip(b.c, 120)); }
   else if (['wa', 'tel', 'pdf'].includes(b.e)) { inc('ev', b.e); if (b.c) inc('carev', `${clip(b.c, 120)}|${b.e}`); }
   await db().setJSON(k, st);
 }
