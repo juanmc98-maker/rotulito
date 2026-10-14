@@ -62,11 +62,11 @@ export const tiposConStock = (cars) => TIPOS.map((t) => ({ ...t, n: cars.filter(
 
 // Preguntas frecuentes (solo datos confirmados del negocio)
 export const FAQ = [
-  ['¿Hace falta pedir cita para ver un coche?', 'Sí. Atendemos con cita previa en Sabadell, de lunes a viernes de 9:30 a 19:30 y los sábados de 10:00 a 14:00. Puedes pedirla en la web eligiendo día y hora, por WhatsApp o por teléfono. Así te tenemos el coche preparado y te dedicamos el tiempo que necesites.'],
-  ['¿Los coches tienen garantía?', 'Sí, todos los coches tienen garantía de 12 meses. Según la antigüedad del coche, se puede ampliar con coste adicional; pregúntanos.'],
-  ['¿Puedo financiar el coche?', 'Consúltanos. Te explicamos las opciones y las condiciones de financiación de cada caso antes de que decidas nada.'],
-  ['¿Puedo reservar un coche?', 'En los coches que lo indican, sí, con una señal que se descuenta del precio. Primero te confirmamos que sigue disponible y te explicamos las condiciones, y después puedes pagarla por Bizum o transferencia.'],
-  ['¿Os quedáis mi coche?', 'Te hacemos una valoración orientativa de tu coche, hecha por una persona, en 24 horas laborables y sin compromiso. Puedes pedirla en "¿Cuánto vale mi coche?".'],
-  ['¿Me lo podéis llevar a casa?', 'Sí, es posible. Indícanos tu código postal en la ficha del coche y te pasamos presupuesto del envío, sin compromiso.'],
-  ['No encuentro el coche que busco, ¿me lo buscáis?', 'Sí. Dinos en "Te lo buscamos" qué coche quieres y tu presupuesto, y te escribimos cuando tengamos opciones que encajen.'],
+  ['¿Hace falta pedir cita para ver un coche?', 'Sí. Atendemos con cita previa en Sabadell, de lunes a viernes de 9:30 a 19:30 y los sábados de 10:00 a 14:00. Puedes pedirla en la web eligiendo día y hora, por WhatsApp o por teléfono. Así te tenemos el coche preparado y te dedicamos el tiempo que necesites.', ['Pedir cita', '/cita']],
+  ['¿Los coches tienen garantía?', 'Sí, todos los coches tienen garantía de 12 meses. Según la antigüedad del coche, se puede ampliar con coste adicional; pregúntanos.', ['Ver los coches', '/vehiculos/']],
+  ['¿Puedo financiar el coche?', 'Consúltanos. Te explicamos las opciones y las condiciones de financiación de cada caso antes de que decidas nada.', ['Preguntar por WhatsApp', 'wa:Hola, quería información sobre la financiación de un coche.']],
+  ['¿Puedo reservar un coche?', 'En los coches que lo indican, sí, con una señal que se descuenta del precio. Primero te confirmamos que sigue disponible y te explicamos las condiciones, y después puedes pagarla por Bizum o transferencia.', ['Ver los coches', '/vehiculos/']],
+  ['¿Os quedáis mi coche?', 'Te hacemos una valoración orientativa de tu coche, hecha por una persona, en 24 horas laborables y sin compromiso. Puedes pedirla en "¿Cuánto vale mi coche?".', ['Valorar mi coche', '/cuanto-vale-mi-coche']],
+  ['¿Me lo podéis llevar a casa?', 'Sí, es posible. Indícanos tu código postal en la ficha del coche y te pasamos presupuesto del envío, sin compromiso.', ['Ver coches y pedir envío', '/vehiculos/']],
+  ['No encuentro el coche que busco, ¿me lo buscáis?', 'Sí. Dinos en "Te lo buscamos" qué coche quieres y tu presupuesto, y te escribimos cuando tengamos opciones que encajen.', ['Pedir mi coche a la carta', '/te-lo-buscamos']],
 ];

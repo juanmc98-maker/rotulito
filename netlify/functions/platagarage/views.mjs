@@ -135,7 +135,8 @@ const LD_BIZ = { '@context': 'https://schema.org', '@type': ['AutoDealer', 'Loca
 const ldBiz = () => ({ ...LD_BIZ, '@id': `${CTX.site}${B}/#negocio`, url: `${CTX.site}${B}/`, image: abs(`${B}/assets/logo.png`), logo: abs(`${B}/assets/logo.png`), areaServed: ZONAS.map((z) => ({ '@type': 'City', name: z.name })), sameAs: ['https://www.instagram.com/platagarage/'], hasMap: undefined, contactPoint: { '@type': 'ContactPoint', telephone: TEL, contactType: 'sales', availableLanguage: ['es', 'ca'] } });
 const ldWeb = () => ({ '@context': 'https://schema.org', '@type': 'WebSite', '@id': `${CTX.site}${B}/#web`, url: `${CTX.site}${B}/`, name: 'Plata Garage', inLanguage: 'es', publisher: { '@id': `${CTX.site}${B}/#negocio` }, potentialAction: { '@type': 'SearchAction', target: { '@type': 'EntryPoint', urlTemplate: `${CTX.site}${B}/vehiculos/?q={search_term_string}` }, 'query-input': 'required name=search_term_string' } });
 const ldFaq = (list) => ({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: list.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) });
-const faqHtml = (list, title = 'Preguntas frecuentes') => `<div class="faq">${title ? `<h2>${title}</h2>` : ''}${list.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>`;
+const faqLink = (l) => !l ? '' : `<p><a class="btn g sm" href="${esc(l[1].startsWith('wa:') ? wa(l[1].slice(3)) : B + l[1])}"${l[1].startsWith('wa:') ? ' rel="noopener"' : ''}>${esc(l[0])}</a></p>`;
+const faqHtml = (list, title = 'Preguntas frecuentes') => `<div class="faq">${title ? `<h2>${title}</h2>` : ''}${list.map(([q, a, l]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p>${faqLink(l)}</details>`).join('')}</div>`;
 const ld = (o) => `<script type="application/ld+json">${JSON.stringify(o).replace(/</g, '\\u003c')}</script>`;
 
 function page({ title, desc, on = '', body, head = '', script = '', car = '', alert = false, path = '', image = '', noindex = false }) {
@@ -586,7 +587,7 @@ ${car ? `<div class="box" style="max-width:720px;display:flex;gap:14px;align-ite
 <div style="margin-top:48px"><h2>Qué puedes hacer con tu coche</h2><ul class="mu" style="line-height:1.7;margin-top:12px;max-width:720px">
 <li><b style="color:#fff">Vendérnoslo:</b> si encaja con lo que buscamos para nuestro stock, te hacemos una oferta.</li>
 <li><b style="color:#fff">Entregarlo como parte del pago</b> de uno de <a href="${B}/vehiculos/" style="color:var(--or)">nuestros coches</a>.</li>
-<li><b style="color:#fff">Que lo vendamos por ti:</b> nos encargamos de anunciarlo y de atender a los interesados, y el coche se queda contigo hasta que haya un comprador. Te explicamos las condiciones por escrito antes de firmar nada.</li></ul></div>
+<li><b style="color:#fff">Que lo vendamos por ti:</b> nos encargamos de anunciarlo, de atender a los interesados y de todo el papeleo de la venta. Te explicamos las condiciones por escrito antes de firmar nada.</li></ul></div>
 <div style="margin-top:56px">${faqHtml(faqs)}</div>
 <p class="note" style="margin-top:24px">${z ? `También valoramos coches de ${ZONAS_VENTA.filter((x) => x.slug !== z.slug).map((x) => `<a href="${B}/vender-mi-coche-${x.slug}">${esc(x.name)}</a>`).join(', ')} y del resto del Vallès. <a href="${B}/cuanto-vale-mi-coche">Tasación en Sabadell</a>.` : `También valoramos coches de ${ZONAS_VENTA.map((x) => `<a href="${B}/vender-mi-coche-${x.slug}">${esc(x.name)}</a>`).join(', ')} y del resto del Vallès.`}</p>
 <p class="note" style="margin-top:10px">Información orientativa: puede contener errores y no es vinculante.</p></div></section>`;
@@ -694,7 +695,7 @@ export function zona({ z, cars }) {
 
 export function faqPage({ cars }) {
   const body = `<section style="padding-top:56px"><div class="w"><div class="pill">${ic.chat}Dudas</div><h1 class="s">Preguntas <span class="gr">frecuentes</span></h1><p class="lead" style="max-width:640px">Lo que más nos preguntáis antes de venir. Si te queda alguna duda, escríbenos por <a href="${wa('Hola, tengo una duda.')}" style="color:var(--or)">WhatsApp</a>.</p>
-${faqHtml(FAQ, '')}<div class="row" style="margin-top:28px"><a class="btn" href="${B}/vehiculos/">Ver los ${cars.length} coches en stock</a><a class="btn g" href="${B}/cita">Pedir cita</a></div></div></section>`;
+${faqHtml(FAQ, '')}<div style="margin-top:36px"><h2 style="font-size:clamp(22px,2.4vw,28px)">¿Qué necesitas?</h2><div class="row" style="margin-top:16px;flex-wrap:wrap"><a class="btn" href="${B}/vehiculos/">Ver los ${cars.length} coches en stock</a><a class="btn g" href="${B}/cita">Pedir cita</a><a class="btn g" href="${B}/te-lo-buscamos">Pedir mi coche a la carta</a><a class="btn g" href="${B}/cuanto-vale-mi-coche">Valorar mi coche</a><a class="btn g" href="${wa('Hola, tengo una duda.')}" rel="noopener">${ic.wa}WhatsApp</a></div></div></div></section>`;
   return page({ title: 'Preguntas frecuentes | Plata Garage', desc: 'Cita previa, garantía de 12 meses, financiación, reserva, tasación de tu coche y envío a domicilio: resolvemos tus dudas.', body, path: '/preguntas-frecuentes', head: ld(ldFaq(FAQ)) });
 }
 
