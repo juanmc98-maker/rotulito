@@ -19,6 +19,9 @@ export const ZONAS = [
   { slug: 'barcelona', name: 'Barcelona', km: 19, txt: 'Desde Barcelona estás a unos 25-30 minutos de Sabadell por la C-58, según el tráfico. Y si no puedes venir, te pasamos presupuesto para llevarte el coche a casa.' },
 ];
 
+// Páginas "vender mi coche" por zona: solo las poblaciones más cercanas, para no hacer páginas de relleno
+export const ZONAS_VENTA = ['terrassa', 'sant-cugat', 'barbera-del-valles', 'cerdanyola', 'sant-quirze-del-valles', 'castellar-del-valles'].map((s) => ZONAS.find((z) => z.slug === s)).filter(Boolean);
+
 const hasFuel = (c, ...f) => f.some((x) => norm(c.fuel).includes(x));
 // Cada tipo: filtro sobre el stock y textos propios
 export const TIPOS = [

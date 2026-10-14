@@ -171,6 +171,7 @@ function sitemap(site, cars, posts) {
   SEO.tiposConStock(cars).forEach((t) => rows.push(u(`/coches/${t.slug}`, newest)));
   SEO.marcas(cars).forEach((m) => rows.push(u(`/coches/${m.slug}`, newest)));
   SEO.ZONAS.forEach((z) => rows.push(u(`/coches-segunda-mano-${z.slug}`, newest)));
+  SEO.ZONAS_VENTA.forEach((z) => rows.push(u(`/vender-mi-coche-${z.slug}`)));
   posts.forEach((p) => rows.push(u(`/blog/${p.slug}`, p.updated || p.publishedAt)));
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${rows.join('\n')}\n</urlset>`;
 }
@@ -393,6 +394,7 @@ export default async (req, context) => {
     if (sub === '/privacidad') return html(V.privacidad());
     if (sub === '/aviso-legal') return html(V.avisoLegal());
     if (sub === '/te-lo-buscamos') return html(V.teLoBuscamos({ cars: pubCars(cars) }));
+    if (sub.startsWith('/vender-mi-coche-')) { const z = SEO.ZONAS_VENTA.find((x) => x.slug === sub.slice(17)); if (!z) return redirect(`${BASE}/cuanto-vale-mi-coche`); return html(V.cuantoVale({ z })); }
     if (sub === '/cuanto-vale-mi-coche') return html(V.cuantoVale({ car: pubCars(cars).find((c) => c.slug === url.searchParams.get('coche')) }));
     if (sub === '/favoritos') return html(V.favoritos({ cars: pubCars(cars) }), 200, { 'x-robots-tag': 'noindex' });
     if (sub === '/comparar') { const sl = (url.searchParams.get('c') || '').split(',').slice(0, 3); return html(V.comparar({ cars: sl.map((x) => pubCars(cars).find((c) => c.slug === x)).filter(Boolean) }), 200, { 'x-robots-tag': 'noindex' }); }
@@ -690,7 +692,11 @@ export async function diario() {
   // Coches parados: más de 45 días en stock y 3 semanas sin tocar el precio
   const parados = (await load('cars')).filter((c) => !c.sold && !c.hidden && diasD(c.llegada || c.created) >= 45 && diasD((c.priceHistory || []).length > 1 ? c.priceHistory[c.priceHistory.length - 1].d : c.llegada || c.created) >= 21).sort((a, b) => diasD(b.llegada || b.created) - diasD(a.llegada || a.created));
   if (parados.length) await pushAll('garage', `Coches parados: ${parados.length} sin moverse`, parados.slice(0, 3).map((c) => `${c.brand} ${c.model} (${diasD(c.llegada || c.created)} d)`).join(', ') + (parados.length > 3 ? '…' : '') + ' · revisa precio', 'parados').catch((e) => console.error('push', e.message));
-  return Object.fromEntries([...Object.entries(res).map(([k, v]) => [k, v.length]), ['parados', parados.length]]);
+  // Vendedores (tasaciones) que llevan más días de la cuenta en su paso
+  const MAXV = { pendiente: 1, contactado: 3, ofertado: 5, visto: 3, gestion: 30 };
+  const vend = (await load('tasaciones')).filter((t) => MAXV[t.status || 'pendiente'] && diasD(t.desde || t.created) > MAXV[t.status || 'pendiente']);
+  if (vend.length) await pushAll('garage', `Vendedores: ${vend.length} sin mover`, vend.slice(0, 3).map((t) => `${String(t.nombre || '').split(' ')[0]} (${t.marca || ''} ${t.modelo || ''})`.trim()).join(', ') + (vend.length > 3 ? '…' : ''), 'vendedores').catch((e) => console.error('push', e.message));
+  return Object.fromEntries([...Object.entries(res).map(([k, v]) => [k, v.length]), ['parados', parados.length], ['vendedores', vend.length]]);
 }
 // Medición propia sin cookies ni datos personales: contadores por día
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|headless|lighthouse|pingdom/i;
@@ -1097,8 +1103,10 @@ async function adminApi(r, req, M, me, url) {
     const i = list.findIndex((x) => x.id === seg[1]); if (i < 0) return json({ error: 'No existe' }, 404);
     if (M === 'DELETE') { list.splice(i, 1); await save(key, list); return json({ ok: true }); }
     if (M === 'PUT') {
-      const allowed = { bookings: ['pendiente', 'confirmada', 'cancelada', 'completada'], tasaciones: ['pendiente', 'contactado', 'ofertado', 'cerrada'], envios: ['pendiente', 'presupuesto enviado', 'aceptado', 'rechazado'], mensajes: ['pendiente', 'respondido'], alertas: ['activa', 'avisado', 'baja'], busquedas: ['pendiente', 'buscando', 'propuesto', 'cerrada'], portales: ['pendiente', 'contactado', 'cita', 'descartado'] }[key];
-      if ('status' in body && allowed.includes(body.status)) list[i].status = body.status;
+      const allowed = { bookings: ['pendiente', 'confirmada', 'cancelada', 'completada'], tasaciones: ['pendiente', 'contactado', 'ofertado', 'visto', 'comprado', 'gestion', 'vendido', 'descartado', 'cerrada'], envios: ['pendiente', 'presupuesto enviado', 'aceptado', 'rechazado'], mensajes: ['pendiente', 'respondido'], alertas: ['activa', 'avisado', 'baja'], busquedas: ['pendiente', 'buscando', 'propuesto', 'cerrada'], portales: ['pendiente', 'contactado', 'cita', 'descartado'] }[key];
+      if ('status' in body && allowed.includes(body.status) && body.status !== list[i].status) { const d = new Date().toISOString(); list[i].historial = [{ d, t: `Paso: ${list[i].status || 'pendiente'} → ${body.status}` }, ...(list[i].historial || [])].slice(0, 50); list[i].status = body.status; list[i].desde = d; }
+      if (key === 'tasaciones' && 'oferta' in body) { const n = Number(String(body.oferta).replace(/\./g, '').replace(',', '.')); list[i].oferta = isFinite(n) && n > 0 ? Math.round(n) : 0; }
+      if (key === 'tasaciones' && 'motivo' in body) list[i].motivo = clip(body.motivo, 200);
       if ('notas' in body) list[i].notas = clip(body.notas, 2000);
       if ('leido' in body) list[i].leido = !!body.leido;
       if (key === 'bookings' && body.fecha && body.hora) { list[i].fecha = clip(body.fecha, 10); list[i].hora = clip(body.hora, 5); }

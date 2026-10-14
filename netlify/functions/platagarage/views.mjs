@@ -1,5 +1,5 @@
 // Plantillas HTML de la web pública y del panel de Plata Garage
-import { ZONAS, TIPOS, FAQ, marcas, tiposConStock, slugBrand } from './seo.mjs';
+import { ZONAS, ZONAS_VENTA, TIPOS, FAQ, marcas, tiposConStock, slugBrand } from './seo.mjs';
 const B = '/platagarage';
 // Contexto por petición: dominio público (para enlaces absolutos) y si la web se deja indexar
 let CTX = { site: '', index: false };
@@ -482,11 +482,7 @@ export function contacto() {
   const body = `<section style="padding-top:56px"><div class="w"><div class="pill">${ic.chat}Contacto</div><h1 class="s">Hablemos <span class="gr">sin compromiso</span></h1>
 <p class="lead">Atendemos con cita previa en Sabadell, de lunes a viernes de 9:30 a 19:30 y los sábados de 10:00 a 14:00. Lo más rápido es <a href="${wa('Hola, quería información.')}" style="color:var(--or)">WhatsApp</a> o el ${TEL}.</p>
 <div class="two" style="align-items:start;gap:28px"><div class="box" style="padding:28px"><h3>Envíanos un mensaje</h3><form class="f" data-api="${B}/api/mensaje" data-t="mensaje" novalidate>${hp()}${contactFields()}<label>Asunto<input name="asunto" maxlength="120"></label><label>Mensaje *<textarea name="mensaje" required maxlength="3000"></textarea></label>${priv()}<div class="msg" role="alert"></div><button class="btn" type="submit">Enviar mensaje</button></form></div>
-<div class="box" id="tasacion" style="padding:28px"><h3>Tasación de tu vehículo</h3><p class="mu" style="margin:0 0 14px;font-size:14px">Cuéntanos qué coche tienes y te damos una valoración orientativa.</p><form class="f" data-api="${B}/api/tasacion" data-t="tasacion" novalidate>${hp()}${contactFields()}
-<div class="f2"><label>Marca *<input name="marca" required maxlength="40"></label><label>Modelo *<input name="modelo" required maxlength="60"></label></div>
-<div class="f2"><label>Año<input name="anio" inputmode="numeric" maxlength="4"></label><label>Kilómetros<input name="km" inputmode="numeric" maxlength="7"></label></div>
-<label>Combustible<select name="combustible"><option value="">—</option><option>Gasolina</option><option>Diésel</option><option>Híbrido</option><option>Eléctrico</option><option>GLP</option></select></label>
-<label>Estado, extras, observaciones<textarea name="notas" maxlength="1500"></textarea></label>${priv()}<div class="msg" role="alert"></div><button class="btn" type="submit">Solicitar tasación</button></form></div></div></div></section>`;
+<div class="box" id="tasacion" style="padding:28px"><h3>¿Quieres vender tu coche?</h3><p class="mu" style="margin:0 0 16px">Te damos una valoración orientativa gratis, hecha por una persona, en 24 horas laborables. Son 4 preguntas rápidas.</p><a class="btn" href="${B}/cuanto-vale-mi-coche">Valorar mi coche</a><p class="note" style="margin-top:14px">También puedes entregarlo como parte del pago de uno de nuestros coches.</p></div></div></div></section>`;
   return page({ title: 'Contacto y tasación | Plata Garage', desc: 'Contacta con Plata Garage en Sabadell o pide la tasación de tu coche.', on: 'con', body, script: FORM_JS, path: '/contacto' });
 }
 
@@ -557,11 +553,21 @@ ${contactFields()}${priv()}<div class="msg" role="alert"></div><button class="bt
   return page({ title: 'Te buscamos coche en Sabadell | Plata Garage', desc: 'Dinos qué coche de segunda mano buscas y tu presupuesto y te lo buscamos. Sin compromiso.', body, script: FORM_JS, path: '/te-lo-buscamos' });
 }
 
-export function cuantoVale({ car } = {}) {
+export function cuantoVale({ car, z } = {}) {
   const y = new Date().getFullYear();
-  const body = `<section style="padding-top:56px"><div class="w"><div class="pill">${I('<path d="M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L2 12V2h10l8.6 8.6a2 2 0 010 2.8z"/><circle cx="7" cy="7" r="1.5"/>')}Tasación gratuita</div><h1 class="s">¿Cuánto vale <span class="gr">mi coche?</span></h1>
+  const enZ = z ? ` en ${esc(z.name)}` : '';
+  const faqs = [
+    ['¿La valoración es gratis?', 'Sí. Es gratis y sin compromiso: nos cuentas qué coche tienes y te respondemos en 24 horas laborables.'],
+    ['¿La cifra que me dais es definitiva?', 'No. Es una valoración orientativa con los datos que nos das. El precio final depende de ver el coche en persona y comprobar su documentación.'],
+    ['¿Qué miráis para valorar un coche?', 'Año y kilómetros, el mantenimiento que se le ha hecho, el estado de chapa, interior y neumáticos, la ITV, si tiene cargas y cuánta demanda real tiene ese modelo ahora mismo.'],
+    ['¿Puedo entregarlo como parte del pago de uno de vuestros coches?', 'Sí. Al pedir la valoración dinos qué coche te interesa y te decimos cuánto te quedaría por pagar.'],
+    ['¿Y si todavía lo estoy pagando?', 'Se puede estudiar. Si tiene reserva de dominio de una financiera hay que cancelarla antes de la venta; lo vemos contigo caso por caso.'],
+    ['¿Qué documentación necesito?', 'Permiso de circulación, ficha técnica con la ITV en vigor y tu DNI. Si tienes las facturas del mantenimiento, mejor.'],
+    ...(z ? [[`Soy de ${z.name}, ¿tengo que ir a Sabadell?`, z.km ? `Para darte la valoración orientativa no hace falta: lo hacemos con los datos que nos envías. Para el precio final quedamos con cita en Sabadell, a unos ${z.km} km de ${z.name}.` : 'Para la valoración orientativa no hace falta venir. Para el precio final quedamos con cita en nuestro local de Sabadell.']] : []),
+  ];
+  const body = `<section style="padding-top:56px"><div class="w"><div class="pill">${I('<path d="M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L2 12V2h10l8.6 8.6a2 2 0 010 2.8z"/><circle cx="7" cy="7" r="1.5"/>')}Tasación gratuita</div><h1 class="s">${z ? `Vender mi coche <span class="gr">en ${esc(z.name)}</span>` : '¿Cuánto vale <span class="gr">mi coche?</span>'}</h1>
 ${car ? `<div class="box" style="max-width:720px;display:flex;gap:14px;align-items:center"><img src="${esc(im(cover(car), 200))}" alt="" width="96" height="72" style="border-radius:10px;object-fit:cover"><div><b>Para entregarlo como parte del pago del ${esc(carName(car))} (${car.year})</b><div class="mu" style="font-size:14px">${eur(car.price)} · Te diremos cuánto te quedaría por pagar.</div></div></div>` : ''}
-<p class="lead" style="max-width:640px">Responde 4 preguntas rápidas y te damos una valoración orientativa, hecha por una persona y no por un algoritmo, en 24 horas laborables. Sin compromiso de venta.</p>
+<p class="lead" style="max-width:640px">${z ? `¿Vives en ${esc(z.name)} y quieres saber cuánto te darían por tu coche? ` : ''}Responde 4 preguntas rápidas y te damos una valoración orientativa, hecha por una persona y no por un algoritmo, en 24 horas laborables. Sin compromiso de venta.</p>
 <div class="box wz" style="padding:28px"><div class="stp2"><i class="on"></i><i></i><i></i><i></i></div>
 <form class="f" data-api="${B}/api/tasacion" data-t="tasacion" novalidate id="wz">${hp()}${car ? `<input type="hidden" name="coche" value="${car.slug}">` : ''}
 <fieldset class="on"><legend>1. ¿Qué coche es?</legend><div class="f2"><label>Marca *<input name="marca" required maxlength="40" placeholder="Seat"></label><label>Modelo *<input name="modelo" required maxlength="60" placeholder="León 1.5 TSI"></label></div>
@@ -571,11 +577,25 @@ ${car ? `<div class="box" style="max-width:720px;display:flex;gap:14px;align-ite
 <label>¿Algo que debamos saber?<textarea name="notas" maxlength="1500" placeholder="Extras, golpes, mantenimiento, un solo propietario…"></textarea></label></fieldset>
 <fieldset><legend>4. ¿Dónde te enviamos la valoración?</legend>${contactFields()}${priv()}<div class="msg" role="alert"></div></fieldset>
 <div class="row" style="justify-content:space-between;margin-top:6px"><button class="btn g" type="button" id="wzb" style="visibility:hidden">Atrás</button><button class="btn" type="button" id="wzn">Siguiente</button><button class="btn" type="submit" id="wzs" style="display:none">Recibir mi valoración</button></div></form>
-<p class="note">Valoración orientativa y no vinculante: el precio final depende de ver el coche en persona.</p></div></div></section>`;
+<p class="note">Valoración orientativa y no vinculante: el precio final depende de ver el coche en persona.</p></div>
+<div style="margin-top:56px"><h2>Cómo funciona</h2><div class="two" style="margin-top:18px;gap:16px">
+<div class="box" style="margin:0"><b>1. Nos cuentas qué coche tienes</b><p class="mu" style="margin:6px 0 0">Marca, modelo, año, kilómetros y cómo está. Te lleva un par de minutos.</p></div>
+<div class="box" style="margin:0"><b>2. Te enviamos una valoración orientativa</b><p class="mu" style="margin:6px 0 0">La hace una persona, mirando el mercado real de ese coche, en 24 horas laborables.</p></div>
+<div class="box" style="margin:0"><b>3. Si te encaja, lo vemos en persona</b><p class="mu" style="margin:6px 0 0">Quedamos con cita en Sabadell, revisamos el coche y la documentación y te damos el precio final.</p></div>
+<div class="box" style="margin:0"><b>4. Tú decides</b><p class="mu" style="margin:6px 0 0">Sin compromiso: si no te convence, no pasa nada.</p></div></div></div>
+<div style="margin-top:48px"><h2>Qué puedes hacer con tu coche</h2><ul class="mu" style="line-height:1.7;margin-top:12px;max-width:720px">
+<li><b style="color:#fff">Vendérnoslo:</b> si encaja con lo que buscamos para nuestro stock, te hacemos una oferta.</li>
+<li><b style="color:#fff">Entregarlo como parte del pago</b> de uno de <a href="${B}/vehiculos/" style="color:var(--or)">nuestros coches</a>.</li>
+<li><b style="color:#fff">Que lo vendamos por ti:</b> nos encargamos de anunciarlo y de atender a los interesados, y el coche se queda contigo hasta que haya un comprador. Te explicamos las condiciones por escrito antes de firmar nada.</li></ul></div>
+<div style="margin-top:56px">${faqHtml(faqs)}</div>
+<p class="note" style="margin-top:24px">${z ? `También valoramos coches de ${ZONAS_VENTA.filter((x) => x.slug !== z.slug).map((x) => `<a href="${B}/vender-mi-coche-${x.slug}">${esc(x.name)}</a>`).join(', ')} y del resto del Vallès. <a href="${B}/cuanto-vale-mi-coche">Tasación en Sabadell</a>.` : `También valoramos coches de ${ZONAS_VENTA.map((x) => `<a href="${B}/vender-mi-coche-${x.slug}">${esc(x.name)}</a>`).join(', ')} y del resto del Vallès.`}</p>
+<p class="note" style="margin-top:10px">Información orientativa: puede contener errores y no es vinculante.</p></div></section>`;
   const script = `(()=>{const f=document.getElementById('wz'),fs=[...f.querySelectorAll('fieldset')],bar=[...document.querySelectorAll('.stp2 i')],b=document.getElementById('wzb'),n=document.getElementById('wzn'),sb=document.getElementById('wzs');let k=0;
 const go=i=>{k=i;fs.forEach((x,j)=>x.classList.toggle('on',j===k));bar.forEach((x,j)=>x.classList.toggle('on',j<=k));b.style.visibility=k?'visible':'hidden';n.style.display=k<fs.length-1?'':'none';sb.style.display=k===fs.length-1?'':'none'};
 n.onclick=()=>{const bad=[...fs[k].querySelectorAll('[required]')].find(x=>!x.value.trim());if(bad){bad.focus();bad.reportValidity&&bad.reportValidity();return}go(k+1)};b.onclick=()=>go(k-1)})();${FORM_JS}`;
-  return page({ title: '¿Cuánto vale mi coche? Tasación gratis en Sabadell | Plata Garage', desc: 'Pide una valoración orientativa de tu coche, hecha por una persona, en 24 horas laborables. Gratis y sin compromiso.', body, script, path: '/cuanto-vale-mi-coche' });
+  const path = z ? `/vender-mi-coche-${z.slug}` : '/cuanto-vale-mi-coche';
+  const tz = z ? `Vender mi coche en ${z.name}: tasación gratis | Plata Garage` : '';
+  return page({ title: z ? (tz.length <= 64 ? tz : `Vender mi coche en ${z.name} | Plata Garage`) : '¿Cuánto vale mi coche? Tasación gratis en Sabadell | Plata Garage', desc: z ? `¿Quieres vender tu coche en ${z.name}? Te damos una valoración orientativa gratis, hecha por una persona, en 24 horas laborables. Sin compromiso.`.slice(0, 158) : 'Pide una valoración orientativa de tu coche, hecha por una persona, en 24 horas laborables. Gratis y sin compromiso.', body, script, path, head: ld(ldFaq(faqs)) + ld(ldCrumb([['Inicio', '/'], z ? ['¿Cuánto vale mi coche?', '/cuanto-vale-mi-coche'] : null, [z ? `Vender mi coche en ${z.name}` : '¿Cuánto vale mi coche?']].filter(Boolean))) });
 }
 
 // Markdown sencillo y seguro (escapa todo el HTML)
@@ -622,7 +642,7 @@ export function notFound(msg = 'Esta página no existe o el coche ya no está di
   return page({ noindex: true, title: 'Página no encontrada | Plata Garage', desc: msg, body: `<section><div class="w"><div class="cta"><h2>Vaya…</h2><p class="lead">${esc(msg)}</p><div class="row"><a class="btn" href="${B}/vehiculos/">Ver coches en stock</a></div></div></div></section>` });
 }
 
-const AV = '44';
+const AV = '45';
 export function adminShell() {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Backoffice · Plata Garage</title><link rel="icon" href="${B}/assets/icon-192.png"><link rel="manifest" href="${B}/assets/manifest.webmanifest"><link rel="apple-touch-icon" href="${B}/assets/icon-192.png"><meta name="theme-color" content="#050505"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Plata Garage"><link rel="stylesheet" href="${B}/assets/admin.css?v=${AV}"></head><body><div id="app"></div><script src="${B}/assets/admin.js?v=${AV}"></script></body></html>`;
 }
