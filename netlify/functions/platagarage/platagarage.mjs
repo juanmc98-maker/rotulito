@@ -426,6 +426,7 @@ async function api(r, req, M, ip, url, context) {
     return json({ dias });
   }
   if (r === '/hit' && M === 'POST') { await hit(req, context).catch(() => {}); return new Response(null, { status: 204 }); }
+  if (r.startsWith('/w/') && M === 'POST') { await hitW(r.slice(3), req, context).catch(() => {}); return new Response(null, { status: 204 }); }
   if (r.startsWith('/ical/') && M === 'GET') {
     const tok = r.slice(6).replace(/\.ics$/, '');
     if (!env('PG_ADMIN_PASSWORD') || tok.length !== 32 || !eqHash(tok, icalToken())) return new Response('No encontrado', { status: 404 });
@@ -632,13 +633,38 @@ async function hit(req, context) {
     if (b.n) inc('tot', 'nuevas');
   }
   else if (b.e === 'falta') { const K = { precio: 'El precio', financiacion: 'La financiación', verlo: 'Verlo en persona', datos: 'Más fotos o datos', garantia: 'La garantía', entregar: 'Entregar su coche' }; if (K[b.k]) { inc('falta', K[b.k]); if (b.c) inc('faltacar', `${clip(b.c, 120)}|${K[b.k]}`); } }
-  else if (b.e === 'q') { const q = clip(String(b.q || '').replace(/[^a-z0-9ñ .,€-]/gi, ' ').replace(/\s+/g, ' ').trim(), 80); if (q) { inc('q', q); if (!Number(b.n)) inc('q0', q); } }
+  else if (b.e === 'q') { const q = clip(String(b.q || '').replace(/\d(?:[ .]?\d){6,}/g, ' ').replace(/[^a-z0-9ñ .,€-]/gi, ' ').replace(/\s+/g, ' ').trim(), 80); if (q) { inc('q', q); if (!Number(b.n)) inc('q0', q); } }
   else if (b.e === 'cwv') {
     const tpl = ['home', 'catalogo', 'ficha', 'landing', 'cita', 'otra'].includes(b.t) ? b.t : 'otra';
     const B = { lcp: [1000, 1500, 2000, 2500, 3000, 4000, 6000], inp: [100, 200, 300, 500, 800], cls: [0.05, 0.1, 0.15, 0.25, 0.4] };
     for (const m of ['lcp', 'inp', 'cls']) { const v = Number(b[m]); if (!Number.isFinite(v) || v < 0) continue; const i = B[m].findIndex((x) => v <= x); inc('cwv', `${tpl}|${m}|${i < 0 ? B[m].length : i}`); }
   }
   else if (['wa', 'tel', 'pdf'].includes(b.e)) { inc('ev', b.e); if (b.c) inc('carev', `${clip(b.c, 120)}|${b.e}`); }
+  await db().setJSON(k, st);
+}
+
+// Contador de las webs de Plata Marine y Rotulito (lo envían sus analytics.js / track.js solo con consentimiento de analítica):
+// contadores por día, sin datos personales; lo escrito en buscadores se guarda sin números largos (teléfonos)
+const WNEG = ['marine', 'rotulito'];
+const sinNum = (v, n) => clip(String(v ?? '').replace(/\d(?:[ .]?\d){6,}/g, ' ').replace(/[^\p{L}0-9 .,€+|:\/-]/gu, ' ').replace(/\s+/g, ' '), n);
+async function hitW(neg, req, context) {
+  if (!WNEG.includes(neg) || BOT.test(req.headers.get('user-agent') || '')) return;
+  const b = await req.json().catch(() => ({})); if (!b || typeof b !== 'object') return;
+  const k = `wstats/${neg}/${today()}`; const st = (await db().get(k, { type: 'json' })) || {};
+  const inc = (g, key) => { key = clip(key, 120); if (!key) return; st[g] = st[g] || {}; st[g][key] = (st[g][key] || 0) + 1; };
+  const t = clip(b.t, 20), canal = clip(b.c, 40) || 'Directo';
+  if (t === 'visita') {
+    inc('pv', clip(b.p, 120)); inc('tot', 'visitas'); if (Number(b.e)) { inc('tot', 'nuevas'); inc('src', canal); }
+    if (b.l) inc('lang', clip(b.l, 4)); if (b.b) inc('boat', clip(b.b, 80));
+    const ua = req.headers.get('user-agent') || ''; inc('dev', /iPad|Tablet/i.test(ua) ? 'tablet' : /Mobi|Android|iPhone/i.test(ua) ? 'móvil' : 'ordenador');
+    const g = context?.geo; if (g?.city) inc('city', clip(g.city, 60));
+  } else if (t === 'contacto' || t === 'lead' || t === 'novedades') {
+    inc('tot', t); inc('ev', `${t}|${clip(b.m, 30) || 'otro'}`); inc(t + 'src', canal); if (b.b) inc(t + 'boat', clip(b.b, 80));
+  } else if (t === 'busqueda') { const q = sinNum(b.m, 80).toLowerCase(); if (q.length > 1) { inc('q', q); if (!Number(b.e)) inc('q0', q); } }
+  else if (t === 'filtro') { const f = clip(String(b.m ?? '').replace(/[^\p{L}0-9 €|\/-]/gu, ' ').replace(/\s+/g, ' '), 120); if (f) { inc('filtro', f); if (!Number(b.e)) inc('filtro0', f); } }
+  else if (t === 'falta') { const f = sinNum(b.m, 40); if (f) { inc('falta', f); if (b.b) inc('faltaboat', `${clip(b.b, 80)}|${f}`); } }
+  else if (t === 'embudo') { const f = sinNum(b.m, 40); if (f) inc('embudo', f); }
+  else return;
   await db().setJSON(k, st);
 }
 
@@ -909,7 +935,9 @@ async function adminApi(r, req, M, me, url) {
   }
   if (seg[0] === 'stats' && M === 'GET') {
     const dias = Math.min(Math.max(Number(url.searchParams.get('dias')) || 30, 1), 365); const out = [];
-    for (let i = dias - 1; i >= 0; i--) { const d = addDays(today(), -i); out.push({ d, ...((await db().get(`stats/${d}`, { type: 'json' })) || {}) }); }
+    const neg = url.searchParams.get('neg'); const pre = WNEG.includes(neg) ? `wstats/${neg}/` : 'stats/';
+    if (WNEG.includes(neg) && !(me.negs || []).includes(neg)) return json({ error: 'No tienes acceso a este negocio.' }, 403);
+    for (let i = dias - 1; i >= 0; i--) { const d = addDays(today(), -i); out.push({ d, ...((await db().get(`${pre}${d}`, { type: 'json' })) || {}) }); }
     return json(out);
   }
   if (seg[0] === 'users') {
