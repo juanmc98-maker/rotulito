@@ -716,9 +716,13 @@ export function comparar({ cars }) {
   const rows = [['Precio', (c) => eur(c.price)], ['Año', (c) => c.year], ['Kilómetros', (c) => kms(c.km)], ['Combustible', (c) => esc(c.fuel)], ['Cambio', (c) => esc(c.trans)], ['Potencia', (c) => (c.cv ? c.cv + ' CV' : '—')], ['Carrocería', (c) => esc(c.body || '—')], ['Plazas', (c) => c.seats || '—'], ['Puertas', (c) => c.doors || '—'], ['Color', (c) => esc(c.color || '—')], ['Etiqueta DGT', (c) => esc(etiquetaDe(c) || '—')], ['Garantía', () => '12 meses'], ['Equipamiento', (c) => (c.features || []).slice(0, 8).map(esc).join('<br>') || '—']];
   const body = `<section style="padding-top:56px"><div class="w"><div class="crumb" style="padding:0 0 18px"><a href="${B}/favoritos">${ic.back}Volver a favoritos</a></div><h1 class="s">Comparar <span class="gr">coches</span></h1>
 ${cars.length < 2 ? `<p class="lead">Elige al menos 2 coches en <a href="${B}/favoritos" style="color:var(--or)">tus favoritos</a> para compararlos.</p>` : `<div class="cmp" style="margin-top:28px"><table><thead><tr><th></th>${cars.map((c) => `<td><a href="${B}/vehiculos/${c.slug}"><img src="${esc(im(cover(c), 500))}" alt="${esc(carName(c))}" loading="lazy"></a><b style="display:block;margin-top:8px">${esc(c.brand)} ${esc(c.model)}</b><span class="mu" style="font-size:13px">${esc(c.version || '')}</span></td>`).join('')}</tr></thead>
-<tbody>${rows.map(([k, f]) => `<tr><th>${k}</th>${cars.map((c) => `<td>${f(c)}</td>`).join('')}</tr>`).join('')}<tr><th></th>${cars.map((c) => `<td><a class="btn sm" href="${B}/cita?coche=${c.slug}">Pedir cita</a></td>`).join('')}</tr></tbody></table></div>
+<tbody>${rows.map(([k, f]) => `<tr><th>${k}</th>${cars.map((c) => `<td>${f(c)}</td>`).join('')}</tr>`).join('')}<tr><th></th>${cars.map((c) => `<td><a class="btn sm" data-cc="${c.slug}" href="${B}/cita?coche=${c.slug}">Pedir cita</a></td>`).join('')}</tr></tbody></table></div>
 <p class="note" style="margin-top:16px">Datos orientativos y no vinculantes; pueden contener errores. Confírmalos con nosotros antes de decidir.</p>`}</div></section>`;
-  return page({ title: 'Comparar coches | Plata Garage', desc: 'Compara coches de Plata Garage lado a lado.', body, noindex: true });
+  // Medición de la prueba del comparador (sin cookies): cuántas comparaciones y cuántos contactan desde aquí
+  const sl = JSON.stringify(cars.map((c) => c.slug));
+  const script = `(()=>{const snd=o=>{try{navigator.sendBeacon('${B}/api/hit',new Blob([JSON.stringify(o)],{type:'application/json'}))}catch(x){}};const sl=${sl};if(sl.length>1)snd({e:'cmp',c:sl.slice().sort().join('+')});
+document.addEventListener('click',e=>{const a=e.target.closest('a');if(!a)return;if(a.dataset.cc)snd({e:'cmpc',c:a.dataset.cc,k:'cita'});else if((a.getAttribute('href')||'').startsWith('https://wa.me'))snd({e:'cmpc',k:'wa'})},true)})();`;
+  return page({ title: 'Comparar coches | Plata Garage', desc: 'Compara coches de Plata Garage lado a lado.', body, script, noindex: true });
 }
 
 export function cookies() {
