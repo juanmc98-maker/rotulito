@@ -78,7 +78,7 @@ function showLogin() {
 }
 
 // ---------- layout ----------
-const NAV = [['leads', 'Leads'], ['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes'], ['coches', 'Coches'], ['trimestre', 'Trimestre'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['horarios', 'Horarios'], ['valoraciones', 'Valoraciones'], ['busquedas', 'Te lo buscamos'], ['alertas', 'Alertas'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog'], ['usuarios', 'Usuarios']];
+const NAV = [['leads', 'Leads'], ['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes'], ['coches', 'Coches'], ['trimestre', 'Trimestre'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['horarios', 'Horarios'], ['valoraciones', 'Vendedores'], ['busquedas', 'Te lo buscamos'], ['alertas', 'Alertas'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog'], ['usuarios', 'Usuarios']];
 let badges = {};
 // Negocio activo: Plata Garage (panel completo), Plata Marine y Rotulito (embudo de clientes)
 const NEGS = { garage: { n: 'Plata Garage', logo: B + '/assets/logo.png', dark: true }, marine: { n: 'Plata Marine', logo: '/img/plata-marine-logo.png' }, rotulito: { n: 'Rotulito', logo: '/assets/rotulito-logo.svg' } };
@@ -116,7 +116,7 @@ function shell(active) {
 const home = () => '#leads';
 function goHome() { if (location.hash === home()) route(); else location.hash = home(); }
 const top = (t, sub = '', right = '') => `<div class="top"><div><h1>${t}</h1>${sub ? `<p>${sub}</p>` : ''}</div><div class="row">${right}</div></div>`;
-const badge = (s) => { const m = { pendiente: 'w', confirmada: 'b', completada: 'ok', cancelada: 'r', contactado: 'b', ofertado: 'o', cerrada: 'ok', 'presupuesto enviado': 'b', aceptado: 'ok', rechazado: 'r', respondido: 'ok' }; return `<span class="bg ${m[s] || 'x'}">${esc(s[0].toUpperCase() + s.slice(1))}</span>`; };
+const badge = (s) => { const m = { pendiente: 'w', confirmada: 'b', completada: 'ok', cancelada: 'r', contactado: 'b', ofertado: 'o', cerrada: 'ok', visto: 'b', comprado: 'ok', gestion: 'o', vendido: 'ok', descartado: 'r', 'presupuesto enviado': 'b', aceptado: 'ok', rechazado: 'r', respondido: 'ok' }; return `<span class="bg ${m[s] || 'x'}">${esc(s[0].toUpperCase() + s.slice(1))}</span>`; };
 
 // ---------- vistas ----------
 const V = {};
@@ -527,21 +527,21 @@ V.bancos = async (m) => {
 };
 
 // Bandejas: reservas, valoraciones, envíos, mensajes
-function inbox({ key, path, title, sub, states, body }) {
+function inbox({ key, path, title, sub, states, body, labels = {} }) {
   return async (m, arg) => {
     const [list, holders, cars] = await Promise.all([api('/admin/' + path), key === 'reservas' ? api('/admin/holders') : [], key === 'reservas' ? api('/admin/cars') : []]);
     m = shell(key); const f = arg || 'todas';
     if (key === 'reservas' && f === 'semana') return agenda(m, list);
-    const shown = list.filter((x) => (f === 'todas' ? true : f === 'activas' ? !['cancelada', 'completada', 'cerrada', 'rechazado', 'respondido'].includes(x.status) : x.status === f));
-    m.innerHTML = top(title, sub(list)) + `<div class="filt">${[...(key === 'reservas' ? [['semana', 'Agenda semanal']] : []), ['todas', 'Todas'], ['activas', 'Abiertas'], ...states.map((s) => [s, s[0].toUpperCase() + s.slice(1)])].map(([k, t]) => `<button data-f="${k}" class="${f === k ? 'on' : ''}">${t}</button>`).join('')}</div>` +
+    const shown = list.filter((x) => (f === 'todas' ? true : f === 'activas' ? !['cancelada', 'completada', 'cerrada', 'rechazado', 'respondido', 'comprado', 'vendido', 'descartado'].includes(x.status) : x.status === f));
+    m.innerHTML = top(title, sub(list)) + `<div class="filt">${[...(key === 'reservas' ? [['semana', 'Agenda semanal']] : []), ['todas', 'Todas'], ['activas', 'Abiertas'], ...states.map((s) => [s, labels[s] || s[0].toUpperCase() + s.slice(1)])].map(([k, t]) => `<button data-f="${k}" class="${f === k ? 'on' : ''}">${t}</button>`).join('')}</div>` +
       (shown.map((x) => `<div class="card it" data-id="${x.id}"><div class="hd"><div><b style="font-size:16px">${esc(x.nombre)}</b>${x.propuesta ? ' <span class="bd" style="position:static;background:var(--or);color:#fff;padding:2px 8px;border-radius:999px;font-size:12px">Hora propuesta · confirmar</span>' : ''}<div class="meta">${x.email ? esc(x.email) + ' · ' : ''}<a href="tel:${esc(x.telefono)}">${esc(x.telefono)}</a> · recibido ${fdt(x.created)}</div></div>${badge(x.status)}</div>
       <div class="row" style="margin:14px 0;align-items:stretch">${body(x, { holders, cars })}</div>
       <label>Notas internas<textarea data-n rows="2" style="min-height:60px">${esc(x.notas || '')}</textarea></label>
-      <div class="row" style="margin-top:12px"><select data-s style="width:auto">${states.map((s) => `<option${s === x.status ? ' selected' : ''}>${s}</option>`).join('')}</select><button class="btn s" data-sv>Guardar</button><a class="btn g s" target="_blank" rel="noopener" href="${waLink(x.telefono, 'Hola ' + x.nombre.split(' ')[0] + ', te escribimos de Plata Garage. ')}">Responder por WhatsApp</a>${key === 'reservas' && x.fecha >= new Date().toISOString().slice(0, 10) && x.status !== 'cancelada' ? `<a class="btn g s" target="_blank" rel="noopener" href="${recordatorio(x)}">${IC.wa}Recordar cita</a>` : ''}<a class="btn g s" href="#cliente/${String(x.telefono).replace(/\D/g, '').slice(-9)}">Ficha del cliente</a>${x.email ? `<a class="btn g s" href="mailto:${esc(x.email)}">Email</a>` : ''}<span style="flex:1"></span><button class="btn r s" data-del>Borrar</button></div></div>`).join('') || '<div class="card mu">No hay nada aquí todavía.</div>');
+      <div class="row" style="margin-top:12px"><select data-s style="width:auto">${states.map((s) => `<option value="${s}"${s === x.status ? ' selected' : ''}>${esc(labels[s] || s)}</option>`).join('')}</select><button class="btn s" data-sv>Guardar</button><a class="btn g s" target="_blank" rel="noopener" href="${waLink(x.telefono, 'Hola ' + x.nombre.split(' ')[0] + ', te escribimos de Plata Garage. ')}">Responder por WhatsApp</a>${key === 'reservas' && x.fecha >= new Date().toISOString().slice(0, 10) && x.status !== 'cancelada' ? `<a class="btn g s" target="_blank" rel="noopener" href="${recordatorio(x)}">${IC.wa}Recordar cita</a>` : ''}<a class="btn g s" href="#cliente/${String(x.telefono).replace(/\D/g, '').slice(-9)}">Ficha del cliente</a>${x.email ? `<a class="btn g s" href="mailto:${esc(x.email)}">Email</a>` : ''}<span style="flex:1"></span><button class="btn r s" data-del>Borrar</button></div></div>`).join('') || '<div class="card mu">No hay nada aquí todavía.</div>');
     m.querySelectorAll('.filt button').forEach((b) => (b.onclick = () => (location.hash = `#${key}/${b.dataset.f}`)));
     m.querySelectorAll('.it').forEach((el) => {
       const id = el.dataset.id;
-      el.querySelector('[data-sv]').onclick = guard(async () => { const extra = key === 'mensajes' ? { leido: true } : {}; await api(`/admin/${path}/${id}`, { method: 'PUT', body: { status: el.querySelector('[data-s]').value, notas: el.querySelector('[data-n]').value, ...extra } }); toast('Guardado'); route(); });
+      el.querySelector('[data-sv]').onclick = guard(async () => { const extra = key === 'mensajes' ? { leido: true } : {}; await api(`/admin/${path}/${id}`, { method: 'PUT', body: { status: el.querySelector('[data-s]').value, notas: el.querySelector('[data-n]').value, ...(el.querySelector('[data-o]') ? { oferta: el.querySelector('[data-o]').value } : {}), ...extra } }); toast('Guardado'); route(); });
       el.querySelector('[data-del]').onclick = guard(async () => { if (!confirm('¿Borrar esta solicitud? No se puede deshacer.')) return; await api(`/admin/${path}/${id}`, { method: 'DELETE' }); toast('Borrado'); route(); });
     });
     if (key === 'mensajes') list.filter((x) => !x.leido).forEach((x) => api(`/admin/mensajes/${x.id}`, { method: 'PUT', body: { leido: true } }).catch(() => {}));
@@ -577,8 +577,16 @@ V.reservas = inbox({ key: 'reservas', path: 'reservas', title: 'Reservas', sub: 
   body: (x, { holders, cars }) => { const car = cars.find((c) => c.slug === x.coche); const h = car && holders.find((y) => y.id === car.holder);
     return bx('Fecha', `<b>${fdate(x.fecha)} · ${x.hora}</b>`) + bx('Motivo', esc(x.motivo)) + bx('Coche', x.coche ? `<a href="${B}/vehiculos/${x.coche}" target="_blank">${esc(x.cocheNombre)}</a>` : '—') + (x.mensaje ? bx('Comentario', esc(x.mensaje)) : '') +
       (x.tipo === 'reserva' && car ? bx('Para la señal', `${car.reserve ? eur(car.reserve) + ' · ' : ''}Bizum 660 49 32 28${h?.accounts?.length ? '<br>' + h.accounts.map((a) => `${esc(a.bank)}: ${esc(a.iban)}`).join('<br>') : ''}`) : ''); } });
-V.valoraciones = inbox({ key: 'valoraciones', path: 'tasaciones', title: 'Valoraciones', sub: (l) => `${l.length} solicitudes de tasación.`, states: ['pendiente', 'contactado', 'ofertado', 'cerrada'],
-  body: (x) => bx('Vehículo', `<b>${esc(x.marca)} ${esc(x.modelo)}</b>`) + bx('Año', x.anio || '—') + bx('Km', nf(x.km)) + bx('Combustible', esc(x.combustible || '—')) + (x.notas_cliente ? bx('Observaciones', esc(x.notas_cliente)) : '') });
+// Vendedores: quien quiere vender su coche (tasaciones), como embudo con avisos de los que llevan días parados
+const PASOS_V = { pendiente: ['Nuevo', 1], contactado: ['Contactado', 3], ofertado: ['Tasado (oferta enviada)', 5], visto: ['Visto en persona', 3], comprado: ['Comprado', 0], gestion: ['Gestión de venta', 30], vendido: ['Vendido', 0], descartado: ['Descartado', 0], cerrada: ['Cerrada', 0] };
+const diasV = (x) => Math.floor((Date.now() - Date.parse(x.desde || x.created)) / DIA);
+const paradoV = (x) => PASOS_V[x.status || 'pendiente'] && PASOS_V[x.status || 'pendiente'][1] && diasV(x) > PASOS_V[x.status || 'pendiente'][1];
+V.valoraciones = inbox({ key: 'valoraciones', path: 'tasaciones', title: 'Vendedores', labels: Object.fromEntries(Object.entries(PASOS_V).map(([k, v]) => [k, v[0]])),
+  sub: (l) => { const ab = l.filter((x) => !['comprado', 'vendido', 'descartado', 'cerrada'].includes(x.status)); const pa = ab.filter(paradoV).length; return `${ab.length} vendedor${ab.length === 1 ? "" : "es"} en marcha de ${l.length} solicitudes de tasación${pa ? ` · <b style="color:var(--or)">${pa} parado${pa > 1 ? 's' : ''} más días de la cuenta</b>` : ''}.`; },
+  states: ['pendiente', 'contactado', 'ofertado', 'visto', 'comprado', 'gestion', 'vendido', 'descartado'],
+  body: (x) => bx('Vehículo', `<b>${esc(x.marca)} ${esc(x.modelo)}</b>`) + bx('Año', x.anio || '—') + bx('Km', nf(x.km)) + bx('Combustible', esc(x.combustible || '—')) + (x.estado ? bx('Estado', esc(x.estado)) : '') + (x.parteDePago ? bx('Parte de pago de', esc(x.cocheNombre || '')) : '') + (x.notas_cliente ? bx('Observaciones', esc(x.notas_cliente)) : '')
+    + bx('En este paso', `<span style="${paradoV(x) ? 'color:var(--or);font-weight:700' : ''}">${diasV(x)} día${diasV(x) === 1 ? '' : 's'}${paradoV(x) ? ' · toca moverlo' : ''}</span>`)
+    + `<label style="min-width:160px">Oferta (€)<input data-o inputmode="numeric" value="${x.oferta || ''}" placeholder="0"></label>` });
 V.envios = inbox({ key: 'envios', path: 'envios', title: 'Solicitudes de envío', sub: (l) => `${l.length} solicitudes de presupuesto de envío.`, states: ['pendiente', 'presupuesto enviado', 'aceptado', 'rechazado'],
   body: (x) => bx('Código postal', `<b>${esc(x.cp)}</b>`) + bx('Coche', x.coche ? `<a href="${B}/vehiculos/${x.coche}" target="_blank">${esc(x.cocheNombre)}</a>` : '—') });
 V.mensajes = inbox({ key: 'mensajes', path: 'mensajes', title: 'Mensajes', sub: (l) => `${l.length} mensajes recibidos.`, states: ['pendiente', 'respondido'],
