@@ -1,6 +1,6 @@
 /* Backoffice Plata Garage */
 (() => {
-const B = '/platagarage', API = B + '/api';
+const B = '', ST = '/platagarage', API = B + '/api';
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const eur = (n) => (n == null || n === '' ? '—' : new Intl.NumberFormat('es-ES',{useGrouping:'always'}).format(n) + ' €');
@@ -58,12 +58,12 @@ const QUIEN = [['cristina', 'Cristina'], ['juan', 'Juan']];
 function showLogin() {
   let last = ''; try { last = localStorage.getItem('pg_who') || ''; } catch (e) { /* */ }
   const pick = () => {
-    $('#app').innerHTML = `<div class="login"><div class="card"><img src="${B}/assets/logo.png" alt="Plata Garage"><h2>¿Quién eres?</h2><div class="who">${QUIEN.map(([u, n]) => `<button type="button" class="btn${u === last ? '' : ' g'}" data-u="${u}">${n}</button>`).join('')}</div><a href="#" class="mu sm" id="otro">Otro usuario</a></div></div>`;
+    $('#app').innerHTML = `<div class="login"><div class="card"><img src="${ST}/assets/logo.png" alt="Plata Garage"><h2>¿Quién eres?</h2><div class="who">${QUIEN.map(([u, n]) => `<button type="button" class="btn${u === last ? '' : ' g'}" data-u="${u}">${n}</button>`).join('')}</div><a href="#" class="mu sm" id="otro">Otro usuario</a></div></div>`;
     $('#app').querySelectorAll('[data-u]').forEach((b) => (b.onclick = () => form(b.dataset.u, b.textContent)));
     $('#otro').onclick = (e) => { e.preventDefault(); form('', ''); };
   };
   const form = (u, n) => {
-    $('#app').innerHTML = `<div class="login"><form class="card" id="lf"><img src="${B}/assets/logo.png" alt="Plata Garage"><h2>${n ? 'Hola, ' + esc(n) : 'Backoffice'}</h2>${u ? `<input type="hidden" name="user" value="${u}">` : '<label style="text-align:left">Usuario<input name="user" autocomplete="username" required autocapitalize="none"></label>'}<label style="text-align:left">Contraseña<input type="password" name="password" autocomplete="current-password" required></label><button class="btn" style="justify-content:center">Entrar</button><a href="#" class="mu sm" id="cw">No soy ${n ? esc(n) : 'yo'}</a><p class="mu sm" id="le"></p></form></div>`;
+    $('#app').innerHTML = `<div class="login"><form class="card" id="lf"><img src="${ST}/assets/logo.png" alt="Plata Garage"><h2>${n ? 'Hola, ' + esc(n) : 'Backoffice'}</h2>${u ? `<input type="hidden" name="user" value="${u}">` : '<label style="text-align:left">Usuario<input name="user" autocomplete="username" required autocapitalize="none"></label>'}<label style="text-align:left">Contraseña<input type="password" name="password" autocomplete="current-password" required></label><button class="btn" style="justify-content:center">Entrar</button><a href="#" class="mu sm" id="cw">No soy ${n ? esc(n) : 'yo'}</a><p class="mu sm" id="le"></p></form></div>`;
     $('#cw').onclick = (e) => { e.preventDefault(); pick(); };
     $('#lf').password.focus();
     $('#lf').onsubmit = async (e) => {
@@ -81,7 +81,7 @@ function showLogin() {
 const NAV = [['leads', 'Leads'], ['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes'], ['coches', 'Coches'], ['trimestre', 'Trimestre'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['horarios', 'Horarios'], ['valoraciones', 'Vendedores'], ['busquedas', 'Te lo buscamos'], ['alertas', 'Alertas'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog'], ['usuarios', 'Usuarios']];
 let badges = {};
 // Negocio activo: Plata Garage (panel completo), Plata Marine y Rotulito (embudo de clientes)
-const NEGS = { garage: { n: 'Plata Garage', logo: B + '/assets/logo.png', dark: true }, marine: { n: 'Plata Marine', logo: '/img/plata-marine-logo.png' }, rotulito: { n: 'Rotulito', logo: '/assets/rotulito-logo.svg' } };
+const NEGS = { garage: { n: 'Plata Garage', logo: ST + '/assets/logo.png', dark: true }, marine: { n: 'Plata Marine', logo: '/img/plata-marine-logo.png' }, rotulito: { n: 'Rotulito', logo: '/assets/rotulito-logo.svg' } };
 let MIS = ['garage']; let ROL = ''; const ME_ADMIN = () => ROL === 'admin';
 let QUIEN_YO = ''; // quién ha entrado (se muestra en el menú)
 let PRIMERA = true; // primera carga de la app
@@ -162,7 +162,7 @@ async function poll() {
     if (lastSum) {
       const t = { citas: 'Nueva cita', tas: 'Nueva tasación', env: 'Nueva solicitud de envío', msg: 'Nuevo mensaje', bus: 'Nueva petición "Te lo buscamos"' };
       const h = { citas: 'reservas', tas: 'valoraciones', env: 'envios', msg: 'mensajes', bus: 'busquedas' };
-      Object.keys(cur).forEach((k) => { if (cur[k] > lastSum[k]) { if ('Notification' in window && Notification.permission === 'granted') { const o = { body: 'Ábrela en el panel', icon: B + '/assets/icon-192.png', tag: k }; if (swReg) swReg.showNotification(t[k] + ' · Plata Garage', o); else { const n = new Notification(t[k] + ' · Plata Garage', o); n.onclick = () => { window.focus(); location.hash = '#' + h[k]; }; } } toast(t[k]); } });
+      Object.keys(cur).forEach((k) => { if (cur[k] > lastSum[k]) { if ('Notification' in window && Notification.permission === 'granted') { const o = { body: 'Ábrela en el panel', icon: ST + '/assets/icon-192.png', tag: k }; if (swReg) swReg.showNotification(t[k] + ' · Plata Garage', o); else { const n = new Notification(t[k] + ' · Plata Garage', o); n.onclick = () => { window.focus(); location.hash = '#' + h[k]; }; } } toast(t[k]); } });
       const act = (location.hash.slice(1) || 'resumen').split('/')[0]; if ($('#sb') && !$('#sb').classList.contains('open')) shell(act);
     }
     lastSum = cur;
