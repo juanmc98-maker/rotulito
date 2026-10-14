@@ -7,11 +7,12 @@ import QRCode from 'qrcode';
 import * as SEO from './seo.mjs';
 
 export const config = {
-  path: ['/platagarage', '/platagarage/*'],
-  excludedPath: ['/platagarage/assets/*', '/platagarage/img/*'],
+  path: ['/*'],
+  excludedPath: ['/platagarage/assets/*', '/platagarage/img/*', '/assets/*', '/img/*', '/.netlify/*'],
 };
 
-const BASE = '/platagarage';
+const BASE = ''; // la web vive en la raíz del dominio
+const ST = '/platagarage'; // archivos estáticos y direcciones antiguas
 // Hasta la migración al dominio definitivo la web no se indexa (PG_INDEX=1 la abre a Google)
 const INDEX = () => env('PG_INDEX') === '1';
 const TZ = 'Europe/Madrid';
@@ -78,7 +79,7 @@ async function sessionUser(req) {
   const negs = u.role === 'admin' ? ['garage', 'marine', 'rotulito'] : (u.negs && u.negs.length ? u.negs : ['garage']);
   return { id: u.id, name: u.name, role: u.role || 'editor', negs, ses };
 }
-const cookie = (v, maxAge) => `pg_s=${v}; Path=${BASE}; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;
+const cookie = (v, maxAge) => `pg_s=${v}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;
 const eqHash = (a, b) => { const x = crypto.createHash('sha256').update(String(a)).digest(), y = crypto.createHash('sha256').update(String(b)).digest(); return crypto.timingSafeEqual(x, y); };
 const hashPass = (pw, salt = crypto.randomBytes(16).toString('hex')) => ({ salt, hash: crypto.scryptSync(String(pw), salt, 64).toString('hex') });
 const checkPass = (pw, u) => { const h = crypto.scryptSync(String(pw), u.salt, 64); const g = Buffer.from(u.hash, 'hex'); return h.length === g.length && crypto.timingSafeEqual(h, g); };
@@ -166,7 +167,7 @@ const xesc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 function sitemap(site, cars, posts) {
   const u = (path, lastmod, img = []) => `<url><loc>${xesc(site + BASE + path)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ''}${img.slice(0, 10).map((i) => `<image:image><image:loc>${xesc(i.startsWith('http') ? i : site + i)}</image:loc></image:image>`).join('')}</url>`;
   const newest = cars.map((c) => c.updated || c.created || '').sort().pop() || today();
-  const rows = [u('/', newest), u('/vehiculos/', newest), u('/cita'), u('/te-lo-buscamos'), u('/cuanto-vale-mi-coche'), u('/preguntas-frecuentes'), u('/contacto'), u('/blog/')];
+  const rows = [u('/', newest), u('/vehiculos/', newest), u('/cita'), u('/te-lo-buscamos'), u('/cuanto-vale-mi-coche'), u('/preguntas-frecuentes'), u('/contacto'), u('/blog/'), u('/aviso-legal'), u('/privacidad'), u('/cookies'), u('/condiciones-de-contratacion')];
   cars.forEach((c) => rows.push(u(`/vehiculos/${c.slug}`, c.updated || c.created, c.images || [])));
   SEO.tiposConStock(cars).forEach((t) => rows.push(u(`/coches/${t.slug}`, newest)));
   SEO.marcas(cars).forEach((m) => rows.push(u(`/coches/${m.slug}`, newest)));
@@ -314,8 +315,8 @@ const SW_JS = `// Panel instalable: siempre carga la versión más reciente (sin
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', () => {});
-self.addEventListener('push', (e) => { let d = {}; try { d = e.data.json(); } catch (x) { /* */ } e.waitUntil(self.registration.showNotification(d.title || 'Plata Garage', { body: d.body || '', icon: '/platagarage/assets/icon-192.png', tag: d.tag || undefined, data: { url: d.url || '/platagarage/admin' } })); });
-self.addEventListener('notificationclick', (e) => { e.notification.close(); const u = (e.notification.data && e.notification.data.url) || '/platagarage/admin'; e.waitUntil(self.clients.matchAll({ type: 'window' }).then((cs) => { if (cs[0]) { cs[0].focus(); return cs[0].navigate ? cs[0].navigate(u).catch(() => {}) : null; } return self.clients.openWindow(u); })); });
+self.addEventListener('push', (e) => { let d = {}; try { d = e.data.json(); } catch (x) { /* */ } e.waitUntil(self.registration.showNotification(d.title || 'Plata Garage', { body: d.body || '', icon: '/platagarage/assets/icon-192.png', tag: d.tag || undefined, data: { url: d.url || '/admin' } })); });
+self.addEventListener('notificationclick', (e) => { e.notification.close(); const u = (e.notification.data && e.notification.data.url) || '/admin'; e.waitUntil(self.clients.matchAll({ type: 'window' }).then((cs) => { if (cs[0]) { cs[0].focus(); return cs[0].navigate ? cs[0].navigate(u).catch(() => {}) : null; } return self.clients.openWindow(u); })); });
 `;
 
 // Aviso de bajada de precio a quien lo pidió en la ficha (con su consentimiento y baja en un clic)
@@ -340,8 +341,12 @@ export default async (req, context) => {
   const M = req.method;
   const ip = context?.ip || req.headers.get('x-nf-client-connection-ip') || '';
   try {
-    if (p === BASE && !url.pathname.endsWith('/')) return redirect(BASE + '/');
-    const sub = p.slice(BASE.length) || '/';
+    let sub = p;
+    if (p === ST || p.startsWith(ST + '/')) {
+      const rest = p.slice(ST.length) || '/';
+      if (rest.startsWith('/api/') || rest.startsWith('/media/') || rest === '/admin-sw.js') sub = rest;
+      else return redirect(rest + url.search);
+    }
 
     // ---- fotos subidas desde el panel ----
     if (sub.startsWith('/media/')) {
@@ -393,6 +398,7 @@ export default async (req, context) => {
     if (sub === '/contacto') return html(V.contacto({ cars: pubCars(cars) }));
     if (sub === '/privacidad') return html(V.privacidad());
     if (sub === '/aviso-legal') return html(V.avisoLegal());
+    if (sub === '/condiciones-de-contratacion') return html(V.condiciones());
     if (sub === '/te-lo-buscamos') return html(V.teLoBuscamos({ cars: pubCars(cars) }));
     if (sub.startsWith('/vender-mi-coche-')) { const z = SEO.ZONAS_VENTA.find((x) => x.slug === sub.slice(17)); if (!z) return redirect(`${BASE}/cuanto-vale-mi-coche`); return html(V.cuantoVale({ z })); }
     if (sub === '/cuanto-vale-mi-coche') return html(V.cuantoVale({ car: pubCars(cars).find((c) => c.slug === url.searchParams.get('coche')) }));
@@ -405,6 +411,7 @@ export default async (req, context) => {
       return html(V.gracias(url.searchParams.get('t') || '', { bk, car: bk?.coche ? cars.find((c) => c.slug === bk.coche) : null, cars: pubCars(cars) }), 200, { 'cache-control': 'no-store' });
     }
     if (sub === '/blog') return html(V.blogList({ posts: (await load('posts')).filter((x) => x.published) }));
+    if (sub === '/blog/etiqueta-ambiental-dgt-que-coche-de-segunda-mano-puedes-comprar-en-barcelona-sin-restricciones-en-2026') return redirect(`${BASE}/vehiculos/`);
     if (sub.startsWith('/blog/')) {
       const post = (await load('posts')).find((x) => x.slug === sub.slice(6) && x.published);
       if (!post) return redirect(`${BASE}/blog/`);
@@ -661,7 +668,7 @@ async function notify(tipo, d, origin) {
   const td = 'padding:8px 0;color:#6b6b6b;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;width:42%', tv = 'padding:8px 0;color:#f5f5f5;font-size:15px;font-weight:600';
   const mailHtml = `<div style="margin:0;padding:0;background:#050505;color:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#050505;padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#0d0d0d;border:1px solid #262626;border-radius:16px;overflow:hidden">
-<tr><td style="padding:24px 32px;text-align:center;border-bottom:1px solid #262626"><img src="${origin}${BASE}/assets/logo.png" alt="Plata Garage" height="36" style="height:36px;width:auto;display:inline-block"></td></tr>
+<tr><td style="padding:24px 32px;text-align:center;border-bottom:1px solid #262626"><img src="${origin}${ST}/assets/logo.png" alt="Plata Garage" height="36" style="height:36px;width:auto;display:inline-block"></td></tr>
 <tr><td style="padding:32px;color:#f5f5f5;font-size:15px;line-height:1.55"><h1 style="margin:0 0 16px;font-size:24px;line-height:1.2;color:#f5f5f5;font-weight:700">${hesc(H1)}</h1>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 20px;border:1px solid #262626;border-radius:12px;background:#050505"><tr><td style="padding:18px 20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${F.map(([k, v]) => `<tr><td style="${td}">${k}</td><td style="${tv}">${k === 'Teléfono' ? `<a href="https://wa.me/${String(v).replace(/\D/g, '').replace(/^(\d{9})$/, '34$1')}" style="color:#f5f5f5;text-decoration:none">${hesc(v)}</a>` : hesc(v)}</td></tr>`).join('')}</table></td></tr></table>
 ${notas ? `<p style="margin:0 0 14px;color:#a1a1a1">Notas: ${hesc(notas)}</p>` : ''}
@@ -675,7 +682,7 @@ ${notas ? `<p style="margin:0 0 14px;color:#a1a1a1">Notas: ${hesc(notas)}</p>` :
 
   const lines = txt;
   const body = new URLSearchParams({ 'form-name': 'avisos', asunto: subject, tipo, nombre: d.nombre || d.email || '', telefono: d.telefono || '', detalle: lines, panel: `${origin}${BASE}/admin` });
-  await fetch(`${origin}${BASE}/assets/avisos.html`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body });
+  await fetch(`${origin}${ST}/assets/avisos.html`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body });
 }
 // Aviso diario al móvil: los seguimientos que tocan hoy en cada negocio (los que llevan más días de la cuenta en su paso)
 const MAXD_S = {
@@ -1136,5 +1143,5 @@ async function adminApi(r, req, M, me, url) {
 }
 
 async function dropMedia(urls = []) {
-  for (const u of urls) if (u.startsWith(BASE + '/media/')) await media().delete(u.slice(BASE.length + 7)).catch(() => {});
+  for (const u of urls) { const k = u.startsWith('/media/') ? u.slice(7) : u.startsWith(ST + '/media/') ? u.slice(ST.length + 7) : ''; if (k) await media().delete(k).catch(() => {}); }
 }
