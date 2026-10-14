@@ -60,7 +60,8 @@ h2{font-size:clamp(30px,4vw,48px);font-weight:700;letter-spacing:-.02em;line-hei
 h1.s{font-size:clamp(32px,4.5vw,52px)}
 .hero{position:relative;overflow:hidden;min-height:640px;display:flex;align-items:center}
 .hero .bg{position:absolute;inset:0}.hero .bg img{width:100%;height:100%;object-fit:cover;display:block}
-.hero .bg:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,5,5,.92) 0%,rgba(5,5,5,.7) 45%,rgba(5,5,5,.35) 100%),linear-gradient(0deg,#050505 0%,transparent 35%),radial-gradient(60% 60% at 0% 60%,rgba(247,104,6,.28),transparent 70%)}
+.hero .bg:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,5,5,.85) 0%,rgba(5,5,5,.45) 45%,rgba(5,5,5,.08) 100%),linear-gradient(0deg,#050505 0%,rgba(5,5,5,.55) 30%,transparent 60%),radial-gradient(55% 55% at 0% 60%,rgba(247,104,6,.18),transparent 70%)}
+@media(max-width:700px){.hero .bg img{object-position:62% 50%}.hero .bg:after{background:linear-gradient(0deg,#050505 0%,rgba(5,5,5,.75) 45%,rgba(5,5,5,.35) 100%)}}
 .hero .w{width:100%;position:relative;padding-top:64px;padding-bottom:56px}.hero h1{max-width:760px}
 .hero p.l{color:var(--mu);font-size:19px;max-width:560px;margin:22px 0 30px}
 .row{display:flex;gap:12px;flex-wrap:wrap}
@@ -300,7 +301,7 @@ f.innerHTML='<p class="msg ok" style="display:block">¡Hecho! Te avisaremos cuan
 const HERO = `${ST}/assets/hero.jpg`;
 export function home({ cars }) {
   const dest = cars.filter((c) => c.featured).sort((a, b) => b.price - a.price).slice(0, 6);
-  const body = `<section class="hero" style="padding:0"><div class="bg"><img src="${esc(im(HERO, 1280))}" srcset="${esc(srcset(HERO, [640, 960, 1280, 1920]))}" sizes="100vw" alt="" fetchpriority="high" width="1920" height="1280"></div><div class="w"><div class="pill"><i></i>Coches seleccionados</div><h1>Vehículos de ocasión<br>en Sabadell, <span class="gr">con trato<br>directo.</span></h1>
+  const body = `<section class="hero" style="padding:0"><div class="bg"><img src="${esc(im(HERO, 1600))}" srcset="${esc(srcset(HERO, [640, 960, 1280, 1600, 2000]))}" sizes="100vw" alt="" fetchpriority="high" width="1920" height="1280"></div><div class="w"><div class="pill"><i></i>Coches seleccionados</div><h1>Vehículos de ocasión<br>en Sabadell, <span class="gr">con trato<br>directo.</span></h1>
 <p class="l">Garantía de 12 meses y atención con cita previa. Mira el stock y ven a verlo sin compromiso.</p>
 <form class="qs" action="${B}/vehiculos/" role="search"><input name="q" placeholder="¿Qué buscas? Ej.: SUV automático hasta 15.000 €" aria-label="Buscar coche"><button class="btn" type="submit">Buscar</button></form>
 <div class="row" style="margin-top:14px"><a class="btn g sm" href="${B}/vehiculos/">Ver todo el stock ${ic.arrow}</a><a class="btn g sm" href="${B}/te-lo-buscamos">Busco un coche concreto</a></div>
@@ -314,7 +315,7 @@ export function home({ cars }) {
 <section style="padding-top:0"><div class="w">${faqHtml(FAQ.slice(0, 5))}<p style="margin-top:16px"><a href="${B}/preguntas-frecuentes" style="color:var(--or)">Ver todas las preguntas →</a></p></div></section>
 <section id="cita"><div class="w"><div class="cta"><h2>¿Tienes un coche en mente?<br><span class="gr">Reserva una visita.</span></h2><p class="lead" style="max-width:520px;margin:18px auto 0">Atendemos con cita previa en Sabadell. Elige día y hora y te lo confirmamos.</p>
 <div class="row"><a class="btn" href="${B}/cita">Reservar cita</a><a class="btn g" href="${B}/cuanto-vale-mi-coche">¿Cuánto vale mi coche?</a></div></div></div></section>`;
-  return page({ title: 'Coches de segunda mano en Sabadell | Plata Garage', desc: 'Coches de segunda mano en Sabadell y el Vallès con garantía de 12 meses. Mira el stock, pide cita y ven a verlo sin compromiso.', on: 'home', body, alert: true, path: '/', head: `<link rel="preload" as="image" href="${esc(im(HERO, 1280))}" imagesrcset="${esc(srcset(HERO, [640, 960, 1280, 1920]))}" imagesizes="100vw" fetchpriority="high">` + ld(ldWeb()) + ld(ldFaq(FAQ.slice(0, 5))) });
+  return page({ title: 'Coches de segunda mano en Sabadell | Plata Garage', desc: 'Coches de segunda mano en Sabadell y el Vallès con garantía de 12 meses. Mira el stock, pide cita y ven a verlo sin compromiso.', on: 'home', body, alert: true, path: '/', head: `<link rel="preload" as="image" href="${esc(im(HERO, 1600))}" imagesrcset="${esc(srcset(HERO, [640, 960, 1280, 1600, 2000]))}" imagesizes="100vw" fetchpriority="high">` + ld(ldWeb()) + ld(ldFaq(FAQ.slice(0, 5))) });
 }
 
 export function catalog({ cars, q = {}, vendido = null }) {
