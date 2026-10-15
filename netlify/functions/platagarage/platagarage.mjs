@@ -216,7 +216,8 @@ async function buildClientes() {
   const [b, t, e, m, bu, al, cars, cl, po] = await Promise.all(['bookings', 'tasaciones', 'envios', 'mensajes', 'busquedas', 'alertas', 'cars', 'clientes', 'portales'].map(load));
   const map = new Map();
   const add = (x, tipo, resumen) => {
-    const k = pkey(x.telefono); if (!k) return;
+    // Sin teléfono (p. ej. Coches.net no lo da en el aviso): clave estable a partir del id, para que el lead no se pierda
+    const k = pkey(x.telefono) || (x.id ? '0' + String([...String(x.id)].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % 1e8).padStart(8, '0') : ''); if (!k) return;
     if (!map.has(k)) map.set(k, { key: k, nombre: x.nombre, telefono: x.telefono, email: x.email || '', leads: [] });
     const c = map.get(k); if (x.email && !c.email) c.email = x.email; if (x.nombre && (!c.nombre || (x.created || '') > (c.last || ''))) c.nombre = x.nombre;
     c.leads.push({ tipo, id: x.id, created: x.created || '', status: x.status, fuente: x.fuente, resumen, fecha: x.fecha, hora: x.hora, coche: x.coche, cocheNombre: x.cocheNombre, motivo: x.motivo, btipo: x.tipo });
@@ -1103,6 +1104,11 @@ async function adminApi(r, req, M, me, url) {
       let it = cl.find((x) => x.key === k); if (!it) { it = { key: k }; cl.push(it); }
       it.borrado = new Date().toISOString(); it.borradoPor = me.name; await save('clientes', cl); return json({ ok: true });
     }
+  }
+  if (seg[0] === 'stats' && M === 'DELETE') { // Reiniciar las analíticas de la web de Plata Garage (solo administrador)
+    if (me.role !== 'admin') return json({ error: 'Solo un administrador puede reiniciar las analíticas.' }, 403);
+    const { blobs } = await db().list({ prefix: 'stats/' }); for (const b of blobs) await db().delete(b.key);
+    return json({ ok: true, borrados: blobs.length });
   }
   if (seg[0] === 'stats' && M === 'GET') {
     const dias = Math.min(Math.max(Number(url.searchParams.get('dias')) || 30, 1), 365); const out = [];
