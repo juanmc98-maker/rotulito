@@ -31,6 +31,8 @@ export const TIPOS = [
   { slug: 'gasolina', h: 'Coches de gasolina', f: (c) => hasFuel(c, 'gasolina'), txt: 'Coches de gasolina de segunda mano, ideales si haces trayectos cortos o vas mucho por ciudad.' },
   { slug: 'hibridos', h: 'Coches híbridos', f: (c) => hasFuel(c, 'hibrid'), txt: 'Coches híbridos de segunda mano, con etiqueta ECO o CERO.' },
   { slug: 'electricos', h: 'Coches eléctricos', f: (c) => hasFuel(c, 'electr'), txt: 'Coches eléctricos de segunda mano, con etiqueta CERO.' },
+  { slug: 'japoneses', h: 'Coches japoneses', f: (c) => ['toyota', 'mazda', 'nissan', 'honda', 'suzuki', 'mitsubishi', 'lexus', 'subaru', 'infiniti', 'daihatsu'].includes(slugBrand(c.brand)), txt: 'Coches japoneses de segunda mano: Toyota, Mazda, Nissan y otras marcas japonesas, conocidas por su fiabilidad y su bajo coste de mantenimiento.' },
+  { slug: 'alemanes', h: 'Coches alemanes', f: (c) => ['audi', 'bmw', 'mercedes', 'mercedes-benz', 'porsche', 'volkswagen', 'opel', 'smart'].includes(slugBrand(c.brand)), txt: 'Coches alemanes de segunda mano: Audi, BMW, Mercedes, Volkswagen y otras marcas alemanas, con buen acabado y comportamiento en carretera.' },
   { slug: 'suv', h: 'SUV', f: (c) => norm(c.body) === 'suv', txt: 'SUV de segunda mano: posición de conducción alta, más espacio y maletero para el día a día.' },
   { slug: 'familiares', h: 'Coches familiares', f: (c) => norm(c.body) === 'familiar' || norm(c.body) === 'monovolumen' || (c.seats || 0) >= 7, txt: 'Familiares y monovolúmenes de segunda mano, con espacio de sobra para la familia y el maletero.' },
   { slug: 'compactos', h: 'Coches compactos', f: (c) => norm(c.body) === 'compacto', txt: 'Compactos de segunda mano: fáciles de aparcar, con poco consumo y suficiente espacio para el día a día.' },
