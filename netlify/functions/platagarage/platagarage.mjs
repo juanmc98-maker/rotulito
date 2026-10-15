@@ -5,6 +5,7 @@ import seed from './seed.mjs';
 import * as V from './views.mjs';
 import QRCode from 'qrcode';
 import * as SEO from './seo.mjs';
+import * as I18N from './i18n.mjs';
 
 export const config = {
   path: ['/*'],
@@ -335,7 +336,7 @@ async function avisarBajada(c, origin) {
 }
 
 // ---------- router ----------
-export default async (req, context) => {
+const inner = async (req, context) => {
   const url = new URL(req.url);
   let p = url.pathname.replace(/\/+$/, '') || '/';
   const M = req.method;
@@ -1145,3 +1146,6 @@ async function adminApi(r, req, M, me, url) {
 async function dropMedia(urls = []) {
   for (const u of urls) { const k = u.startsWith('/media/') ? u.slice(7) : u.startsWith(ST + '/media/') ? u.slice(ST.length + 7) : ''; if (k) await media().delete(k).catch(() => {}); }
 }
+
+// Versiones en catalán (/ca/) e inglés (/en/)
+export default I18N.wrap(inner, (u) => (env('PG_SITE_URL') || u.origin).replace(/\/+$/, ''));
