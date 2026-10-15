@@ -43,10 +43,14 @@ const RULES = [
   [/^Te lo valoramos sin compromiso y te decimos cuánto te quedaría por pagar por el (.+)\.$/, (m) => [`Te'l valorem sense compromís i et diem quant et quedaria per pagar pel ${m[1]}.`, `We'll value it with no obligation and tell you how much you'd have left to pay for the ${m[1]}.`]],
   [/^Plata Garage · Sabadell · (.+)<br>Fotos, cita y más datos: (.+)$/, (m) => [`Plata Garage · Sabadell · ${m[1]}<br>Fotos, cita i més dades: ${m[2]}`, `Plata Garage · Sabadell · ${m[1]}<br>Photos, booking and more details: ${m[2]}`]],
   [/^Etiqueta (ECO|CERO|B|C)$/, (m) => [`Etiqueta ${m[1] === 'CERO' ? 'ZERO' : m[1]}`, `${m[1] === 'CERO' ? 'ZERO' : m[1]} sticker`]],
+  [/^Vídeo$/, () => ['Vídeo', 'Video']],
+  [/^El coche en vídeo$/, () => ['El cotxe en vídeo', 'The car on video']],
   [/^Pronto publicaremos los primeros artículos\.$/, () => ['Aviat publicarem els primers articles.', "We'll be publishing our first articles soon."]],
 ];
+let EXTRA = null; // traducciones automáticas de esta petición (Google), si hay clave
 export const look = (key, lang) => {
   const v = DICT[key]; if (v) return v[IDX[lang]];
+  if (EXTRA && EXTRA[key]) return EXTRA[key];
   for (const [re, f] of RULES) { const m = key.match(re); if (m) return f(m)[IDX[lang]]; }
   return null;
 };
@@ -175,7 +179,36 @@ export function sitemapLangs(xml, site) {
 }
 
 // Envoltorio del manejador: /ca/… y /en/… sirven la misma web traducida
-export function wrap(inner, siteOf) {
+// Traducción automática (Google Cloud Translation) de lo que no está en el diccionario: descripciones de coches nuevos, artículos…
+// Solo si existe la clave PG_TRANSLATE_KEY. Cada frase se traduce una vez y se guarda; las siguientes visitas no gastan nada.
+let CACHE = null, CACHE_T = 0;
+const isLong = (k) => k.length >= 12 && /[a-záéíóúñ]{3,} [a-záéíóúñ]{2,}/i.test(k) && !/^https?:/.test(k);
+async function autoTr(html, lang, opts) {
+  const apiKey = opts?.key?.(); if (!apiKey || !opts.store) return null;
+  const miss = new Set();
+  segment(html, (run) => { const k = keyOf(run).key; if (!look(k, lang) && isLong(k)) miss.add(k); return null; }, null);
+  if (!miss.size) return null;
+  const st = opts.store();
+  if (!CACHE || Date.now() - CACHE_T > 300000) { CACHE = (await st.get('i18n-auto', { type: 'json' }).catch(() => null)) || { ca: {}, en: {} }; CACHE_T = Date.now(); }
+  const C = CACHE[lang] || (CACHE[lang] = {});
+  const todo = [...miss].filter((k) => !(k in C)).slice(0, 60);
+  if (todo.length) {
+    try {
+      const q = todo.map((k) => k.replace(/\{(\d+)\}/g, '<span translate="no">{$1}</span>'));
+      const r = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${encodeURIComponent(apiKey)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q, source: 'es', target: lang, format: 'html' }), signal: AbortSignal.timeout(6000) });
+      const j = await r.json();
+      const ph = (x) => (x.match(/\{\d+\}|<\/?[a-z]+>/g) || []).sort().join();
+      (j?.data?.translations || []).forEach((t, i) => {
+        const v = String(t.translatedText || '').replace(/<span translate="no">\s*(\{\d+\})\s*<\/span>/g, '$1');
+        C[todo[i]] = v && ph(v) === ph(todo[i]) ? v : '';
+      });
+      await st.setJSON('i18n-auto', CACHE).catch(() => {});
+    } catch (e) { /* sin traducción automática: se queda en castellano */ }
+  }
+  const out = {}; miss.forEach((k) => { if (C[k]) out[k] = C[k]; }); return out;
+}
+
+export function wrap(inner, siteOf, opts = {}) {
   return async (req, context) => {
     const url = new URL(req.url);
     const m = url.pathname.match(/^\/(ca|en)(\/.*)?$/);
@@ -197,6 +230,8 @@ export function wrap(inner, siteOf) {
     if (!ct.includes('text/html') || /^\/admin/.test(path)) return res;
     const body = await res.text();
     const p = (path === '/vehiculos' || path === '/blog') ? path + '/' : path;
-    return new Response(decorate(body, lang, p, site), { status: res.status, headers: res.headers });
+    const extra = lang && /^\/(vehiculos|blog)\/./.test(p) ? await autoTr(body, lang, opts) : null;
+    EXTRA = extra; let out; try { out = decorate(body, lang, p, site); } finally { EXTRA = null; }
+    return new Response(out, { status: res.status, headers: res.headers });
   };
 }
