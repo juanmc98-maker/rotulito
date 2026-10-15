@@ -442,6 +442,7 @@ ${feats.length ? `<section class="fs" id="equipamiento"><div class="ey">Equipami
 <dl class="dt">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl></div>
 <p class="note">Datos orientativos y no vinculantes; pueden contener errores. Confírmalos con nosotros antes de decidir.</p>
 <div class="pn" style="display:none;gap:16px;align-items:center"><div style="width:96px">${qr}</div><div>Plata Garage · Sabadell · ${TEL}<br>Fotos, cita y más datos: ${esc(fichaUrl)}</div></div></section>
+${c.video?.url ? `<section class="fs" id="video"><div class="ey">Vídeo</div><h2>El coche en vídeo</h2><video controls playsinline preload="none" poster="${esc(im(imgs[0], 1200))}" style="width:100%;max-height:72vh;border-radius:14px;background:#000;display:block"><source src="${esc(c.video.url)}" type="${esc(c.video.type || 'video/mp4')}"></video></section>` : ''}
 ${imgs.length > 1 ? `<section class="fs" id="fotos"><div class="ey">Fotos</div><h2>Todas las fotos (${imgs.length})</h2><div class="ph6">${imgs.map((u, i) => `<button type="button" data-i="${i}" aria-label="Ver foto ${i + 1} en grande"><img src="${esc(im(u, 500))}" alt="${esc(name)} ${c.year} – foto ${i + 1}" loading="lazy" width="400" height="300"></button>`).join('')}</div></section>` : ''}
 <section class="fs" id="falta"><div class="box" style="padding:22px"><h3>¿Qué te falta para decidirte?</h3><p class="mu sm" style="margin:4px 0 12px">Un toque y te ayudamos con eso. Es anónimo.</p><div class="chipl" id="ftl">${[['precio', 'El precio'], ['financiacion', 'La financiación'], ['verlo', 'Verlo en persona'], ['datos', 'Más fotos o datos'], ['garantia', 'Saber qué cubre la garantía'], ['entregar', 'Entregar mi coche']].map(([k, t]) => `<a href="#" data-f="${k}">${t}</a>`).join('')}</div><div id="ftr" class="note" style="margin-top:12px"></div></div></section>
 <section class="fs" id="dudas">${faqHtml(fq, 'Dudas sobre este coche')}</section>
@@ -660,7 +661,7 @@ export function notFound(msg = 'Esta página no existe o el coche ya no está di
   return page({ noindex: true, title: 'Página no encontrada | Plata Garage', desc: msg, body: `<section><div class="w"><div class="cta"><h2>Vaya…</h2><p class="lead">${esc(msg)}</p><div class="row"><a class="btn" href="${B}/vehiculos/">Ver coches en stock</a></div></div></div></section>` });
 }
 
-const AV = '45';
+const AV = '46';
 export function adminShell() {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Backoffice · Plata Garage</title><link rel="icon" href="${ST}/assets/icon-192.png"><link rel="manifest" href="${ST}/assets/manifest.webmanifest"><link rel="apple-touch-icon" href="${ST}/assets/icon-192.png"><meta name="theme-color" content="#050505"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Plata Garage"><link rel="stylesheet" href="${ST}/assets/admin.css?v=${AV}"></head><body><div id="app"></div><script src="${ST}/assets/admin.js?v=${AV}"></script></body></html>`;
 }
