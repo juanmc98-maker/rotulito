@@ -138,6 +138,9 @@ function cleanCar(b, old = {}) {
   if ('features' in b) c.features = (Array.isArray(b.features) ? b.features : String(b.features).split('\n')).map((x) => clip(x, 120)).filter(Boolean).slice(0, 80);
   if ('images' in b) c.images = (b.images || []).filter((u) => typeof u === 'string' && u.startsWith(BASE + '/')).slice(0, 40);
   ['featured', 'sold', 'hidden'].forEach((k) => { if (k in b) c[k] = !!b[k]; });
+  if ('video' in b) c.video = b.video && typeof b.video.url === 'string' && b.video.url.startsWith(BASE + '/media/v-') ? { url: clip(b.video.url, 200), type: clip(b.video.type, 40) || 'video/mp4', size: num(b.video.size) || 0 } : undefined;
+  if ('gestion' in b) c.gestion = !!b.gestion;
+  if ('comision' in b) c.comision = num(b.comision);
   if ('llegada' in b) c.llegada = /^\d{4}-\d{2}-\d{2}$/.test(b.llegada || '') ? b.llegada : undefined;
   if (!['disponible', 'preparacion', 'reservado'].includes(c.status)) c.status = 'disponible';
   return c;
@@ -352,6 +355,7 @@ const inner = async (req, context) => {
     // ---- fotos subidas desde el panel ----
     if (sub.startsWith('/media/')) {
       const key = sub.slice(7);
+      if (key.startsWith('v-')) return await serveVideo(key, req);
       const r = await media().getWithMetadata(key, { type: 'arrayBuffer' });
       if (!r) return new Response('No encontrado', { status: 404 });
       return new Response(r.data, { headers: { 'content-type': r.metadata?.type || 'image/jpeg', 'cache-control': 'public, max-age=31536000, immutable' } });
@@ -369,6 +373,7 @@ const inner = async (req, context) => {
     V.setCtx({ site, index: INDEX(), gtag: clip(env('PG_GTAG_ID'), 20), pixel: clip(env('PG_META_PIXEL'), 20), clarity: clip(env('PG_CLARITY') || 'yx42pl2vd4', 20), gsv: clip(env('PG_GSV'), 80) });
     const cars = await load('cars');
     if (sub === '/robots.txt') return text(`User-agent: *\n${INDEX() ? `Allow: /\nDisallow: ${BASE}/admin\nDisallow: ${BASE}/api/\nDisallow: ${BASE}/gracias\n` : 'Disallow: /\n'}\nSitemap: ${site}${BASE}/sitemap.xml\n`, 'text/plain');
+    if (sub === `/${INDEXNOW_KEY}.txt`) return text(INDEXNOW_KEY, 'text/plain');
     if (sub === '/sitemap.xml') return text(sitemap(site, pubCars(cars), (await load('posts')).filter((x) => x.published)), 'application/xml');
     if (sub === '/llms.txt') return text(llms(site, pubCars(cars)), 'text/plain');
     if (sub === '/') return html(V.home({ cars: pubCars(cars), sched: await load('schedule') }));
@@ -763,7 +768,7 @@ async function hitW(neg, req, context) {
 
 const COLS = ['bookings', 'tasaciones', 'envios', 'mensajes'];
 async function adminApi(r, req, M, me, url) {
-  const body = M === 'GET' || M === 'DELETE' ? {} : await req.json().catch(() => ({}));
+  const body = M === 'GET' || M === 'DELETE' || r.startsWith('/video/chunk') ? {} : await req.json().catch(() => ({}));
   const seg = r.split('/').filter(Boolean); // e.g. ['cars','c001']
 
   if (seg[0] === 'summary') {
@@ -790,10 +795,10 @@ async function adminApi(r, req, M, me, url) {
     if (M === 'POST' && !seg[1]) {
       const c = cleanCar(body, { id: uid('c'), featured: false, sold: false, images: [], features: [], status: 'disponible', created: today(), llegada: today() });
       const e = carErrors(c); if (e.length) return json({ error: 'Faltan datos: ' + e.join(', ') }, 400);
-      c.slug = uniqueSlug(cars, c); c.updated = today(); await holderPorDueno(c); cars.unshift(c); await save('cars', cars); return json(c);
+      c.slug = uniqueSlug(cars, c); c.updated = today(); await holderPorDueno(c); cars.unshift(c); await save('cars', cars); if (!c.hidden) await indexNow(url.origin, [c.slug]); return json(c);
     }
     const i = cars.findIndex((x) => x.id === seg[1]); if (i < 0) return json({ error: 'No existe' }, 404);
-    if (M === 'DELETE') { const [old] = cars.splice(i, 1); await save('cars', cars); await dropMedia(old.images); return json({ ok: true }); }
+    if (M === 'DELETE') { const [old] = cars.splice(i, 1); await save('cars', cars); await dropMedia(old.images); if (old.video?.url) await dropVideo(old.video.url); await indexNow(url.origin, [old.slug]); return json({ ok: true }); }
     if (M === 'POST' && seg[2] === 'duplicar') {
       const o = cars[i]; const c = { ...structuredClone(o), id: uid('c'), images: [], sold: false, soldAt: undefined, buyer: undefined, featured: false, hidden: true, status: 'preparacion', created: today(), updated: today(), oldSlugs: [], priceHistory: [], log: [{ d: new Date().toISOString(), by: me.name, t: `Creado como copia del ${o.brand} ${o.model}` }], srcId: undefined };
       c.slug = uniqueSlug(cars, c); cars.unshift(c); await save('cars', cars); return json(c);
@@ -813,6 +818,8 @@ async function adminApi(r, req, M, me, url) {
       c.updated = today(); cars[i] = c; await save('cars', cars);
       if (!c.sold && !c.hidden && old.price && c.price < old.price) await avisarBajada(c, url.origin).catch((e) => console.error('bajada', e.message));
       await dropMedia((old.images || []).filter((u) => !(c.images || []).includes(u)));
+      if (old.video?.url && old.video.url !== c.video?.url) await dropVideo(old.video.url);
+      await indexNow(url.origin, [c.slug]);
       return json(c);
     }
   }
@@ -978,6 +985,31 @@ async function adminApi(r, req, M, me, url) {
     if (M === 'GET') return json(list[i]);
     if (M === 'PUT') { const antes = [list[i].precio, list[i].estado].join('|'); campos(list[i], body); list[i].updated = new Date().toISOString(); await save('cartera-marine', list); if (antes !== [list[i].precio, list[i].estado].join('|')) await avisarCruces(list[i]).catch(() => {}); return json(list[i]); }
     if (M === 'DELETE') { list.splice(i, 1); await save('cartera-marine', list); return json({ ok: true }); }
+  }
+  // ---- vídeo del coche: se sube por trozos (Netlify limita cada petición a 6 MB) y se sirve por rangos ----
+  if (seg[0] === 'video' && M === 'POST') {
+    if (seg[1] === 'start') {
+      const type = String(body.type || ''); const size = Number(body.size) || 0;
+      if (!/^video\/(mp4|quicktime|webm)$/.test(type)) return json({ error: 'Formato de vídeo no admitido (usa MP4 o MOV)' }, 400);
+      if (!size || size > VID_MAX) return json({ error: `El vídeo pesa demasiado (máximo ${Math.round(VID_MAX / 1e6)} MB). Grábalo en 720p o recórtalo.` }, 400);
+      const key = `v-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+      return json({ key, chunk: VID_CHUNK, n: Math.ceil(size / VID_CHUNK) });
+    }
+    if (seg[1] === 'chunk') {
+      const key = String(url.searchParams.get('key') || ''); const i = Number(url.searchParams.get('i'));
+      if (!/^v-\d+-[a-f0-9]{8}$/.test(key) || !Number.isInteger(i) || i < 0 || i > 40) return json({ error: 'Trozo no válido' }, 400);
+      const buf = Buffer.from(await req.arrayBuffer());
+      if (!buf.length || buf.length > VID_CHUNK) return json({ error: 'Trozo no válido' }, 400);
+      await media().set(`${key}.${i}`, buf, { metadata: { type: 'application/octet-stream' } });
+      return json({ ok: true });
+    }
+    if (seg[1] === 'end') {
+      const key = String(body.key || ''); const type = String(body.type || 'video/mp4'); const size = Number(body.size) || 0; const n = Math.ceil(size / VID_CHUNK);
+      if (!/^v-\d+-[a-f0-9]{8}$/.test(key) || !n || n > 40) return json({ error: 'Vídeo no válido' }, 400);
+      for (let i = 0; i < n; i++) if (!(await media().getMetadata(`${key}.${i}`).catch(() => null))) return json({ error: 'Faltan trozos del vídeo, vuelve a subirlo' }, 400);
+      await media().set(key, '', { metadata: { type: /quicktime/.test(type) ? 'video/mp4' : type, size, cs: VID_CHUNK, n } });
+      return json({ url: `${BASE}/media/${key}`, type: /quicktime/.test(type) ? 'video/mp4' : type, size });
+    }
   }
   if (seg[0] === 'upload' && M === 'POST') {
     const { name, type, data } = body; // data: base64 (ya reducida en el navegador)
@@ -1147,5 +1179,39 @@ async function dropMedia(urls = []) {
   for (const u of urls) { const k = u.startsWith('/media/') ? u.slice(7) : u.startsWith(ST + '/media/') ? u.slice(ST.length + 7) : ''; if (k) await media().delete(k).catch(() => {}); }
 }
 
+// ---------- vídeo ----------
+const VID_CHUNK = 4 * 1024 * 1024, VID_MAX = 80 * 1000 * 1000;
+async function serveVideo(key, req) {
+  const meta = (await media().getMetadata(key).catch(() => null))?.metadata;
+  if (!meta || !meta.n) return new Response('No encontrado', { status: 404 });
+  const size = Number(meta.size), cs = Number(meta.cs) || VID_CHUNK;
+  const m = (req.headers.get('range') || '').match(/bytes=(\d*)-(\d*)/);
+  let start = 0, end = size - 1;
+  if (m) { if (m[1] !== '') { start = +m[1]; if (m[2] !== '') end = Math.min(+m[2], size - 1); } else if (m[2] !== '') start = Math.max(0, size - +m[2]); }
+  if (start >= size) return new Response(null, { status: 416, headers: { 'content-range': `bytes */${size}` } });
+  const ci = Math.floor(start / cs); end = Math.min(end, (ci + 1) * cs - 1); // como mucho un trozo por respuesta
+  const part = await media().get(`${key}.${ci}`, { type: 'arrayBuffer' });
+  if (!part) return new Response('No encontrado', { status: 404 });
+  const out = new Uint8Array(part).slice(start - ci * cs, end - ci * cs + 1);
+  return new Response(out, { status: 206, headers: { 'content-type': meta.type || 'video/mp4', 'content-range': `bytes ${start}-${end}/${size}`, 'content-length': String(out.length), 'accept-ranges': 'bytes', 'cache-control': 'public, max-age=31536000, immutable' } });
+}
+async function dropVideo(u) {
+  const key = String(u).split('/media/')[1] || ''; if (!/^v-/.test(key)) return;
+  const meta = (await media().getMetadata(key).catch(() => null))?.metadata || {};
+  for (let i = 0; i < (Number(meta.n) || 40); i++) await media().delete(`${key}.${i}`).catch(() => {});
+  await media().delete(key).catch(() => {});
+}
+
+// ---------- IndexNow: avisa a Bing (y a otros buscadores) al momento de coches nuevos, cambiados o vendidos ----------
+const INDEXNOW_KEY = '5f4b2bcc8d4c3a7d9201292845bbbc7a';
+async function indexNow(origin, slugs) {
+  if (!INDEX()) return;
+  const site = (env('PG_SITE_URL') || origin).replace(/\/+$/, ''); const host = new URL(site).host;
+  const urls = [];
+  slugs.filter(Boolean).forEach((s) => ['', '/ca', '/en'].forEach((l) => urls.push(`${site}${l}/vehiculos/${s}`)));
+  ['', '/ca', '/en'].forEach((l) => urls.push(`${site}${l}/vehiculos/`));
+  await fetch('https://api.indexnow.org/indexnow', { method: 'POST', headers: { 'content-type': 'application/json; charset=utf-8' }, body: JSON.stringify({ host, key: INDEXNOW_KEY, keyLocation: `${site}/${INDEXNOW_KEY}.txt`, urlList: urls }), signal: AbortSignal.timeout(4000) }).catch(() => {});
+}
+
 // Versiones en catalán (/ca/) e inglés (/en/)
-export default I18N.wrap(inner, (u) => (env('PG_SITE_URL') || u.origin).replace(/\/+$/, ''));
+export default I18N.wrap(inner, (u) => (env('PG_SITE_URL') || u.origin).replace(/\/+$/, ''), { store: () => db(), key: () => env('PG_TRANSLATE_KEY') });
