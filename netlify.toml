@@ -6,8 +6,13 @@
   # Solo se publica cuando el último cambio lo pide con la palabra "publicar" (cada publicación gasta créditos)
   ignore = "git log -1 --pretty=%B | grep -qi 'publicar' && exit 1 || exit 0"
 
+# Archivos de Rotulito que siguen en el repo: que no se indexen bajo platagarage.com
 [[headers]]
-  for = "/*"
+  for = "/assets/*"
   [headers.values]
-    X-Robots-Tag = "noindex, nofollow"
+    X-Robots-Tag = "noindex"
 
+[[headers]]
+  for = "/img/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"
