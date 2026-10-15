@@ -667,7 +667,7 @@ V.analiticas = async (m, arg) => {
   const max = Math.max(1, ...st.map((d) => (d.tot || {}).visitas || 0));
   const nm = (slug) => { const c = cars.find((x) => x.slug === slug); return c ? `${c.brand} ${c.model} ${c.version || ''} (${c.year})` : slug; };
   const tbl = (rows, h1, h2, f = (x) => esc(x)) => `<table>${rows.slice(0, 10).map(([k, v]) => `<tr><td>${f(k)}</td><td style="text-align:right"><b>${v}</b></td></tr>`).join('') || `<tr><td class="mu">Sin datos todavía.</td></tr>`}</table>`;
-  m.innerHTML = top('Analíticas', 'Visitas y contactos de la web, sin cookies ni datos personales.', `<div class="filt" style="margin:0">${[7, 30, 90].map((d) => `<button data-d="${d}" class="${d === dias ? 'on' : ''}">${d} días</button>`).join('')}</div>`) +
+  m.innerHTML = top('Analíticas', 'Visitas y contactos de la web, sin cookies ni datos personales.', `<div class="filt" style="margin:0">${[7, 30, 90].map((d) => `<button data-d="${d}" class="${d === dias ? 'on' : ''}">${d} días</button>`).join('')}${ROL === 'admin' ? '<button id="stReset" title="Borra todas las visitas contadas hasta hoy">Reiniciar</button>' : ''}</div>`) +
   `<div class="kp"><div class="card"><span>Visitas (entradas a la web)</span><b>${nf(ent)}</b></div><div class="card"><span>Páginas vistas</span><b>${nf(tot)}</b></div><div class="card"><span>Clics a WhatsApp</span><b>${ev.wa || 0}</b></div><div class="card"><span>Clics a teléfono</span><b>${ev.tel || 0}</b></div><div class="card"><span>Formularios enviados</span><b>${forms}</b></div></div>
   <div class="card sec"><h3 style="margin-bottom:14px">Páginas vistas por día</h3><div style="display:flex;align-items:flex-end;gap:3px;height:140px">${st.map((d) => { const v = (d.tot || {}).visitas || 0; return `<div title="${fdate(d.d)}: ${v}" style="flex:1;background:var(--or);opacity:${v ? 1 : .15};height:${Math.max(2, v / max * 100)}%;border-radius:3px 3px 0 0"></div>`; }).join('')}</div></div>
   <div class="two"><div class="card"><h3 style="margin-bottom:10px">Coches más vistos</h3>${tbl(sum('car'), 'Coche', 'Visitas', nm)}</div><div class="card"><h3 style="margin-bottom:10px">De dónde llegan</h3>${tbl(sum('src'))}</div></div>
@@ -696,6 +696,7 @@ V.analiticas = async (m, arg) => {
   ${cwvHtml(sum('cwv'))}
   <p class="mu sm" style="margin-top:14px">Sin cookies ni datos personales: no se guarda la IP ni nada que identifique a nadie. Las ciudades salen de la conexión y son aproximadas.</p>`;
   m.querySelectorAll('[data-d]').forEach((b) => (b.onclick = () => (location.hash = '#analiticas/' + b.dataset.d)));
+  const rs = m.querySelector('#stReset'); if (rs) rs.onclick = guard(async () => { if (!confirm('¿Borrar todas las analíticas de la web contadas hasta hoy? No se puede deshacer.')) return; await api('/admin/stats', { method: 'DELETE' }); toast('Analíticas reiniciadas'); route(); });
 };
 
 // Velocidad real de la web medida en los móviles y ordenadores de los visitantes (percentil 75, como Google)
