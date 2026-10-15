@@ -405,6 +405,7 @@ V.coche = async (m, id) => {
   <div class="card sec"><h3>Reserva</h3><div class="fg"><label>Titular de las cuentas para la reserva${sel('holder', [['', '— Sin reserva —'], ...holders.map((h) => [h.id, `${h.name} · ${h.accounts.length} cuenta${h.accounts.length === 1 ? '' : 's'}`])], c.holder)}</label>${inp('reserve', 'Importe de la señal (€)', 'number')}</div><p class="mu sm">Si pones importe, la ficha muestra "Reserva este coche" y el cliente pide la reserva. Las cuentas no salen en la web: se las pasáis al confirmar.</p></div>
   <div class="card sec"><h3>Descripción y equipamiento</h3><div class="fg"><label class="s3">Descripción *<textarea name="desc" required rows="8">${esc(c.desc || '')}</textarea></label><label class="s3">Cómo lo vemos (opcional: vuestra opinión del coche, sale en la ficha)<textarea name="comment" rows="4">${esc(c.comment || '')}</textarea></label><label class="s3">Equipamiento (uno por línea)<textarea name="features" rows="8">${esc((c.features || []).join('\n'))}</textarea></label></div></div>
   <div class="card sec"><h3>Imágenes</h3><p class="mu sm" style="margin:-6px 0 12px">La primera es la portada (★ para cambiarla). Para ordenarlas, arrástralas (en el móvil, mantén pulsada la foto y muévela). Se reducen solas antes de subir.</p><div class="imgs" id="ig"></div><input type="file" id="fi" accept="image/*" multiple hidden></div>
+  <div class="card sec"><h3>Vídeo</h3><p class="mu sm" style="margin:-6px 0 12px">Un vídeo por coche: sale en la ficha, debajo de los datos. Máximo 80 MB (mejor de menos de 1 minuto y grabado en 720p).</p><div id="vbx"></div><input type="file" id="vfi" accept="video/mp4,video/quicktime,video/webm,video/*" hidden></div>
   <div class="card sec"><h3>Visibilidad</h3><div class="row" style="gap:22px"><label>Estado${sel('status', [['disponible', 'Disponible'], ['preparacion', 'En preparación (próximamente)'], ['reservado', 'Reservado']], c.status)}</label>
   <label class="chk"><input type="checkbox" name="featured" ${c.featured ? 'checked' : ''}>Destacado en la portada</label><label class="chk"><input type="checkbox" name="hidden" ${c.hidden ? 'checked' : ''}>Ocultar de la web</label><label class="chk"><input type="checkbox" name="sold" ${c.sold ? 'checked' : ''}>Marcar como vendido</label><label class="chk"><input type="checkbox" name="gestion" ${c.gestion ? 'checked' : ''}>Gestión de venta (el coche no es nuestro: solo cobramos comisión)</label>${inp('comision', 'Comisión prevista (€, interno)', 'number', 'min="0"')}</div>
   ${isNew ? '' : `<label style="margin-top:12px;max-width:420px">Comprador (para el embudo de clientes)<select name="buyer"><option value="">—</option>${cl.map((x) => `<option value="${x.key}"${c.buyer === x.key ? ' selected' : ''}>${esc(x.nombre)} · ${esc(x.telefono)}</option>`).join('')}</select></label>`}</div>
@@ -438,6 +439,31 @@ V.coche = async (m, id) => {
   const add = guard(async (files) => { const dz = $('#dz'); dz.textContent = 'Subiendo…'; await upload(files, (u) => { imgs.push(u); }); drawImgs(); toast('Fotos subidas'); });
   $('#fi').onchange = (e) => add([...e.target.files]);
   drawImgs();
+  // Vídeo: se sube por trozos de 4 MB con barra de progreso
+  let vid = c.video || null, onVid = null;
+  const drawVid = () => {
+    $('#vbx').innerHTML = vid ? `<video src="${esc(vid.url)}" controls playsinline preload="metadata" style="width:100%;max-width:420px;border-radius:12px;background:#000;display:block"></video><div class="row" style="gap:10px;margin-top:10px"><button type="button" class="btn g sm" id="vch">Cambiar vídeo</button><button type="button" class="btn g sm" id="vdel">Quitar vídeo</button></div>`
+      : '<button type="button" class="btn sm" id="vup">Subir vídeo</button>';
+    const pick = () => $('#vfi').click();
+    if ($('#vup')) $('#vup').onclick = pick; if ($('#vch')) $('#vch').onclick = pick;
+    if ($('#vdel')) $('#vdel').onclick = () => { if (!confirm('¿Quitar el vídeo de este coche?')) return; vid = null; drawVid(); onVid && onVid(); };
+  };
+  $('#vfi').onchange = guard(async (e) => {
+    const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+    if (file.size > 80e6) throw new Error('El vídeo pesa más de 80 MB: grábalo en 720p o recórtalo.');
+    const type = file.type || (/\.mov$/i.test(file.name) ? 'video/quicktime' : 'video/mp4');
+    const st = await api('/admin/video/start', { method: 'POST', body: { type, size: file.size } });
+    const bx = $('#vbx'); bx.innerHTML = '<div class="mu" id="vpr">Subiendo vídeo… 0 %</div>';
+    for (let i = 0; i < st.n; i++) {
+      const blob = file.slice(i * st.chunk, (i + 1) * st.chunk); let ok = false;
+      for (let t = 0; t < 3 && !ok; t++) { const r = await fetch(`${API}/admin/video/chunk?key=${st.key}&i=${i}`, { method: 'POST', headers: { 'content-type': 'application/octet-stream', 'x-pg': '1' }, body: blob, credentials: 'same-origin' }).catch(() => null); ok = !!(r && r.ok); }
+      if (!ok) { drawVid(); throw new Error('Se cortó la subida del vídeo. Prueba otra vez con buena conexión.'); }
+      const p = $('#vpr'); if (p) p.textContent = `Subiendo vídeo… ${Math.round(((i + 1) / st.n) * 100)} %`;
+    }
+    vid = await api('/admin/video/end', { method: 'POST', body: { key: st.key, type, size: file.size } });
+    drawVid(); toast('Vídeo subido'); onVid && onVid();
+  });
+  drawVid();
   if (!isNew) { const dv = document.createElement('div'); m.appendChild(dv); docsBox(dv, 'car', c.id, { venta: c.price, owner: c.owner }); }
   // Marca y modelo desde el listado (se corrigen solos al formato correcto)
   const fm = $('#cf'); const dlm = document.createElement('datalist'); dlm.id = 'dl-mod'; const dlb = document.createElement('datalist'); dlb.id = 'dl-mar'; dlb.innerHTML = Object.keys(MARCAS).map((b) => `<option value="${esc(b)}">`).join(''); fm.append(dlb, dlm);
@@ -449,15 +475,15 @@ V.coche = async (m, id) => {
   // Guardado automático: cualquier cambio en un coche ya creado se guarda solo a los 1,5 s (lo de vendido se sigue marcando a mano)
   if (fm.matricula) fm.matricula.addEventListener('input', () => { const p = fm.matricula.selectionStart; fm.matricula.value = fm.matricula.value.toUpperCase(); fm.matricula.setSelectionRange(p, p); });
   let tAuto = 0, lastAuto = '';
-  const autoSave = () => { if (isNew) return; clearTimeout(tAuto); tAuto = setTimeout(async () => { if (!fm.checkValidity()) return; const d = Object.fromEntries(new FormData(fm)); ['featured', 'hidden', 'gestion'].forEach((k) => { if (fm[k]) d[k] = fm[k].checked; }); delete d.sold; d.images = imgs; const k = JSON.stringify(d); if (k === lastAuto) return;
+  const autoSave = () => { if (isNew) return; clearTimeout(tAuto); tAuto = setTimeout(async () => { if (!fm.checkValidity()) return; const d = Object.fromEntries(new FormData(fm)); ['featured', 'hidden', 'gestion'].forEach((k) => { if (fm[k]) d[k] = fm[k].checked; }); delete d.sold; d.images = imgs; d.video = vid; const k = JSON.stringify(d); if (k === lastAuto) return;
     try { await api('/admin/cars/' + id, { method: 'PUT', body: d }); lastAuto = k; toast('Guardado'); } catch (er) { toast('No se pudo guardar: ' + er.message); } }, 1500); };
   fm.addEventListener('input', (e) => { if (e.target.name !== 'sold') autoSave(); }); fm.addEventListener('change', (e) => { if (e.target.name !== 'sold') autoSave(); });
-  onImgs = autoSave;
+  onImgs = autoSave; onVid = autoSave;
   const hdb = $('#hdb'); if (hdb) hdb.onclick = guard(async () => { if (!confirm('¿Crear la factura de venta en Holded como borrador?')) return; hdb.disabled = true; hdb.textContent = 'Creando…'; try { const r = await api('/admin/holded/factura', { method: 'POST', body: { car: id } }); toast(`Factura creada en Holded (borrador, ${r.regimen})`); route(); } finally { hdb.disabled = false; hdb.textContent = 'Crear factura en Holded'; } });
   $('#cf').onsubmit = guard(async (e) => {
     e.preventDefault(); const f = e.target, b = f.querySelector('button[type=submit]'); b.disabled = true;
     try {
-      const d = Object.fromEntries(new FormData(f)); ['featured', 'hidden', 'sold', 'gestion'].forEach((k) => (d[k] = f[k].checked)); d.images = imgs;
+      const d = Object.fromEntries(new FormData(f)); ['featured', 'hidden', 'sold', 'gestion'].forEach((k) => (d[k] = f[k].checked)); d.images = imgs; d.video = vid;
       if (!imgs.length && !confirm('No has añadido fotos. ¿Guardar igualmente?')) return;
       const r = await api(isNew ? '/admin/cars' : '/admin/cars/' + id, { method: isNew ? 'POST' : 'PUT', body: d });
       toast(isNew ? 'Coche creado' : 'Cambios guardados'); location.hash = '#coche/' + r.id; if (!isNew) route();
