@@ -553,6 +553,8 @@ V.bancos = async (m) => {
 };
 
 // Bandejas: reservas, valoraciones, envíos, mensajes
+const okAs = (a) => !!a && a !== 'undefined' && a !== 'null';
+const mailRe = (x, key) => { const n = String(x.nombre || '').trim().split(' ')[0]; const sub = key === 'mensajes' && okAs(x.asunto) ? 'Re: ' + x.asunto : key === 'reservas' ? 'Tu cita en Plata Garage' : 'Tu consulta en Plata Garage'; return `mailto:${esc(x.email)}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent((n ? 'Hola ' + n : 'Hola') + ',\n\n')}`; };
 function inbox({ key, path, title, sub, states, body, labels = {} }) {
   return async (m, arg) => {
     const [list, holders, cars] = await Promise.all([api('/admin/' + path), key === 'reservas' ? api('/admin/holders') : [], key === 'reservas' ? api('/admin/cars') : []]);
@@ -563,7 +565,7 @@ function inbox({ key, path, title, sub, states, body, labels = {} }) {
       (shown.map((x) => `<div class="card it" data-id="${x.id}"><div class="hd"><div><b style="font-size:16px">${esc(x.nombre)}</b>${x.propuesta ? ' <span class="bd" style="position:static;background:var(--or);color:#fff;padding:2px 8px;border-radius:999px;font-size:12px">Hora propuesta · confirmar</span>' : ''}<div class="meta">${x.email ? esc(x.email) + ' · ' : ''}<a href="tel:${esc(x.telefono)}">${esc(x.telefono)}</a> · recibido ${fdt(x.created)}</div></div>${badge(x.status)}</div>
       <div class="row" style="margin:14px 0;align-items:stretch">${body(x, { holders, cars })}</div>
       <label>Notas internas<textarea data-n rows="2" style="min-height:60px">${esc(x.notas || '')}</textarea></label>
-      <div class="row" style="margin-top:12px"><select data-s style="width:auto">${states.map((s) => `<option value="${s}"${s === x.status ? ' selected' : ''}>${esc(labels[s] || s)}</option>`).join('')}</select><button class="btn s" data-sv>Guardar</button><a class="btn g s" target="_blank" rel="noopener" href="${waLink(x.telefono, 'Hola ' + x.nombre.split(' ')[0] + ', te escribimos de Plata Garage. ')}">Responder por WhatsApp</a>${key === 'reservas' && x.fecha >= new Date().toISOString().slice(0, 10) && x.status !== 'cancelada' ? `<a class="btn g s" target="_blank" rel="noopener" href="${recordatorio(x)}">${IC.wa}Recordar cita</a>` : ''}<a class="btn g s" href="#cliente/${String(x.telefono).replace(/\D/g, '').slice(-9)}">Ficha del cliente</a>${x.email ? `<a class="btn g s" href="mailto:${esc(x.email)}">Email</a>` : ''}<span style="flex:1"></span><button class="btn r s" data-del>Borrar</button></div></div>`).join('') || '<div class="card mu">No hay nada aquí todavía.</div>');
+      <div class="row" style="margin-top:12px"><select data-s style="width:auto">${states.map((s) => `<option value="${s}"${s === x.status ? ' selected' : ''}>${esc(labels[s] || s)}</option>`).join('')}</select><button class="btn s" data-sv>Guardar</button><a class="btn g s" target="_blank" rel="noopener" href="${waLink(x.telefono, 'Hola ' + x.nombre.split(' ')[0] + ', te escribimos de Plata Garage. ')}">Responder por WhatsApp</a>${key === 'reservas' && x.fecha >= new Date().toISOString().slice(0, 10) && x.status !== 'cancelada' ? `<a class="btn g s" target="_blank" rel="noopener" href="${recordatorio(x)}">${IC.wa}Recordar cita</a>` : ''}<a class="btn g s" href="#cliente/${String(x.telefono).replace(/\D/g, '').slice(-9)}">Ficha del cliente</a>${x.email ? `<a class="btn g s" href="${mailRe(x, key)}">Email</a>` : ''}<span style="flex:1"></span><button class="btn r s" data-del>Borrar</button></div></div>`).join('') || '<div class="card mu">No hay nada aquí todavía.</div>');
     m.querySelectorAll('.filt button').forEach((b) => (b.onclick = () => (location.hash = `#${key}/${b.dataset.f}`)));
     m.querySelectorAll('.it').forEach((el) => {
       const id = el.dataset.id;
@@ -616,7 +618,7 @@ V.valoraciones = inbox({ key: 'valoraciones', path: 'tasaciones', title: 'Vended
 V.envios = inbox({ key: 'envios', path: 'envios', title: 'Solicitudes de envío', sub: (l) => `${l.length} solicitudes de presupuesto de envío.`, states: ['pendiente', 'presupuesto enviado', 'aceptado', 'rechazado'],
   body: (x) => bx('Código postal', `<b>${esc(x.cp)}</b>`) + bx('Coche', x.coche ? `<a href="${B}/vehiculos/${x.coche}" target="_blank">${esc(x.cocheNombre)}</a>` : '—') });
 V.mensajes = inbox({ key: 'mensajes', path: 'mensajes', title: 'Mensajes', sub: (l) => `${l.length} mensajes recibidos.`, states: ['pendiente', 'respondido'],
-  body: (x) => bx('Asunto', esc(x.asunto || '—')) + bx('Mensaje', `<span style="white-space:pre-line">${esc(x.mensaje)}</span>`) });
+  body: (x) => (okAs(x.asunto) ? bx('Asunto', esc(x.asunto)) : '') + bx('Mensaje', `<span style="white-space:pre-line">${esc(x.mensaje)}</span>`) });
 
 V.busquedas = inbox({ key: 'busquedas', path: 'busquedas', title: 'Te lo buscamos', sub: (l) => `${l.length} peticiones de coche a la carta.`, states: ['pendiente', 'buscando', 'propuesto', 'cerrada'],
   body: (x) => bx('Busca', `<b>${esc([x.marca, x.modelo].filter(Boolean).join(' ') || 'Cualquiera')}</b>`) + bx('Presupuesto', `<b>${eur(x.presupuesto)}</b>`) + bx('Km máx.', nf(x.kmMax)) + bx('Año desde', x.anioDesde || '—') + bx('Combustible / cambio', esc([x.combustible, x.cambio].filter(Boolean).join(' · ') || '—')) + (x.comentario ? bx('Comentario', esc(x.comentario)) : '') });

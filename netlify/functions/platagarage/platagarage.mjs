@@ -40,7 +40,7 @@ const html = (body, status = 200, extra = {}) => new Response(body, { status, he
 const text = (body, type) => new Response(body, { headers: { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'public, max-age=300' } });
 const redirect = (to, status = 301) => new Response(null, { status, headers: { location: to, 'cache-control': 'no-store' } });
 export const slugify = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\+/g, ' plus ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-const clip = (v, n) => String(v ?? '').trim().slice(0, n);
+const clip = (v, n) => { const s = String(v ?? '').trim(); return (s === 'undefined' || s === 'null' ? '' : s).slice(0, n); };
 const num = (v) => { if (v === '' || v == null) return null; const n = Number(String(v).replace(/[^\d.-]/g, '')); return Number.isFinite(n) ? n : null; };
 const today = () => new Intl.DateTimeFormat('sv-SE', { timeZone: TZ }).format(new Date());
 const nowHM = () => new Intl.DateTimeFormat('es-ES', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
