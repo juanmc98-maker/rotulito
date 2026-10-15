@@ -8,7 +8,7 @@ import * as SEO from './seo.mjs';
 
 export const config = {
   path: ['/*'],
-  excludedPath: ['/platagarage/assets/*', '/platagarage/img/*', '/assets/*', '/img/*', '/.netlify/*'],
+  excludedPath: ['/platagarage/assets/*', '/platagarage/img/*', '/assets/*', '/img/*', '/.netlify/*', '/googledd8c57b3752e5141.html'],
 };
 
 const BASE = ''; // la web vive en la raíz del dominio
@@ -365,7 +365,7 @@ export default async (req, context) => {
 
     // ---- web pública ----
     const site = (env('PG_SITE_URL') || url.origin).replace(/\/+$/, '');
-    V.setCtx({ site, index: INDEX(), gtag: clip(env('PG_GTAG_ID'), 20), pixel: clip(env('PG_META_PIXEL'), 20), clarity: clip(env('PG_CLARITY') || 'yx42pl2vd4', 20) });
+    V.setCtx({ site, index: INDEX(), gtag: clip(env('PG_GTAG_ID'), 20), pixel: clip(env('PG_META_PIXEL'), 20), clarity: clip(env('PG_CLARITY') || 'yx42pl2vd4', 20), gsv: clip(env('PG_GSV'), 80) });
     const cars = await load('cars');
     if (sub === '/robots.txt') return text(`User-agent: *\n${INDEX() ? `Allow: /\nDisallow: ${BASE}/admin\nDisallow: ${BASE}/api/\nDisallow: ${BASE}/gracias\n` : 'Disallow: /\n'}\nSitemap: ${site}${BASE}/sitemap.xml\n`, 'text/plain');
     if (sub === '/sitemap.xml') return text(sitemap(site, pubCars(cars), (await load('posts')).filter((x) => x.published)), 'application/xml');
