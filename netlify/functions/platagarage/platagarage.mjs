@@ -395,7 +395,8 @@ const inner = async (req, context) => {
       if (sub.endsWith('.html')) return redirect(`${BASE}/vehiculos/${slug}`);
       const car = cars.find((c) => c.slug === slug || (c.oldSlugs || []).includes(slug));
       if (car && car.sold) return redirect(`${BASE}/vehiculos/?vendido=${encodeURIComponent(car.slug)}`); // vendido: 301 al stock, con la oferta de buscarle uno igual
-      if (!car || car.hidden) return redirect(`${BASE}/vehiculos/`);
+      if (!car) return html(V.notFound('Este coche ya no está en nuestra web. Mira los que tenemos ahora en stock.'), 404); // nunca existió: 404 de verdad (no 301 al stock, que Google cuenta como soft 404)
+      if (car.hidden) return redirect(`${BASE}/vehiculos/`, 302); // en preparación: temporal, volverá a estar
       if (car.slug !== slug) return redirect(`${BASE}/vehiculos/${car.slug}`);
       const fichaUrl = `${url.origin}${BASE}/vehiculos/${car.slug}`;
       const qr = await QRCode.toString(fichaUrl, { type: 'svg', margin: 0, width: 96 }).catch(() => '');

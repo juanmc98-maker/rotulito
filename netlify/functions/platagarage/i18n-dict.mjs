@@ -1158,6 +1158,8 @@ export default {
   "¡Gracias!": ["Gràcies!","Thank you!"],
   "Hemos recibido tu solicitud.": ["Hem rebut la teva sol·licitud.","We've received your request."],
   "<a>Ver más coches</a><a>Escribir por WhatsApp</a>": ["<a>Veure més cotxes</a><a>Escriure per WhatsApp</a>","<a>See more cars</a><a>Message us on WhatsApp</a>"],
+  "Blog de coches de segunda mano | Plata Garage": ["Blog de cotxes de segona mà | Plata Garage","Used car blog | Plata Garage"],
+  "Este coche ya no está en nuestra web. Mira los que tenemos ahora en stock.": ["Aquest cotxe ja no és a la nostra web. Mira els que tenim ara en estoc.","This car is no longer on our website. Have a look at the ones we have in stock now."],
   "Página no encontrada | Plata Garage": ["Pàgina no trobada | Plata Garage","Page not found | Plata Garage"],
   "Esta página no existe o el coche ya no está disponible.": ["Aquesta pàgina no existeix o el cotxe ja no està disponible.","This page doesn't exist or the car is no longer available."],
   "Vaya…": ["Vaja…","Oops…"],

@@ -33,6 +33,7 @@ const fill = (tr, nums, tags) => {
 const FUEL = { gasolina: ['gasolina', 'petrol'], 'diésel': ['dièsel', 'diesel'], 'híbrido': ['híbrid', 'hybrid'], 'eléctrico': ['elèctric', 'electric'], glp: ['GLP', 'LPG'] };
 const TRANS = { manual: ['manual', 'manual'], 'automático': ['automàtic', 'automatic'] };
 const RULES = [
+  [/^(.+) de (\{\d+\}) km en Sabadell \| Plata Garage$/, (m) => [`${m[1]} de ${m[2]} km a Sabadell | Plata Garage`, `Used ${m[1]}, ${m[2]} km, in Sabadell | Plata Garage`]],
   [/^(.+) de segunda mano en Sabadell \| Plata Garage$/, (m) => [`${m[1]} de segona mà a Sabadell | Plata Garage`, `Used ${m[1]} in Sabadell | Plata Garage`]],
   [/^(.+) en Sabadell \| Plata Garage$/, (m) => [`${m[1]} a Sabadell | Plata Garage`, `${m[1]} in Sabadell | Plata Garage`]],
   [/^(.+), (\{\d+\}) km, (gasolina|diésel|híbrido|eléctrico|glp), (manual|automático)\. (\{\d+\}) €\. Garantía de (\{\d+\}) meses en Sabadell\. Pide cita\.$/, (m) => { const f = FUEL[m[3]], t = TRANS[m[4]]; return [`${m[1]}, ${m[2]} km, ${f[0]}, ${t[0]}. ${m[5]} €. Garantia de ${m[6]} mesos a Sabadell. Demana cita.`, `${m[1]}, ${m[2]} km, ${f[1]}, ${t[1]}. ${m[5]} €. ${m[6]}-month warranty in Sabadell. Book a visit.`]; }],
