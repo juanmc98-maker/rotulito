@@ -2,6 +2,7 @@
 import { getStore as nfGetStore } from '@netlify/blobs';
 import crypto from 'node:crypto';
 import seed from './seed.mjs';
+import astSeed from './astilleros-seed.mjs';
 import * as V from './views.mjs';
 import QRCode from 'qrcode';
 import * as SEO from './seo.mjs';
@@ -23,7 +24,7 @@ const db = () => store('platagarage');
 const media = () => store('platagarage-media');
 
 // ---------- datos ----------
-const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'gastos-marine': {}, 'gastos-rotulito': {}, pushsubs: [], vapid: {}, docs: {}, 'cartera-marine': [], 'demandas-marine': [], 'holded-neg': {} };
+const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'gastos-marine': {}, 'gastos-rotulito': {}, pushsubs: [], vapid: {}, docs: {}, 'cartera-marine': [], 'astilleros-marine': astSeed, 'demandas-marine': [], 'holded-neg': {} };
 async function load(key) {
   const v = await db().get(key, { type: 'json' });
   if (v == null) { const d = structuredClone(DEFAULTS[key]); await db().setJSON(key, d); return d; }
@@ -1054,6 +1055,19 @@ async function adminApi(r, req, M, me, url) {
     if (M === 'GET') return json(list[i]);
     if (M === 'PUT') { const antes = [list[i].precio, list[i].estado].join('|'); campos(list[i], body); list[i].updated = new Date().toISOString(); await save('cartera-marine', list); if (antes !== [list[i].precio, list[i].estado].join('|')) await avisarCruces(list[i]).catch(() => {}); return json(list[i]); }
     if (M === 'DELETE') { list.splice(i, 1); await save('cartera-marine', list); return json({ ok: true }); }
+  }
+  // Astilleros contactados por Plata Marine (CRM de acuerdos con fabricantes)
+  if (seg[0] === 'astilleros') {
+    if (!(me.negs || []).includes('marine')) return json({ error: 'No tienes acceso.' }, 403);
+    const list = await load('astilleros-marine');
+    if (M === 'GET' && !seg[1]) return json(list);
+    const ESTS = ['pend', 'sent', 'resp', 'pausa', 'firm', 'desc', 'perd'];
+    const campos = (o, b) => { ['n', 'c', 't', 'tt', 'g', 'es', 'ch', 'rec', 'mot', 'fecha'].forEach((f) => { if (f in b) o[f] = clip(b[f], 300); }); if ('nota' in b) o.nota = clip(b.nota, 6000); if ('s' in b && ESTS.includes(b.s)) o.s = b.s; if ('p' in b && ['A', 'M', 'B'].includes(b.p)) o.p = b.p; if ('r' in b && ['eu', 'no-ue', 'cn'].includes(b.r)) o.r = b.r; if ('int' in b) { const n = Number(b.int); if (n >= 1 && n <= 5) o.int = n; else delete o.int; } if ('conv' in b) o.conv = b.conv === true || b.conv === 'on' || b.conv === '1'; return o; };
+    if (M === 'POST' && !seg[1]) { if (!clip(body.n, 200)) return json({ error: 'Pon el nombre del astillero' }, 400); const o = campos({ id: uid('a'), s: 'pend', p: 'M', r: 'eu', orden: list.reduce((a, x) => Math.max(a, x.orden || 0), 0) + 1, created: new Date().toISOString() }, body); list.unshift(o); await save('astilleros-marine', list); return json(o); }
+    const i = list.findIndex((x) => x.id === seg[1]); if (i < 0) return json({ error: 'No existe' }, 404);
+    if (M === 'GET') return json(list[i]);
+    if (M === 'PUT') { campos(list[i], body); list[i].updated = new Date().toISOString(); await save('astilleros-marine', list); return json(list[i]); }
+    if (M === 'DELETE') { list.splice(i, 1); await save('astilleros-marine', list); return json({ ok: true }); }
   }
   // ---- vídeo del coche: se sube por trozos (Netlify limita cada petición a 6 MB) y se sirve por rangos ----
   if (seg[0] === 'video' && M === 'POST') {
