@@ -24,7 +24,7 @@ const db = () => store('platagarage');
 const media = () => store('platagarage-media');
 
 // ---------- datos ----------
-const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], financiaciones: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'gastos-marine': {}, 'gastos-rotulito': {}, pushsubs: [], vapid: {}, docs: {}, 'cartera-marine': [], 'astilleros-marine': astSeed, 'demandas-marine': [], 'holded-neg': {} };
+const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], financiaciones: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'gastos-marine': {}, 'gastos-rotulito': {}, pushsubs: [], vapid: {}, docs: {}, 'cartera-marine': [], 'astilleros-marine': astSeed, 'demandas-marine': [], 'holded-neg': {}, tarifas: {} };
 async function load(key) {
   const v = await db().get(key, { type: 'json' });
   if (v == null) { const d = structuredClone(DEFAULTS[key]); await db().setJSON(key, d); return d; }
@@ -375,7 +375,8 @@ const inner = async (req, context) => {
     // ---- web pública ----
     const site = (env('PG_SITE_URL') || url.origin).replace(/\/+$/, '');
     V.setCtx({ site, index: INDEX(), gtag: clip(env('PG_GTAG_ID'), 20), pixel: clip(env('PG_META_PIXEL'), 20), clarity: clip(env('PG_CLARITY') || 'yx42pl2vd4', 20), gsv: clip(env('PG_GSV'), 80) });
-    const cars = await load('cars');
+    const [cars, holdersPub, tarifasPub] = await Promise.all([load('cars'), load('holders'), load('tarifas')]);
+    V.setCtx({ holders: holdersPub }); V.setTarifa(tarifasPub);
     if (sub === '/robots.txt') return text(`User-agent: *\n${INDEX() ? `Allow: /\nDisallow: ${BASE}/admin\nDisallow: ${BASE}/api/\nDisallow: ${BASE}/gracias\nDisallow: /ca/gracias\nDisallow: /en/gracias\nDisallow: /reservar\nDisallow: /ca/reservar\nDisallow: /en/reservar\nDisallow: /financiar\nDisallow: /ca/financiar\nDisallow: /en/financiar\nDisallow: /favoritos\nDisallow: /ca/favoritos\nDisallow: /en/favoritos\nDisallow: /*/cartel\n` : 'Disallow: /\n'}\nSitemap: ${site}${BASE}/sitemap.xml\n`, 'text/plain');
     if (sub === `/${INDEXNOW_KEY}.txt`) return text(INDEXNOW_KEY, 'text/plain');
     if (sub === '/sitemap.xml') return text(sitemap(site, pubCars(cars), (await load('posts')).filter((x) => x.published)), 'application/xml');
@@ -676,7 +677,10 @@ async function api(r, req, M, ip, url, context) {
     const docs = [];
     for (const x of noms) { const buf = Buffer.from(await x.file.arrayBuffer()); const id = 'n' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'); const iv = crypto.randomBytes(12); const ci = crypto.createCipheriv('aes-256-gcm', docKey(), iv);
       const enc = Buffer.concat([ci.update(buf), ci.final()]); await media().set('nomina/' + id, Buffer.concat([iv, ci.getAuthTag(), enc])); docs.push({ id, nombre: clip(x.file.name, 120) || 'nomina', mime: x.file.type, size: buf.length }); }
-    const it = { ...base, ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}), fin: { dni, direccion, cp, poblacion, civil, antiguedad, salario, vivienda, gastoVivienda, cesion: base.created, docs, plazo: V.PLAZOS.includes(Number(f.plazo)) ? Number(f.plazo) : 0, entrada: Math.max(0, Math.round(Number(f.entrada) || 0)) } };
+    V.setCtx({ holders: await load('holders') }); V.setTarifa(await load('tarifas'));
+    const plazoF = V.PLAZOS.includes(Number(f.plazo)) ? Number(f.plazo) : 0, entradaF = Math.max(0, Math.round(Number(f.entrada) || 0));
+    const est = c && plazoF ? V.cuotaPara(c, Number(c.price) + V.cambioNombre(c) - entradaF, plazoF) : null;
+    const it = { ...base, ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}), fin: { dni, direccion, cp, poblacion, civil, antiguedad, salario, vivienda, gastoVivienda, cesion: base.created, docs, plazo: plazoF, entrada: entradaF, ...(est ? { cuota: est.c, tin: est.t, tae: Math.round(est.tae * 100) / 100, financiera: est.fin === 'lendrock' ? 'Lendrock' : 'Confía', importe: Number(c.price) + V.cambioNombre(c) - entradaF } : {}) } };
     // Conservación: como máximo 12 meses (política de privacidad); con la solicitud se borran sus nóminas
     const lim = new Date(Date.now() - 365 * 864e5).toISOString(); const all = await load('financiaciones');
     for (const x of all.filter((y) => (y.created || '') <= lim)) for (const d of x.fin?.docs || []) await media().delete('nomina/' + d.id).catch(() => {});
@@ -866,6 +870,7 @@ async function hit(req, context) {
   }
   else if (b.e === 'cmp') { const par = String(b.c || '').split('+').map((x) => clip(x, 120)).filter(Boolean).slice(0, 3); if (par.length > 1) { inc('tot', 'comparaciones'); inc('cmppar', par.join('+')); } }
   else if (b.e === 'cmpc') { inc('tot', 'cmpcontacto'); inc('cmpk', b.k === 'wa' ? 'WhatsApp' : 'Pedir cita'); if (b.c) inc('cmpcar', clip(b.c, 120)); }
+  else if (b.e === 'calc') { const k = clip(b.k, 12); if (/^(uso|entrada|solicitar|p\d{2,3})$/.test(k)) { inc('calc', k); if (b.c && (k === 'uso' || k === 'solicitar')) inc('calccar', `${clip(b.c, 120)}|${k}`); } }
   else if (['wa', 'tel', 'pdf'].includes(b.e)) { inc('ev', b.e); if (b.c) inc('carev', `${clip(b.c, 120)}|${b.e}`); }
   await db().setJSON(k, st);
 }
@@ -1306,6 +1311,19 @@ async function adminApi(r, req, M, me, url) {
       b.status = 'cancelada'; b.historial = [{ d, t: 'No disponible: avisado el cliente' }, ...(b.historial || [])].slice(0, 50); await save('bookings', list);
       const ok = await sendMail({ to: b.email, subject: `Sobre tu reserva del ${b.cocheNombre}`, text: `Hola ${nombre},\n\nLo sentimos mucho: el ${b.cocheNombre} se ha vendido justo antes en nuestras instalaciones y no podemos reservártelo.\n\n${b.pagoAvisado ? 'Te devolvemos la señal íntegra por el mismo medio por el que la pagaste. ' : 'No tienes que pagar nada. '}Si quieres, te buscamos uno parecido: ${url.origin}${BASE}/te-lo-buscamos\n\nUn saludo,\nPlata Garage · 660 49 32 28` }).catch(() => false);
       return json({ ok: true, enviado: !!ok });
+    }
+  }
+  if (seg[0] === 'tarifas') { // tarifas de la calculadora de cuota: se cambian aquí sin publicar la web
+    if (M === 'GET') { const t = await load('tarifas'); V.setTarifa(t); return json({ actual: V.TARIFA, guardadas: !!(t && t.confia) }); }
+    if (M === 'PUT') {
+      const n = (v, lo, hi) => { const x = Number(String(v ?? '').replace(',', '.')); return isFinite(x) && x >= lo && x <= hi ? Math.round(x * 100) / 100 : null; };
+      const fecha = (v) => (/^\d{2}\/\d{2}\/\d{4}$/.test(String(v || '')) ? String(v) : null);
+      const b = body || {}, cf = b.confia || {}, ld = b.lendrock || {};
+      const arr = (a) => (Array.isArray(a) && a.length === 8 ? a.map((v) => n(v, 0, 30)) : null);
+      const obj = (o, pl) => { const r = {}; for (const m of pl) { const v = o && o[m] !== '' && o[m] != null ? n(o[m], 0, 30) : null; if (v) r[m] = v; } return r; };
+      const t = { confia: { fecha: fecha(cf.fecha), apertura: n(cf.apertura, 0, 15), alto: arr(cf.alto), bajo: arr(cf.bajo) }, lendrock: { fecha: fecha(ld.fecha), apertura: n(ld.apertura, 0, 15), hasta10: obj(ld.hasta10, [36, 48, 60, 72, 84, 96, 108, 120]), hasta16: obj(ld.hasta16, [36, 48, 60, 72, 84, 96]) } };
+      if (!t.confia.fecha || !t.lendrock.fecha || t.confia.apertura == null || t.lendrock.apertura == null || !t.confia.alto || !t.confia.bajo || t.confia.alto.includes(null) || t.confia.bajo.includes(null)) return json({ error: 'Revisa los datos: fechas dd/mm/aaaa y todos los TIN de Confía.' }, 400);
+      await save('tarifas', t); V.setTarifa(t); return json({ ok: true, actual: V.TARIFA });
     }
   }
   if (seg[0] === 'financiaciones' && seg[2] === 'doc' && seg[3] && M === 'GET') { // nómina adjunta (descifrada solo para el panel)
