@@ -1347,4 +1347,10 @@ export default {
   "Entrada (opcional)": ["Entrada (opcional)", "Down payment (optional)"],
   "Plazo en meses": ["Termini en mesos", "Term in months"],
   "Entrada de {0} € · {1} meses": ["Entrada de {0} € · {1} mesos", "{0} € down payment · {1} months"],
+  "+ {0} € de cambio de nombre": ["+ {0} € de canvi de nom", "+ {0} € registration transfer"],
+  "<a>o desde <b>{0} €/mes</b><small>{1} meses sin entrada · TIN {2} % · TAE {3} % · ver ejemplo</small></a>": ["<a>o des de <b>{0} €/mes</b><small>{1} mesos sense entrada · TIN {2} % · TAE {3} % · veure exemple</small></a>", "<a>or from <b>{0} €/month</b><small>{1} months, no down payment · TIN {2} % · APR {3} % · see example</small></a>"],
+  "Cambio de nombre": ["Canvi de nom", "Registration transfer"],
+  "El importe a financiar incluye el cambio de nombre ({0} €).": ["L'import a finançar inclou el canvi de nom ({0} €).", "The amount financed includes the registration transfer ({0} €)."],
+  "Desde <b>{0} €/mes</b> <small>TIN {1} % · TAE {2} %*</small>": ["Des de <b>{0} €/mes</b> <small>TIN {1} % · TAE {2} %*</small>", "From <b>{0} €/month</b> <small>TIN {1} % · APR {2} %*</small>"],
+  "* Cuotas orientativas sin entrada, al plazo más largo disponible y con la financiera más económica para cada coche. Incluyen el cambio de nombre y la comisión de apertura financiada. Financiación sujeta a la aprobación de la entidad (Confía o Lendrock). Tienes el ejemplo completo con todos los datos en la calculadora de cada coche.": ["* Quotes orientatives sense entrada, al termini més llarg disponible i amb la financera més econòmica per a cada cotxe. Inclouen el canvi de nom i la comissió d'obertura finançada. Finançament subjecte a l'aprovació de l'entitat (Confía o Lendrock). Tens l'exemple complet amb totes les dades a la calculadora de cada cotxe.", "* Indicative monthly payments with no down payment, over the longest term available and with the cheapest finance company for each car. They include the registration transfer and the financed opening fee. Financing subject to approval by the lender (Confía or Lendrock). The full example with all the details is in each car's calculator."],
 };
