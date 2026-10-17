@@ -2,15 +2,24 @@
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 // Distancias en línea recta desde el centro de Sabadell, redondeadas (orientativas)
+// Solo estas zonas se indexan (las demás quedan con noindex,follow y fuera del sitemap: evitan páginas casi iguales)
+export const ZONAS_IDX = ['sabadell', 'terrassa', 'sant-cugat', 'barbera-del-valles'];
+// Texto propio de cada zona indexable
+export const ZONA_MAS = {
+  sabadell: 'Somos una compraventa pequeña de Sabadell: cada coche lo elegimos nosotros, lo revisamos en taller y le cambiamos el aceite antes de entregarlo. Atendemos con cita para enseñarte el coche con calma, sin prisas y sin colas, y si te encaja lo puedes reservar con una señal que se descuenta del precio.',
+  terrassa: 'Entre Terrassa y Sabadell hay unos 9 km por la C-58, así que puedes venir a ver el coche en la misma tarde. Si lo prefieres, te mandamos antes por WhatsApp las fotos y los datos que nos pidas para que no hagas el viaje en balde.',
+  'sant-cugat': 'Desde Sant Cugat se llega a Sabadell en pocos minutos. En el stock puedes filtrar por automáticos, SUV o precio para ver solo lo que te encaja y pedir cita para ese coche.',
+  'barbera-del-valles': 'Barberà del Vallès y Sabadell están pegadas, así que es la visita más cómoda: pide cita a la hora que te vaya bien y te tenemos el coche preparado.',
+};
 export const ZONAS = [
   { slug: 'sabadell', name: 'Sabadell', km: 0, txt: 'Estamos en Sabadell. Si eres de aquí, pide cita y ven a ver el coche con calma, el día y la hora que mejor te vayan.' },
-  { slug: 'terrassa', name: 'Terrassa', km: 9, txt: 'Desde Terrassa estás a unos minutos de nosotros por la C-58. Pide cita, ven a ver el coche y pruébalo sin prisas.' },
+  { slug: 'terrassa', name: 'Terrassa', km: 9, txt: 'Desde Terrassa estás a unos minutos de nosotros por la C-58. Pide cita y ven a ver el coche sin prisas.' },
   { slug: 'sant-cugat', name: 'Sant Cugat del Vallès', km: 9, txt: 'Si vives en Sant Cugat del Vallès, Sabadell te queda muy cerca. Elige día y hora y te tenemos el coche preparado.' },
   { slug: 'barbera-del-valles', name: 'Barberà del Vallès', km: 4, txt: 'Barberà del Vallès está pegada a Sabadell: en pocos minutos estás viendo el coche que te interesa.' },
   { slug: 'cerdanyola', name: 'Cerdanyola del Vallès', km: 7, txt: 'Desde Cerdanyola del Vallès llegas a Sabadell en un momento por la C-58. Reserva tu visita y te atendemos sin esperas.' },
   { slug: 'ripollet', name: 'Ripollet', km: 7, txt: 'Si eres de Ripollet, estamos al lado. Mira el stock, pide cita y ven a verlo sin compromiso.' },
   { slug: 'badia-del-valles', name: 'Badia del Vallès', km: 5, txt: 'Badia del Vallès está a un paso de Sabadell. Pide cita y te enseñamos el coche con tranquilidad.' },
-  { slug: 'sant-quirze-del-valles', name: 'Sant Quirze del Vallès', km: 3, txt: 'Desde Sant Quirze del Vallès estás prácticamente en Sabadell. Elige el coche, pide cita y ven a probarlo.' },
+  { slug: 'sant-quirze-del-valles', name: 'Sant Quirze del Vallès', km: 3, txt: 'Desde Sant Quirze del Vallès estás prácticamente en Sabadell. Elige el coche, pide cita y ven a verlo.' },
   { slug: 'castellar-del-valles', name: 'Castellar del Vallès', km: 7, txt: 'Si vives en Castellar del Vallès, bajas a Sabadell en pocos minutos. Te esperamos con cita previa.' },
   { slug: 'santa-perpetua-de-mogoda', name: 'Santa Perpètua de Mogoda', km: 6, txt: 'Santa Perpètua de Mogoda está muy cerca de Sabadell. Mira el stock y reserva tu visita sin compromiso.' },
   { slug: 'polinya', name: 'Polinyà', km: 4, txt: 'Desde Polinyà llegas a Sabadell en nada. Pide cita y ven a ver el coche cuando te vaya bien.' },
@@ -46,6 +55,30 @@ export const TIPOS = [
   { slug: 'menos-de-20000', h: 'Coches por menos de 20.000 €', f: (c) => c.price <= 20000, txt: 'Coches de segunda mano por menos de 20.000 €, revisados y con garantía de 12 meses.' },
   { slug: 'pocos-kilometros', h: 'Coches con pocos kilómetros', f: (c) => c.km != null && c.km <= 80000, txt: 'Coches de segunda mano con menos de 80.000 km.' },
 ];
+
+// Contenido propio de las categorías con más stock e intención de compra (texto y dudas específicas)
+export const EXTRA = {
+  japoneses: {
+    p: ['Los coches japoneses tienen fama de fiables y de tener un mantenimiento sencillo, y por eso muchos clientes nos piden "un japonés" sin tener aún claro el modelo. En el stock suele haber Toyota, Mazda y Nissan: Toyota destaca por sus híbridos con etiqueta ECO, Mazda por motores de gasolina sin turbo y un buen acabado, y Nissan por sus SUV.', 'Como con cualquier coche de ocasión, lo importante es el estado de cada unidad: por eso todos pasan por taller antes de entregarse y salen con 12 meses de garantía.'],
+    faq: [['¿Son más fiables los coches japoneses?', 'Tienen buena fama de fiabilidad, pero en un coche de segunda mano pesa más cómo se ha cuidado cada unidad. Te enseñamos el coche, te contamos lo que sabemos de él y sale revisado y con 12 meses de garantía.'], ['¿Tenéis híbridos japoneses?', 'Depende del stock de cada semana. En esta página ves todos los japoneses que tenemos ahora; si buscas un híbrido concreto y no está, dínoslo en "Te lo buscamos".']],
+  },
+  automaticos: {
+    p: ['El cambio automático es lo que más nos piden: en ciudad y en los atascos del Vallès se agradece no tener que tocar el embrague. Hay varios tipos (convertidor de par, doble embrague o el cambio de los híbridos) y cada uno tiene su forma de conducirse y su mantenimiento.', 'Si no has llevado nunca un automático, en la visita te explicamos cómo funciona antes de decidir.'],
+    faq: [['¿Un automático tiene más mantenimiento?', 'Según el tipo de cambio, el fabricante puede indicar el cambio de aceite de la caja cada cierto número de kilómetros. Te decimos lo que toca en el coche que te interese antes de que lo compres.'], ['¿Puedo ver el coche antes?', 'Sí. Pide cita y te lo tenemos preparado para verlo con calma. La prueba en carretera la reservamos para cuando hay compromiso de compra.']],
+  },
+  'menos-de-10000': {
+    p: ['Por menos de 10.000 € lo normal es encontrar coches con algunos años y kilómetros, pero eso no tiene por qué ser un problema si el coche se ha cuidado. Aquí tienes los que tenemos ahora en ese precio, ordenados de más barato a más caro.', 'Aunque sean los más asequibles, pasan la misma revisión en taller que el resto y llevan los mismos 12 meses de garantía.'],
+    faq: [['¿Los coches baratos también tienen garantía?', 'Sí, todos los coches tienen 12 meses de garantía, cuesten lo que cuesten.']],
+  },
+  mazda: {
+    p: ['En nuestro stock suele haber varios Mazda: buen acabado, conducción agradable y motores de gasolina sin turbo en muchos modelos. Aquí ves todos los Mazda que tenemos ahora en stock.'],
+    faq: [],
+  },
+  nissan: {
+    p: ['Nissan es sobre todo marca de SUV y crossovers, muy prácticos para el día a día y para la familia. Aquí ves todos los Nissan que tenemos ahora en stock.'],
+    faq: [],
+  },
+};
 
 export const slugBrand = (b) => norm(b).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 export function marcas(cars) {

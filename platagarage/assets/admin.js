@@ -395,9 +395,9 @@ V.coche = async (m, id) => {
   let imgs = [...(c.images || [])];
   const sel = (n, opts, v) => `<select name="${n}">${opts.map((o) => (Array.isArray(o) ? o : [o, o])).map(([val, t]) => `<option value="${esc(val)}"${String(v ?? '') === String(val) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
   const inp = (n, l, t = 'text', extra = '') => `<label>${l}<input name="${n}" type="${t}" value="${esc(c[n] ?? '')}" ${extra}></label>`;
-  m.innerHTML = top(isNew ? 'Nuevo coche' : `${esc(c.brand)} ${esc(c.model)}`, isNew ? 'Rellena los datos y añade las fotos.' : `Ficha pública: <a href="${B}/vehiculos/${c.slug}" target="_blank" style="color:var(--or)">${B}/vehiculos/${c.slug}</a>`, `<a class="btn g" href="#coches">Volver</a>`) +
+  m.innerHTML = top(isNew ? 'Nuevo coche' : `${esc(c.brand)} ${esc(c.model)}`, isNew ? 'Rellena los datos y añade las fotos.' : `Ficha pública: <a href="${B}/vehiculos/${c.slug}" target="_blank" style="color:var(--or)">${B}/vehiculos/${c.slug}</a> · <a href="${B}/vehiculos/${c.slug}/cartel" target="_blank" style="color:var(--or)">Imprimir cartel (PDF)</a>`, `<a class="btn g" href="#coches">Volver</a>`) +
   `<form id="cf">
-  <div class="card sec"><h3>Identificación</h3><div class="fg">${inp('brand', 'Marca *', 'text', 'required')}${inp('model', 'Modelo *', 'text', 'required')}${inp('version', 'Versión')}${inp('matricula', 'Matrícula (interno, no sale en la web)', 'text', 'autocapitalize="characters" style="text-transform:uppercase" placeholder="1234ABC"')}${inp('llegada', 'Entrada en stock (fecha de compra)', 'date')}<label>De quién es (interno, no sale en la web)${sel('owner', [['', '— Sin asignar —'], 'Cristina', 'Juan'], c.owner)}</label></div></div>
+  <div class="card sec"><h3>Identificación</h3><div class="fg">${inp('brand', 'Marca *', 'text', 'required')}${inp('model', 'Modelo *', 'text', 'required')}${inp('version', 'Versión')}${inp('matricula', 'Matrícula (interno, no sale en la web)', 'text', 'autocapitalize="characters" style="text-transform:uppercase" placeholder="1234ABC"')}${inp('bastidor', 'Bastidor (interno, para el documento de reserva)', 'text', 'autocapitalize="characters" style="text-transform:uppercase" maxlength="17"')}${inp('llegada', 'Entrada en stock (fecha de compra)', 'date')}<label>De quién es (interno, no sale en la web)${sel('owner', [['', '— Sin asignar —'], 'Cristina', 'Juan'], c.owner)}</label></div></div>
   <div class="card sec"><h3>Datos principales</h3><div class="fg">${inp('year', 'Año *', 'number', 'min="1950" max="2100" required')}${inp('km', 'Kilómetros *', 'number', 'min="0" required')}${inp('price', 'Precio (€) *', 'number', 'min="0" required')}
   <label>Combustible *${sel('fuel', ['Gasolina', 'Diésel', 'Híbrido', 'Híbrido enchufable', 'Eléctrico', 'GLP'], c.fuel || 'Gasolina')}</label><label>Cambio *${sel('trans', ['Manual', 'Automático'], c.trans || 'Manual')}</label><label>Carrocería${sel('body', [['', '—'], 'Berlina', 'Compacto', 'Familiar', 'SUV', 'Coupé', 'Cabrio', 'Monovolumen', 'Furgoneta', 'Pickup'], c.body)}</label>
   ${inp('cv', 'Potencia (CV)', 'number')}<label>Etiqueta DGT${sel('etiqueta', [['', 'Según la descripción'], 'CERO', 'ECO', 'C', 'B', ['SIN', 'Sin etiqueta']], c.etiqueta)}</label>${inp('doors', 'Puertas', 'number')}${inp('seats', 'Plazas', 'number')}${inp('color', 'Color')}</div></div>
@@ -603,6 +603,9 @@ function mes(m, list, off = 0) {
 const bx = (k, v) => `<div class="box2" style="flex:1;min-width:150px"><small>${k}</small>${v}</div>`;
 V.reservas = inbox({ key: 'reservas', path: 'reservas', title: 'Reservas', sub: (l) => `${l.length} citas registradas · ${l.filter((x) => x.status === 'pendiente').length} pendientes`, states: ['pendiente', 'confirmada', 'cancelada', 'completada'],
   body: (x, { holders, cars }) => { const car = cars.find((c) => c.slug === x.coche); const h = car && holders.find((y) => y.id === car.holder);
+    if (x.tipo === 'reserva' && x.res) return bx('Reserva web', `<b>${esc(x.cocheNombre || '')}</b><br>Señal: <b>${eur(x.senal || car?.reserve || 0)}</b><br>${x.status === 'confirmada' ? '<span style="color:#4ade80">Confirmada y documento enviado</span>' : x.status === 'cancelada' ? '<span class="mu">Cancelada</span>' : x.pagoAvisado ? `<span style="color:var(--or)"><b>Dice que ha pagado</b> (${fdt(x.pagoAvisado)}): revisa el banco</span>` : '<span class="mu">Aún no ha avisado del pago</span>'}`) +
+      bx('Datos del cliente', `DNI/NIE ${esc(x.res.dni)}<br>${esc(x.res.direccion)}, ${esc(x.res.cp)} ${esc(x.res.poblacion)}`) + (x.mensaje ? bx('Comentario', esc(x.mensaje)) : '') +
+      `<div class="row" style="flex-basis:100%;gap:8px;margin-top:4px">${x.status !== 'confirmada' && x.status !== 'cancelada' ? `<select data-rm="${x.id}" style="width:auto"><option value="Bizum">Pagado por Bizum</option><option value="transferencia">Pagado por transferencia</option></select><button class="btn s" data-rc="${x.id}">Pago recibido: confirmar y enviar documento</button><button class="btn r s" data-rn="${x.id}">No disponible</button>` : ''}<a class="btn g s" target="_blank" href="${API}/admin/reservas/${x.id}/documento">Ver documento</a></div>`;
     return bx('Fecha', `<b>${fdate(x.fecha)} · ${x.hora}</b>`) + bx('Motivo', esc(x.motivo)) + bx('Coche', x.coche ? `<a href="${B}/vehiculos/${x.coche}" target="_blank">${esc(x.cocheNombre)}</a>` : '—') + (x.mensaje ? bx('Comentario', esc(x.mensaje)) : '') +
       (x.tipo === 'reserva' && car ? bx('Para la señal', `${car.reserve ? eur(car.reserve) + ' · ' : ''}Bizum 660 49 32 28${h?.accounts?.length ? '<br>' + h.accounts.map((a) => `${esc(a.bank)}: ${esc(a.iban)}`).join('<br>') : ''}`) : ''); } });
 // Vendedores: quien quiere vender su coche (tasaciones), como embudo con avisos de los que llevan días parados
@@ -1259,3 +1262,16 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register(B + '/admin-s
 window.addEventListener('hashchange', () => $('.lay') && route());
 boot();
 })();
+
+// Reservas web: confirmar el pago de la señal (envía el documento) o avisar de que no está disponible
+document.addEventListener('click', async (e) => {
+  const c = e.target.closest('[data-rc]'), n = e.target.closest('[data-rn]'); if (!c && !n) return;
+  e.preventDefault(); const id = (c || n).dataset.rc || (c || n).dataset.rn;
+  if (c && !confirm('¿Has comprobado en el banco que ha entrado la señal? Se enviará el documento de reserva al cliente y el coche pasará a Reservado.')) return;
+  if (n && !confirm('¿Avisar al cliente de que el coche ya no está disponible?')) return;
+  (c || n).disabled = true;
+  try {
+    const r = await api(`/admin/reservas/${id}/${c ? 'confirmar' : 'nodisponible'}`, { method: 'PUT', body: c ? { metodo: (document.querySelector(`[data-rm="${id}"]`) || {}).value || '' } : {} });
+    toast(r.enviado ? (c ? 'Reserva confirmada y documento enviado' : 'Cliente avisado') : 'Hecho, pero el email no salió: escríbele por WhatsApp'); route();
+  } catch (err) { toast(err.message || 'Error'); (c || n).disabled = false; }
+});

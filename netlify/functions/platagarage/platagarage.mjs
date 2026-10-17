@@ -132,6 +132,7 @@ function cleanCar(b, old = {}) {
   const S = (k, n = 120) => { if (k in b) c[k] = clip(b[k], n); };
   ['brand', 'model', 'version', 'fuel', 'trans', 'body', 'color', 'holder', 'status', 'etiqueta', 'owner'].forEach((k) => S(k));
   if ('matricula' in b) c.matricula = clip(String(b.matricula).toUpperCase().replace(/[\s-]/g, ''), 12);
+  if ('bastidor' in b) c.bastidor = clip(String(b.bastidor).toUpperCase().replace(/[\s-]/g, ''), 17);
   if ('desc' in b) c.desc = clip(b.desc, 8000);
   if ('comment' in b) c.comment = clip(b.comment, 3000);
   ['year', 'km', 'price', 'cv', 'doors', 'seats', 'monthly', 'term', 'reserve'].forEach((k) => { if (k in b) c[k] = num(b[k]); });
@@ -175,7 +176,7 @@ function sitemap(site, cars, posts) {
   cars.forEach((c) => rows.push(u(`/vehiculos/${c.slug}`, c.updated || c.created, c.images || [])));
   SEO.tiposConStock(cars).forEach((t) => rows.push(u(`/coches/${t.slug}`, newest)));
   SEO.marcas(cars).forEach((m) => rows.push(u(`/coches/${m.slug}`, newest)));
-  SEO.ZONAS.forEach((z) => rows.push(u(`/coches-segunda-mano-${z.slug}`, newest)));
+  SEO.ZONAS.filter((z) => SEO.ZONAS_IDX.includes(z.slug)).forEach((z) => rows.push(u(`/coches-segunda-mano-${z.slug}`, newest)));
   SEO.ZONAS_VENTA.forEach((z) => rows.push(u(`/vender-mi-coche-${z.slug}`)));
   posts.forEach((p) => rows.push(u(`/blog/${p.slug}`, p.updated || p.publishedAt)));
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${rows.join('\n')}\n</urlset>`;
@@ -390,6 +391,13 @@ const inner = async (req, context) => {
       if (!l) return redirect(`${BASE}/vehiculos/`);
       return html(V.landingPage({ l, cars: pubCars(cars) }), 200, l.cars.length ? {} : { 'x-robots-tag': 'noindex, follow' });
     }
+    if (/^\/vehiculos\/[^/]+\/cartel$/.test(sub)) { // cartel A4 para imprimir (no se indexa)
+      const car = cars.find((c) => c.slug === sub.split('/')[2]);
+      if (!car) return redirect(`${BASE}/vehiculos/`, 302);
+      const fichaUrl = `${site}${BASE}/vehiculos/${car.slug}`;
+      const qr = await QRCode.toString(fichaUrl + '?utm_source=cartel&utm_medium=qr', { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }).catch(() => '');
+      return html(V.cartel({ car, qr, fichaUrl }), 200, { 'x-robots-tag': 'noindex, nofollow' });
+    }
     if (sub.startsWith('/vehiculos/')) {
       const slug = sub.slice(11).replace(/\.html$/, '');
       if (sub.endsWith('.html')) return redirect(`${BASE}/vehiculos/${slug}`);
@@ -401,6 +409,25 @@ const inner = async (req, context) => {
       const fichaUrl = `${url.origin}${BASE}/vehiculos/${car.slug}`;
       const qr = await QRCode.toString(fichaUrl, { type: 'svg', margin: 0, width: 96 }).catch(() => '');
       return html(V.ficha({ car, cars: pubCars(cars), holders: await load('holders'), qr, fichaUrl }));
+    }
+    if (sub === '/reservar') {
+      const car = cars.find((c) => c.slug === url.searchParams.get('coche') && !c.sold && !c.hidden);
+      if (!car || !(car.reserve > 0) || car.status !== 'disponible') return redirect(car ? `${BASE}/vehiculos/${car.slug}` : `${BASE}/vehiculos/`, 302);
+      return html(V.reservar({ car, holder: (await load('holders')).find((h) => h.id === car.holder) }), 200, { 'x-robots-tag': 'noindex, nofollow' });
+    }
+    if (sub === '/reserva/pago') {
+      const id = clip(url.searchParams.get('r'), 40), k = clip(url.searchParams.get('k'), 16);
+      const b = id && k.length === 16 && eqHash(k, sign('ref|' + id).slice(0, 16)) ? (await load('bookings')).find((x) => x.id === id && x.tipo === 'reserva') : null;
+      if (!b) return redirect(`${BASE}/vehiculos/`, 302);
+      const car = cars.find((c) => c.slug === b.coche) || {};
+      return html(V.pagoReserva({ b, car: { ...car, reserve: b.senal || car.reserve }, holder: (await load('holders')).find((h) => h.id === car.holder), k, avisado: !!b.pagoAvisado }), 200, { 'x-robots-tag': 'noindex, nofollow', 'cache-control': 'private, no-store' });
+    }
+    if (sub === '/reserva/documento') { // enlace firmado que recibe el cliente al confirmar la reserva
+      const id = clip(url.searchParams.get('r'), 40), k = clip(url.searchParams.get('k'), 24);
+      const b = id && k.length === 24 && eqHash(k, sign('doc|' + id).slice(0, 24)) ? (await load('bookings')).find((x) => x.id === id && x.tipo === 'reserva' && x.confirmedAt) : null;
+      if (!b) return html(V.notFound('Este enlace no es válido. Escríbenos y te lo enviamos de nuevo.'), 404, { 'x-robots-tag': 'noindex' });
+      const car = cars.find((c) => c.slug === b.coche) || b.carSnap || {};
+      return html(V.docReserva({ b, car: b.carSnap || car, holder: (await load('holders')).find((h) => h.id === (b.carSnap || car).holder) }), 200, { 'x-robots-tag': 'noindex, nofollow', 'cache-control': 'private, no-store' });
     }
     if (sub === '/cita') return html(V.cita({ cars: pubCars(cars), coche: url.searchParams.get('coche') || '', motivo: url.searchParams.get('motivo') || '' }));
     if (sub === '/contacto') return html(V.contacto({ cars: pubCars(cars) }));
@@ -561,6 +588,46 @@ async function api(r, req, M, ip, url, context) {
     const it = { canal: clip(f.canal, 60), id: uid('a'), email, busca: car ? `Bajada de precio: ${car.brand} ${car.model} (${car.year})` : clip(f.busca, 120), max: num(f.max), created: new Date().toISOString(), status: 'activa', origen: clip(f.origen, 120), ...(car ? { coche: car.slug, tipo: 'precio', precio: car.price } : {}) };
     const i = list.findIndex((x) => x.email === email && (x.coche || '') === (it.coche || '')); if (i >= 0) list[i] = { ...list[i], ...it, id: list[i].id }; else list.unshift(it);
     await save('alertas', list); await notify('alerta', it, url.origin).catch(() => {}); await bump('lp', (it.origen || '/').split('?')[0]).catch(() => {}); await bump('lsrc', it.canal || 'directo').catch(() => {}); return json({ ok: true });
+  }
+
+  if (r === '/reserva' && M === 'POST') {
+    const f = await readForm(req);
+    const chk = checkContact(f, { emailReq: true });
+    if (chk.spam) return json({ ok: true });
+    if (chk.error) return json({ error: chk.error }, 400);
+    const dni = clip(f.dni, 12).toUpperCase().replace(/[\s-]/g, '');
+    const okDni = (() => { const m = dni.match(/^([0-9]{8}|[XYZ][0-9]{7})([A-Z])$/); if (!m) return false; const n = Number(m[1].replace('X', '0').replace('Y', '1').replace('Z', '2')); return 'TRWAGMYFPDXBNJZSQVHLCKE'[n % 23] === m[2]; })();
+    if (!okDni) return json({ error: 'Revisa el DNI o NIE: la letra no cuadra.' }, 400);
+    const direccion = clip(f.direccion, 140), cp = clip(f.cp, 5), poblacion = clip(f.poblacion, 80);
+    if (direccion.length < 5) return json({ error: 'Escribe tu dirección.' }, 400);
+    if (!/^\d{5}$/.test(cp)) return json({ error: 'Escribe un código postal de 5 cifras.' }, 400);
+    if (poblacion.length < 2) return json({ error: 'Escribe tu población.' }, 400);
+    if (f.condiciones !== 'si') return json({ error: 'Marca que has leído las condiciones de la reserva.' }, 400);
+    if (await rateLimited(ip, 'form', 8)) return json({ error: 'Has enviado demasiadas solicitudes. Escríbenos por WhatsApp.' }, 429);
+    const cars = await load('cars'); const c = cars.find((x) => x.slug === clip(f.coche, 120) && !x.sold && !x.hidden);
+    if (!c || !(c.reserve > 0)) return json({ error: 'Este coche ya no se puede reservar desde la web. Escríbenos por WhatsApp.' }, 409);
+    const base = { id: uid(), ...chk.data, created: new Date().toISOString(), status: 'pendiente', notas: '' };
+    const it = { ...base, tipo: 'reserva', motivo: 'Reservar este coche', mensaje: clip(f.mensaje, 1000), coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), res: { dni, direccion, cp, poblacion, condiciones: base.created } };
+    it.senal = c.reserve; it.carSnap = { slug: c.slug, brand: c.brand, model: c.model, version: c.version, year: c.year, km: c.km, price: c.price, reserve: c.reserve, matricula: c.matricula, bastidor: c.bastidor, holder: c.holder };
+    const list = await load('bookings'); list.unshift(it); await save('bookings', list);
+    const kRef = sign('ref|' + it.id).slice(0, 16); const pagoUrl = `${url.origin}${BASE}/reserva/pago?r=${it.id}&k=${kRef}`;
+    const hld = (await load('holders')).find((h) => h.id === c.holder); const concepto = V.conceptoReserva(it, c);
+    await notify('cita', { ...it, mensaje: [`Señal: ${c.reserve} €`, `Dirección: ${direccion}, ${cp} ${poblacion}`, it.mensaje].filter(Boolean).join(' · ') }, url.origin).catch(() => {});
+    await pushAll('garage', `Nueva reserva: ${clip(c.brand + ' ' + c.model, 40)}`, `${clip(it.nombre, 40)} · pendiente de pagar la señal`, 'reserva-' + it.id).catch(() => {});
+    await sendMail({ to: it.email, subject: `Tu reserva del ${c.brand} ${c.model}: datos para pagar la señal`, text: `Hola ${it.nombre.split(' ')[0]},\n\nHemos recibido tu solicitud para reservar el ${it.cocheNombre}.\n\nPara reservarlo, paga la señal de ${c.reserve} €:\n- Por Bizum al 660 49 32 28${(hld?.accounts || []).length ? `\n- O por transferencia a ${hld.accounts.map((a) => a.iban + (a.bank ? ' (' + a.bank + ')' : '')).join(' / ')}, titular ${hld.name}` : ''}\nConcepto: ${concepto}\n\nCuando lo hayas pagado, avísanos aquí: ${pagoUrl}\n\nEn cuanto veamos el pago te confirmamos la reserva y te enviamos el documento de reserva. Si el coche se hubiera vendido justo antes en nuestras instalaciones, te lo decimos y te devolvemos la señal íntegra.\n\nUn saludo,\nPlata Garage · 660 49 32 28` }).catch(() => {});
+    await bump('ev', 'form-reserva').catch(() => {}); await bump('lp', base.origen || '/').catch(() => {}); await bump('lsrc', base.canal || 'directo').catch(() => {});
+    return json({ ok: true, ref: it.id, k: kRef });
+  }
+  if (r === '/reserva/pagado' && M === 'POST') { // el cliente avisa de que ha pagado la señal
+    const f = await req.json().catch(() => ({})); const id = clip(f.r, 40), k = clip(f.k, 16);
+    if (!id || k.length !== 16 || !eqHash(k, sign('ref|' + id).slice(0, 16))) return json({ error: 'Enlace no válido' }, 403);
+    const list = await load('bookings'); const b = list.find((x) => x.id === id && x.tipo === 'reserva'); if (!b) return json({ error: 'No existe' }, 404);
+    if (!b.pagoAvisado) {
+      b.pagoAvisado = new Date().toISOString(); b.historial = [{ d: b.pagoAvisado, t: 'El cliente avisa de que ha pagado la señal' }, ...(b.historial || [])].slice(0, 50); await save('bookings', list);
+      await pushAll('garage', `Señal pagada: ${clip(b.cocheNombre, 40)}`, `${clip(b.nombre, 40)} dice que ha pagado ${b.senal || ''} €. Revisa el banco`, 'pago-' + b.id).catch(() => {});
+      await sendMail({ subject: `Señal pagada (revisar banco) — ${b.nombre} (${b.cocheNombre})`, text: `${b.nombre} dice que ha pagado la señal de ${b.senal || ''} € del ${b.cocheNombre}.\nConcepto: ${V.conceptoReserva(b, b.carSnap || {})}\n\nRevisa el banco y, si ha entrado, confirma la reserva en el panel: ${url.origin}${BASE}/admin#reservas/todas` }).catch(() => {});
+    }
+    return json({ ok: true });
   }
 
   if (['/cita', '/tasacion', '/envio', '/mensaje', '/busqueda'].includes(r) && M === 'POST') {
@@ -1143,6 +1210,29 @@ async function adminApi(r, req, M, me, url) {
       if ('disabled' in body) { u.disabled = !!body.disabled; u.ver = (u.ver || 0) + 1; }
       if (body.cerrar) u.ver = (u.ver || 0) + 1; // cierra sus sesiones en todos los dispositivos
       await save('users', users); return json(pub(u));
+    }
+  }
+  if (seg[0] === 'reservas' && seg[2] && ['confirmar', 'nodisponible', 'documento'].includes(seg[2])) {
+    const list = await load('bookings'); const b = list.find((x) => x.id === seg[1] && x.tipo === 'reserva'); if (!b) return json({ error: 'No existe' }, 404);
+    const cars = await load('cars'); const car = cars.find((c) => c.slug === b.coche); const snap = { ...(b.carSnap || {}), ...(car ? { matricula: car.matricula, bastidor: car.bastidor, holder: car.holder, km: car.km } : {}) };
+    const holder = (await load('holders')).find((h) => h.id === snap.holder);
+    if (seg[2] === 'documento' && M === 'GET') return html(V.docReserva({ b: { ...b, confirmedAt: b.confirmedAt || new Date().toISOString() }, car: snap, holder }), 200, { 'x-robots-tag': 'noindex', 'cache-control': 'private, no-store' });
+    if (M !== 'PUT') return json({ error: 'Método' }, 405);
+    const d = new Date().toISOString(); const nombre = String(b.nombre).split(' ')[0];
+    if (seg[2] === 'confirmar') {
+      if (!snap.matricula) return json({ error: 'Pon la matrícula del coche en su ficha del panel antes de confirmar: va en el documento de reserva.' }, 400);
+      b.status = 'confirmada'; b.confirmedAt = d; b.pagoMetodo = clip(body.metodo, 30); b.carSnap = snap; b.confirmadoPor = me.name || me.id;
+      b.historial = [{ d, t: `Señal recibida y reserva confirmada${b.pagoMetodo ? ' (' + b.pagoMetodo + ')' : ''}` }, ...(b.historial || [])].slice(0, 50);
+      if (car && body.marcarReservado !== false) { car.status = 'reservado'; car.log = [...(car.log || []), { d, by: b.confirmadoPor, t: `Reservado para ${b.nombre} (web)` }]; await save('cars', cars); }
+      await save('bookings', list);
+      const link = `${url.origin}${BASE}/reserva/documento?r=${b.id}&k=${sign('doc|' + b.id).slice(0, 24)}`;
+      const ok = await sendMail({ to: b.email, subject: `Reserva confirmada: ${b.cocheNombre}`, text: `Hola ${nombre},\n\nHemos recibido tu señal de ${b.senal || ''} € y tu reserva del ${b.cocheNombre} está confirmada. El coche queda reservado a tu nombre durante 7 días.\n\nAquí tienes tu documento de reserva (puedes imprimirlo o guardarlo en PDF):\n${link}\n\nTe escribimos para quedar el día de la firma y la entrega.\n\nUn saludo,\nPlata Garage · 660 49 32 28` }).catch(() => false);
+      return json({ ok: true, link, enviado: !!ok });
+    }
+    if (seg[2] === 'nodisponible') {
+      b.status = 'cancelada'; b.historial = [{ d, t: 'No disponible: avisado el cliente' }, ...(b.historial || [])].slice(0, 50); await save('bookings', list);
+      const ok = await sendMail({ to: b.email, subject: `Sobre tu reserva del ${b.cocheNombre}`, text: `Hola ${nombre},\n\nLo sentimos mucho: el ${b.cocheNombre} se ha vendido justo antes en nuestras instalaciones y no podemos reservártelo.\n\n${b.pagoAvisado ? 'Te devolvemos la señal íntegra por el mismo medio por el que la pagaste. ' : 'No tienes que pagar nada. '}Si quieres, te buscamos uno parecido: ${url.origin}${BASE}/te-lo-buscamos\n\nUn saludo,\nPlata Garage · 660 49 32 28` }).catch(() => false);
+      return json({ ok: true, enviado: !!ok });
     }
   }
   const map = { reservas: 'bookings', tasaciones: 'tasaciones', envios: 'envios', mensajes: 'mensajes', alertas: 'alertas', busquedas: 'busquedas', portales: 'portales' };

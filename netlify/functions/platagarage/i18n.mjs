@@ -33,6 +33,8 @@ const fill = (tr, nums, tags) => {
 const FUEL = { gasolina: ['gasolina', 'petrol'], 'diésel': ['dièsel', 'diesel'], 'híbrido': ['híbrid', 'hybrid'], 'eléctrico': ['elèctric', 'electric'], glp: ['GLP', 'LPG'] };
 const TRANS = { manual: ['manual', 'manual'], 'automático': ['automàtic', 'automatic'] };
 const RULES = [
+  [/^¿Puedo ver el (.+)\?$/, (m) => [`Puc veure el ${m[1]}?`, `Can I see the ${m[1]}?`]],
+  [/^Más (.+) de segunda mano$/, (m) => [`Més ${m[1]} de segona mà`, `More used ${m[1]}`]],
   [/^(.+) de (\{\d+\}) km en Sabadell \| Plata Garage$/, (m) => [`${m[1]} de ${m[2]} km a Sabadell | Plata Garage`, `Used ${m[1]}, ${m[2]} km, in Sabadell | Plata Garage`]],
   [/^(.+) de segunda mano en Sabadell \| Plata Garage$/, (m) => [`${m[1]} de segona mà a Sabadell | Plata Garage`, `Used ${m[1]} in Sabadell | Plata Garage`]],
   [/^(.+) en Sabadell \| Plata Garage$/, (m) => [`${m[1]} a Sabadell | Plata Garage`, `${m[1]} in Sabadell | Plata Garage`]],
