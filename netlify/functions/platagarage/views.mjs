@@ -365,6 +365,7 @@ doQ(false);`;
 
 const FICHA_CSS = `
 .btn.fin{background:#fff;border-color:#fff;color:#000}.finc{display:flex;align-items:center;gap:14px;margin:16px 0 4px;padding:14px 16px;border-radius:16px;border:1px solid rgba(247,104,6,.55);background:radial-gradient(90% 160% at 0% 0%,rgba(247,104,6,.2),transparent 65%),var(--card);color:var(--tx);text-decoration:none;max-width:560px}.finc .fi{width:42px;height:42px;border-radius:12px;background:var(--or);color:#000;display:grid;place-items:center;flex:none}.finc .fi svg{width:22px;height:22px}.finc b{display:block;font-size:15px}.finc small{display:block;color:var(--mu);font-size:13px;line-height:1.4;margin-top:2px}.finc .fa{margin-left:auto;color:var(--or);flex:none}
+.cout{margin:14px 0 4px}.cout b{font-family:'Space Grotesk',Inter,sans-serif;font-size:34px;color:var(--tx)}.cout span{color:var(--mu);font-size:14px;margin-left:6px}#calc .feu{position:relative;display:block}#calc .feu input{padding-right:40px}#calc .feu em{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-style:normal;color:var(--mu)}#calc .fq{font-size:13px;color:var(--mu);font-weight:500;margin-bottom:8px}
 .v2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}.v2 .box{margin:0}.fbx{border-color:rgba(247,104,6,.55)}
 .fh{position:relative;min-height:min(82vh,760px);display:flex;align-items:flex-end;overflow:hidden;background:#0d0d0d}
 .fh img.bgi{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -443,7 +444,7 @@ export function ficha({ car: c, cars, holders, qr = '', fichaUrl = '' }) {
 <div class="chips"><span>${ic.cal}${c.year}</span><span>${ic.gauge}${kms(c.km)}</span><span>${ic.fuel}${esc(c.fuel)}</span><span>${ic.gear}${esc(c.trans)}</span>${c.cv ? `<span>${c.cv} CV</span>` : ''}${etq ? `<span>${etq.startsWith('Sin') ? esc(etq) : 'Etiqueta ' + esc(etq)}</span>` : ''}</div>
 <div class="pz">${eur(c.price)}</div>
 <div class="row">${canRes ? `<a class="btn" href="${resUrl}">${ic.key}Reservar este coche</a>` : ''}${canFin ? `<a class="btn ${canRes ? 'fin' : ''}" href="${finUrl}">${ic.card}Financiarlo</a>` : ''}<a class="btn g" href="#visita">${ic.cal}Pedir cita para verlo</a><a class="btn g" href="${wa(waTxt)}" rel="noopener">${ic.wa}WhatsApp</a></div>
-${canFin ? `<a class="finc" href="${finUrl}"><span class="fi">${ic.card}</span><span><b>Fináncialo sin moverte de casa</b><small>Rellenas tus datos en 2 minutos y nosotros lo tramitamos con la financiera. Sin compromiso.</small></span><span class="fa">${ic.arrow}</span></a>` : ''}
+${canFin ? `<a class="finc" href="#calc"><span class="fi">${ic.card}</span><span><b>Calcula tu cuota y fináncialo</b><small>Elige entrada y plazo, y pide el estudio en 2 minutos sin moverte de casa. Sin compromiso.</small></span><span class="fa">${ic.arrow}</span></a>` : ''}
 <a class="pdf" href="${B}/vehiculos/${c.slug}/cartel" target="_blank" rel="noopener">Descargar ficha (PDF)</a> · <a class="pdf" href="#" data-fav="${c.slug}">Guardar en favoritos</a> · <a class="pdf" href="#bp" id="bpl">Avísame si baja de precio</a>
 <form id="bp" class="bpf" novalidate hidden>${hp()}<input type="hidden" name="coche" value="${c.slug}"><input name="email" type="email" required maxlength="200" placeholder="Tu email"><label class="chk"><input type="checkbox" name="consent" value="si"><span>Quiero que me aviséis por email si baja de precio este coche. Me puedo dar de baja cuando quiera. <a href="${B}/privacidad" target="_blank">Privacidad</a></span></label><div class="msg" role="alert"></div><button class="btn sm" type="submit">Avisarme</button></form></div></section>
 <div class="w fl"><nav class="idx" aria-label="En esta página">${secs.map(([id, t], i) => `<a href="#${id}"${i ? '' : ' class="on"'}>${t}</a>`).join('')}</nav><div>
@@ -462,7 +463,7 @@ ${c.video?.url ? `<section class="fs" id="video"><div class="ey">Vídeo</div><h2
 ${imgs.length > 1 ? `<section class="fs" id="fotos"><div class="ey">Fotos</div><h2>Todas las fotos (${imgs.length})</h2><div class="ph6">${imgs.map((u, i) => `<button type="button" data-i="${i}" aria-label="Ver foto ${i + 1} en grande"><img src="${esc(im(u, 500))}" alt="${esc(name)} ${c.year} – foto ${i + 1}" loading="lazy" width="400" height="300"></button>`).join('')}</div></section>` : ''}
 <section class="fs" id="falta"><div class="box" style="padding:22px"><h3>¿Qué te falta para decidirte?</h3><p class="mu sm" style="margin:4px 0 12px">Un toque y te ayudamos con eso. Es anónimo.</p><div class="chipl" id="ftl">${[...(canRes ? [['reservar', 'Reservarlo ya']] : []), ['financiacion', 'La financiación'], ['precio', 'El precio'], ['verlo', 'Verlo en persona'], ['datos', 'Más fotos o datos'], ['garantia', 'Saber qué cubre la garantía'], ['entregar', 'Entregar mi coche']].map(([k, t]) => `<a href="#" data-f="${k}">${t}</a>`).join('')}</div><div id="ftr" class="note" style="margin-top:12px"></div></div></section>
 <section class="fs" id="dudas">${faqHtml(fq, 'Dudas sobre este coche')}</section>
-${canRes || canFin ? `<section class="fs" id="comprar"><div class="ey">Lo quiero</div><h2>${canRes ? 'Resérvalo o fináncialo' : 'Fináncialo'}</h2><div class="v2">${reservaBox}${canFin ? `<div class="box fbx"><h3>${ic.card}Fináncialo</h3><p class="mu" style="margin:0 0 12px;font-size:14px">Rellenas tus datos en 2 minutos, puedes subir tu nómina y nosotros lo tramitamos con la financiera. Te contamos la respuesta por teléfono o WhatsApp. Sin compromiso.</p><a class="btn" href="${finUrl}">Solicitar financiación</a></div>` : ''}</div></section>` : ''}
+${canRes || canFin ? `<section class="fs" id="comprar"><div class="ey">Lo quiero</div><h2>${canRes ? 'Resérvalo o fináncialo' : 'Fináncialo'}</h2><div class="v2">${reservaBox}${canFin ? `<div class="box fbx" id="calc"><h3>${ic.card}Calcula tu cuota</h3><label>Entrada (opcional)<span class="feu"><input id="cEnt" inputmode="numeric" maxlength="7" placeholder="0"><em>€</em></span></label><div class="fq" style="margin-top:12px">Plazo en meses</div><div class="ops" id="cPl"></div><div class="cout" id="cOut"></div><p class="note" id="cLeg" style="font-size:11.5px;line-height:1.45"></p><a class="btn" id="cGo" data-u="${finUrl}" href="${finUrl}">Solicitar financiación</a><p class="mu" style="margin:10px 0 0;font-size:13px">Rellenas tus datos en 2 minutos y nosotros lo tramitamos con la financiera. Sin compromiso.</p></div>` : ''}</div></section>` : ''}
 <section class="fs" id="visita"><div class="ey">Verlo en persona</div><h2>¿Prefieres verlo antes? Pide cita</h2>${citaForm({ cars, coche: c.slug, inFicha: true })}
 <div class="v3"><div class="box"><h3>${ic.chat}¿Prefieres preguntar?</h3><a class="btn" href="${wa(waTxt)}" rel="noopener">${ic.wa}Preguntar por WhatsApp</a><a class="tx" href="tel:+34660493228">${ic.tel} ${TEL}</a><p class="note">Garantía de 12 meses. <a href="${finUrl}" style="color:var(--or)">Solicitar financiación</a></p></div>
 <div class="box"><h3>${ic.key}¿Tienes coche para entregar?</h3><p class="mu" style="margin:0 0 12px;font-size:14px">Te lo valoramos sin compromiso y te decimos cuánto te quedaría por pagar por el ${esc(c.brand)} ${esc(c.model)}.</p><a class="btn g" href="${B}/cuanto-vale-mi-coche?coche=${c.slug}">Valorar mi coche</a></div>
@@ -489,7 +490,7 @@ links.forEach(a=>{const s=document.querySelector(a.getAttribute('href'));if(s)io
 const r=document.getElementById('ftr');document.querySelectorAll('#ftl [data-f]').forEach(a=>a.onclick=e=>{e.preventDefault();const k=a.dataset.f,x=R[k];document.querySelectorAll('#ftl a').forEach(b=>b.classList.toggle('on',b===a));
 try{navigator.sendBeacon('${B}/api/hit',new Blob([JSON.stringify({e:'falta',k,c:'${c.slug}'})],{type:'application/json'}))}catch(z){}if(k==='financiacion'){location.href=x[2];return}
 r.innerHTML=x[0]+' <a class="btn sm" style="margin-left:8px" href="'+x[2]+'"'+(x[2].startsWith('http')?' rel="noopener"':'')+'>'+x[1]+'</a>'})})();
-${FORM_JS}${SLOTS_JS}`;
+${FORM_JS}${SLOTS_JS}${canFin ? CALC_JS(c, /cristina/i.test((holders || []).find((h) => h.id === c.holder)?.name || '')) : ''}`;
   return page({ title, desc, on: 'veh', body, head: `<link rel="preload" as="image" href="${esc(im(imgs[0], 1600))}" imagesrcset="${esc(srcset(imgs[0], [640, 960, 1280, 1600]))}" imagesizes="100vw" fetchpriority="high"><style>${FICHA_CSS}</style>` + ld(ldCar) + ld(crumbs) + ld(ldFaq(fq)), script, car: c.slug, alert: true, path: `/vehiculos/${c.slug}`, image: imgs[0] });
 }
 
@@ -861,18 +862,54 @@ export const FIN_FAQ = [
   ['¿Pedir el estudio me obliga a algo?', 'No. Pedir el estudio no tiene coste ni te obliga a comprar el coche ni a aceptar la financiación. Antes de firmar nada recibirás por escrito todas las condiciones (TIN, TAE, plazo y cuota).'],
   ['¿Y si no me llega el enlace o me quedo atascado?', 'Mira también en la carpeta de spam. Si no te llega o tienes cualquier duda con los pasos, escríbenos por WhatsApp y te ayudamos a terminarlo.'],
 ];
+// Tarifas de las financieras para la calculadora de cuota de las fichas (sin seguro). Actualizar cuando lleguen tarifas nuevas.
+// Confía: coeficiente = cuota por euro financiado, con la comisión de apertura del 5 % ya incluida (tarifas del 15/10/2026).
+// Lendrock: el TIN elegido es el más bajo que aún deja comisión al colaborador; comisión de apertura del 3 % financiada (simulador del 17/10/2026).
+export const TARIFA = {
+  confia: { fecha: '15/10/2026', entidad: 'Unión Financiera Asturiana, S.A., E.F.C. (Confía)', apertura: 5, plazos: [24, 36, 48, 60, 72, 84, 96, 108],
+    alto: { tin: [9.99, 9.99, 9.99, 9.99, 9.99, 9.99, 9.99, 9.99], coef: [0.048447, 0.033876, 0.026626, 0.022304, 0.019447, 0.017426, 0.015927, 0.014777] }, // desde 13.000 €
+    bajo: { tin: [10.99, 11.99, 11.99, 13.49, 13.49, 13.49, 13.49, 13.49], coef: [0.048933, 0.03487, 0.027645, 0.024155, 0.02135, 0.019382, 0.017937, 0.016838] } }, // menos de 13.000 €
+  lendrock: { fecha: '17/10/2026', entidad: 'Lendrock (WiZink Bank, S.A.U.)', apertura: 3, min: 3000, max: 40000, cuotaMin: 70, edadMax: 16,
+    hasta10: { 36: 8.99, 48: 7.99, 60: 7.99, 72: 6.99, 84: 6.99, 96: 6.99, 108: 6.99, 120: 6.99 }, // coches de hasta 10 años
+    hasta16: { 36: 9.99, 48: 9.99, 60: 8.99, 72: 8.99, 84: 8.99, 96: 8.99 } } }; // de 11 a 16 años
+export const PLAZOS = [24, 36, 48, 60, 72, 84, 96, 108, 120];
+// Calculadora: para cada plazo, la opción más barata para el cliente entre las financieras que puede usar el coche.
+// Coches de Juan: solo Confía. Coches de Cristina: también Lendrock si la antigüedad y el importe lo permiten.
+// Confía: más de 12 años, máx. 96 meses; menos de 5.000 €, máx. 60; 108 meses por debajo de 13.000 € solo desde 10.000 €.
+const CALC_JS = (c, cris) => `(()=>{const el=document.getElementById('calc');if(!el)return;const T=${JSON.stringify(TARIFA)},PL=${JSON.stringify(PLAZOS)},P=${Number(c.price) || 0},Y=${Number(c.year) || 0},CR=${cris ? 1 : 0},LG=(document.documentElement.lang||'es').slice(0,2);
+const ent=document.getElementById('cEnt'),pl=document.getElementById('cPl'),out=document.getElementById('cOut'),leg=document.getElementById('cLeg'),go=document.getElementById('cGo');let n=72;
+const f0=v=>new Intl.NumberFormat('es-ES',{useGrouping:'always',maximumFractionDigits:0}).format(v),f2=v=>new Intl.NumberFormat('es-ES',{useGrouping:'always',minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
+const edad=Y?new Date().getFullYear()-Y:99;
+const tae=(A,c,m)=>{let i=0.01;for(let k=0;k<100;k++){let f=-A,d=0;for(let j=1;j<=m;j++){f+=c/Math.pow(1+i,j);d-=j*c/Math.pow(1+i,j+1)}const s=f/d;i-=s;if(Math.abs(s)<1e-12)break}return(Math.pow(1+i,12)-1)*100};
+const conf=(A,m)=>{const C=T.confia,k=C.plazos.indexOf(m);if(k<0||(edad>12&&m>96)||(A<5000&&m>60)||(m===108&&A<10000))return null;const tb=A>=13000?C.alto:C.bajo;return{c:Math.round(A*tb.coef[k]*100)/100,t:tb.tin[k],ap:C.apertura,ent:C.entidad,f:C.fecha}};
+const lend=(A,m)=>{const L=T.lendrock;if(!CR||edad>L.edadMax||A<L.min||A>L.max)return null;const t=(edad<=10?L.hasta10:L.hasta16)[m];if(!t)return null;const r=t/1200,c=Math.round(A*(1+L.apertura/100)*r/(1-Math.pow(1+r,-m))*100)/100;if(c<L.cuotaMin)return null;return{c,t,ap:L.apertura,ent:L.entidad,f:L.fecha}};
+const best=(A,m)=>[conf(A,m),lend(A,m)].filter(Boolean).sort((a,b)=>a.c-b.c)[0]||null;
+const L={es:['meses','','Ejemplo para {A} € a {n} meses: cuota de {c} €, TIN {t} %, TAE {e} %. Incluye la comisión de apertura del {ap} % ({co} €), financiada. Importe total adeudado: {tot} €. Financiación de {ent}, sujeta a su aprobación. Cálculo orientativo con sus condiciones del {f}: no es una oferta vinculante.','Con esa entrada no queda nada por financiar.'],
+ca:['mesos','','Exemple per a {A} € a {n} mesos: quota de {c} €, TIN {t} %, TAE {e} %. Inclou la comissió d\\'obertura del {ap} % ({co} €), finançada. Import total degut: {tot} €. Finançament de {ent}, subjecte a la seva aprovació. Càlcul orientatiu amb les seves condicions del {f}: no és una oferta vinculant.','Amb aquesta entrada no queda res per finançar.'],
+en:['months','','Example for {A} € over {n} months: monthly payment {c} €, interest rate (TIN) {t} %, APR (TAE) {e} %. Includes the {ap} % opening fee ({co} €), financed. Total amount payable: {tot} €. Financing by {ent}, subject to approval. Indicative calculation with its terms as of {f}: not a binding offer.','With that down payment there is nothing left to finance.']}[LG]||[];
+const run=()=>{const e=Math.max(0,Number(String(ent.value).replace(/[^0-9]/g,''))||0),A=P-e;
+const ok=A>0?PL.filter(m=>best(A,m)):[];
+if(!ok.length){out.textContent='';leg.textContent=A>0?'':L[3];pl.innerHTML='';go.href=go.dataset.u;return}
+if(!ok.includes(n))n=ok.includes(72)?72:ok[ok.length-1];
+pl.innerHTML=ok.map(m=>'<label><input type="radio" name="cpl" value="'+m+'"'+(m===n?' checked':'')+'><span>'+m+'</span></label>').join('');
+pl.querySelectorAll('input').forEach(r=>r.onchange=()=>{n=+r.value;run()});
+const o=best(A,n),ta=tae(A,o.c,n);
+out.innerHTML='<b>'+f2(o.c)+' €</b><span>/'+(LG==='en'?'month':'mes')+' · '+n+' '+L[0]+'</span>';
+leg.textContent=L[2].replace('{A}',f0(A)).replace('{n}',n).replace('{c}',f2(o.c)).replace('{t}',f2(o.t)).replace('{e}',f2(ta)).replace('{ap}',o.ap).replace('{co}',f2(A*o.ap/100)).replace('{tot}',f2(o.c*n)).replace('{ent}',o.ent).replace('{f}',o.f);
+go.href=go.dataset.u+'&plazo='+n+(e?'&entrada='+e:'')};
+ent.addEventListener('input',run);run()})();`;
 // Solicitud de financiación: los datos que pide la financiera, en 3 pasos cortos (pensado para el móvil)
 export const FIN = { civil: ['Soltero/a', 'Casado/a', 'Pareja de hecho', 'Separado/a o divorciado/a', 'Viudo/a'], antig: ['Menos de 6 meses', 'De 6 meses a 1 año', 'De 1 a 3 años', 'Más de 3 años'], vivienda: ['Alquiler', 'Hipoteca', 'Sin gasto'] };
-export function financiar({ car: c, cars = [] }) {
+export function financiar({ car: c, cars = [], plazo = 0, entrada = 0 }) {
   const name = c ? carName(c) : '';
   const elige = !c ? `<label>¿Qué coche te interesa?<select name="coche"><option value="">Aún no lo sé</option>${cars.filter((x) => !x.sold && !x.hidden).map((x) => `<option value="${esc(x.slug)}">${esc(carName(x))} (${x.year}) · ${eur(x.price)}</option>`).join('')}</select></label>` : `<input type="hidden" name="coche" value="${esc(c.slug)}">`;
   const st = (n, t, inner, last) => `<fieldset class="fp" data-p="${n}"${n > 1 ? ' hidden' : ''}><legend>${t}</legend>${inner}<p class="msg" role="alert"></p><div class="fnav">${n > 1 ? '<button class="btn g" type="button" data-bk>Atrás</button>' : ''}${last ? '<button class="btn" type="submit">Enviar solicitud</button>' : '<button class="btn" type="button" data-nx>Siguiente</button>'}</div></fieldset>`;
   const body = `<section style="padding-top:56px"><div class="w" style="max-width:720px">${c ? `<div class="crumb" style="padding:0 0 18px"><a href="${B}/vehiculos/${c.slug}">${ic.back}Volver al coche</a></div>` : ''}<div class="pill">${ic.key}Financiación</div>
 <h1 class="s">${c ? `Financia el ${esc(c.brand)} ${esc(c.model)}` : 'Financia tu coche'}<br><span class="gr">en 2 minutos.</span></h1>
 <p class="lead" style="max-width:620px">Rellena estos datos y nosotros nos encargamos de pedir el estudio a la financiera. Te contamos la respuesta por teléfono o WhatsApp. Sin compromiso.</p>
-${c ? `<div class="box" style="display:flex;gap:16px;align-items:center;margin:22px 0"><img src="${esc(im(cover(c), 400))}" alt="" width="120" height="90" style="width:120px;height:90px;object-fit:cover;border-radius:10px"><div><b>${esc(name)}</b><div class="mu" style="font-size:14px">${c.year} · ${kms(c.km)} · ${eur(c.price)}</div></div></div>` : ''}
+${c ? `<div class="box" style="display:flex;gap:16px;align-items:center;margin:22px 0"><img src="${esc(im(cover(c), 400))}" alt="" width="120" height="90" style="width:120px;height:90px;object-fit:cover;border-radius:10px"><div><b>${esc(name)}</b><div class="mu" style="font-size:14px">${c.year} · ${kms(c.km)} · ${eur(c.price)}</div>${plazo ? `<div style="margin-top:4px;font-size:14px">${entrada ? `Entrada de ${eur(entrada)} · ` : ''}${plazo} meses</div>` : ''}</div></div>` : ''}
 <div class="fbar" aria-hidden="true"><span id="fbt">Paso 1 de 3</span><i><b id="fbb" style="width:33%"></b></i></div>
-<form id="ffin" data-api="${B}/api/financiacion" data-t="financiacion" novalidate>${hp()}
+<form id="ffin" data-api="${B}/api/financiacion" data-t="financiacion" novalidate>${hp()}${plazo ? `<input type="hidden" name="plazo" value="${plazo}">` : ''}${entrada ? `<input type="hidden" name="entrada" value="${entrada}">` : ''}
 ${st(1, 'Tus datos', `${elige}<label>Nombre y apellidos *<input name="nombre" required minlength="2" maxlength="80" autocomplete="name" placeholder="Como aparecen en tu DNI"></label>
 <label>DNI o NIE *<input name="dni" required maxlength="12" autocapitalize="characters" style="text-transform:uppercase" placeholder="12345678Z"></label>
 <div class="fq">Estado civil *</div>${opts('civil', FIN.civil)}`)}
