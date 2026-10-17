@@ -419,7 +419,8 @@ const inner = async (req, context) => {
     }
     if (sub === '/financiar') {
       const car = cars.find((c) => c.slug === url.searchParams.get('coche') && !c.sold && !c.hidden);
-      return html(V.financiar({ car, cars: pubCars(cars) }), 200, { 'x-robots-tag': 'noindex, nofollow' });
+      const plazo = V.TARIFA.plazos.includes(Number(url.searchParams.get('plazo'))) ? Number(url.searchParams.get('plazo')) : 0; const entrada = Math.max(0, Math.min(Number(url.searchParams.get('entrada')) || 0, car ? car.price : 0));
+      return html(V.financiar({ car, cars: pubCars(cars), plazo, entrada: Math.round(entrada) }), 200, { 'x-robots-tag': 'noindex, nofollow' });
     }
     if (sub === '/reserva/pago') {
       const id = clip(url.searchParams.get('r'), 40), k = clip(url.searchParams.get('k'), 16);
@@ -675,7 +676,7 @@ async function api(r, req, M, ip, url, context) {
     const docs = [];
     for (const x of noms) { const buf = Buffer.from(await x.file.arrayBuffer()); const id = 'n' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'); const iv = crypto.randomBytes(12); const ci = crypto.createCipheriv('aes-256-gcm', docKey(), iv);
       const enc = Buffer.concat([ci.update(buf), ci.final()]); await media().set('nomina/' + id, Buffer.concat([iv, ci.getAuthTag(), enc])); docs.push({ id, nombre: clip(x.file.name, 120) || 'nomina', mime: x.file.type, size: buf.length }); }
-    const it = { ...base, ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}), fin: { dni, direccion, cp, poblacion, civil, antiguedad, salario, vivienda, gastoVivienda, cesion: base.created, docs } };
+    const it = { ...base, ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}), fin: { dni, direccion, cp, poblacion, civil, antiguedad, salario, vivienda, gastoVivienda, cesion: base.created, docs, plazo: V.TARIFA.plazos.includes(Number(f.plazo)) ? Number(f.plazo) : 0, entrada: Math.max(0, Math.round(Number(f.entrada) || 0)) } };
     // Conservación: como máximo 12 meses (política de privacidad); con la solicitud se borran sus nóminas
     const lim = new Date(Date.now() - 365 * 864e5).toISOString(); const all = await load('financiaciones');
     for (const x of all.filter((y) => (y.created || '') <= lim)) for (const d of x.fin?.docs || []) await media().delete('nomina/' + d.id).catch(() => {});
