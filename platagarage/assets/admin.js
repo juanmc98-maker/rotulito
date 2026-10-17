@@ -22,6 +22,7 @@ const IC = {
   reservas: svg('<path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/><path d="M9 16l2 2 4-4"/>'),
   horarios: svg('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>'),
   valoraciones: svg('<path d="M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L2 12V2h10l8.6 8.6a2 2 0 010 2.8z"/><circle cx="7" cy="7" r="1.5"/>'),
+  financiaciones: svg('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>'),
   envios: svg('<path d="M1 3h15v13H1zM16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>'),
   mensajes: svg('<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>'),
   analiticas: svg('<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>'),
@@ -79,7 +80,7 @@ function showLogin() {
 }
 
 // ---------- layout ----------
-const NAV = [['leads', 'Leads'], ['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes'], ['coches', 'Coches'], ['trimestre', 'Trimestre'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['horarios', 'Horarios'], ['valoraciones', 'Vendedores'], ['busquedas', 'Te lo buscamos'], ['alertas', 'Alertas'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog'], ['usuarios', 'Usuarios']];
+const NAV = [['leads', 'Leads'], ['resumen', 'Resumen'], ['analiticas', 'Analíticas'], ['clientes', 'Clientes'], ['coches', 'Coches'], ['trimestre', 'Trimestre'], ['bancos', 'Bancos'], ['reservas', 'Reservas'], ['financiaciones', 'Financiación'], ['horarios', 'Horarios'], ['valoraciones', 'Vendedores'], ['busquedas', 'Te lo buscamos'], ['alertas', 'Alertas'], ['envios', 'Envíos'], ['mensajes', 'Mensajes'], ['blog', 'Blog'], ['usuarios', 'Usuarios']];
 let badges = {};
 // Negocio activo: Plata Garage (panel completo), Plata Marine y Rotulito (embudo de clientes)
 const NEGS = { garage: { n: 'Plata Garage', logo: ST + '/assets/logo.png', dark: true }, marine: { n: 'Plata Marine', logo: '/img/plata-marine-logo.png' }, rotulito: { n: 'Rotulito', logo: '/assets/rotulito-logo.svg' } };
@@ -126,10 +127,10 @@ const fechaLarga = (iso) => (iso ? new Date(iso + 'T12:00:00').toLocaleDateStrin
 // Recordatorio de cita por WhatsApp: se abre el chat con el texto escrito y Cristina solo pulsa enviar
 const recordatorio = (b) => { const [y, mo, d] = String(b.fecha || '').split('-');
   return waLink(b.telefono, `Tenemos una visita para ver el coche:\n\n📅 ${d}/${mo} a las ${b.hora}\n📍 Calle Tetuán 92, Sabadell\n\nQuedo pendiente de tu confirmación.\n\nSi te interesa asegurarlo antes de venir, podemos dejarlo reservado y así evitar que otro cliente se adelante. Si quieres, te indico cómo hacerlo.`); };
-const KIC = { coches: IC.coches, 'coches/vendidos': IC.coches, reservas: IC.reservas, valoraciones: IC.valoraciones, envios: IC.envios, mensajes: IC.mensajes, busquedas: IC.busquedas, alertas: IC.alertas, clientes: IC.clientes };
+const KIC = { coches: IC.coches, 'coches/vendidos': IC.coches, reservas: IC.reservas, valoraciones: IC.valoraciones, envios: IC.envios, financiaciones: IC.financiaciones, mensajes: IC.mensajes, busquedas: IC.busquedas, alertas: IC.alertas, clientes: IC.clientes };
 V.resumen = async (m) => {
   const s = await api('/admin/summary');
-  badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes };
+  badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, financiaciones: s.financiacionesPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes };
   m = shell('resumen');
   const k = (n, t, h) => `<a class="card" href="#${h}"><span>${t}</span><i>${KIC[h] || IC.resumen}</i><b>${n}</b></a>`;
   const fila = (b, right) => `<div class="li"><div><b>${esc(b.nombre)}</b><span>${esc(b.motivo || b.cocheNombre || '')} · ${esc(b.telefono)}</span></div><div class="r">${right}</div></div>`;
@@ -159,7 +160,7 @@ async function poll() {
   try {
     const s = await api('/admin/summary');
     const cur = { citas: s.citasPendientes, tas: s.tasacionesNuevas, env: s.enviosPendientes, msg: s.mensajesSinLeer, bus: s.busquedasPendientes };
-    badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes };
+    badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, financiaciones: s.financiacionesPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes };
     if (lastSum) {
       const t = { citas: 'Nueva cita', tas: 'Nueva tasación', env: 'Nueva solicitud de envío', msg: 'Nuevo mensaje', bus: 'Nueva petición "Te lo buscamos"' };
       const h = { citas: 'reservas', tas: 'valoraciones', env: 'envios', msg: 'mensajes', bus: 'busquedas' };
@@ -607,7 +608,7 @@ function inbox({ key, path, title, sub, states, body, labels = {} }) {
     const [list, holders, cars] = await Promise.all([api('/admin/' + path), key === 'reservas' ? api('/admin/holders') : [], key === 'reservas' ? api('/admin/cars') : []]);
     m = shell(key); const f = arg || 'todas';
     if (key === 'reservas' && f === 'semana') return agenda(m, list);
-    const shown = list.filter((x) => (f === 'todas' ? true : f === 'activas' ? !['cancelada', 'completada', 'cerrada', 'rechazado', 'respondido', 'comprado', 'vendido', 'descartado'].includes(x.status) : x.status === f));
+    const shown = list.filter((x) => (f === 'todas' ? true : f === 'activas' ? !['cancelada', 'completada', 'cerrada', 'rechazado', 'respondido', 'comprado', 'vendido', 'descartado', 'denegada'].includes(x.status) : x.status === f));
     m.innerHTML = top(title, sub(list)) + `<div class="filt">${[...(key === 'reservas' ? [['semana', 'Agenda semanal']] : []), ['todas', 'Todas'], ['activas', 'Abiertas'], ...states.map((s) => [s, labels[s] || s[0].toUpperCase() + s.slice(1)])].map(([k, t]) => `<button data-f="${k}" class="${f === k ? 'on' : ''}">${t}</button>`).join('')}</div>` +
       (shown.map((x) => `<div class="card it" data-id="${x.id}"><div class="hd"><div><b style="font-size:16px">${esc(x.nombre)}</b>${x.propuesta ? ' <span class="bd" style="position:static;background:var(--or);color:#fff;padding:2px 8px;border-radius:999px;font-size:12px">Hora propuesta · confirmar</span>' : ''}<div class="meta">${x.email ? esc(x.email) + ' · ' : ''}<a href="tel:${esc(x.telefono)}">${esc(x.telefono)}</a> · recibido ${fdt(x.created)}</div></div>${badge(x.status)}</div>
       <div class="row" style="margin:14px 0;align-items:stretch">${body(x, { holders, cars })}</div>
@@ -667,6 +668,14 @@ V.valoraciones = inbox({ key: 'valoraciones', path: 'tasaciones', title: 'Vended
     + `<label style="min-width:160px">Oferta (€)<input data-o inputmode="numeric" value="${x.oferta || ''}" placeholder="0"></label>` });
 V.envios = inbox({ key: 'envios', path: 'envios', title: 'Solicitudes de envío', sub: (l) => `${l.length} solicitudes de presupuesto de envío.`, states: ['pendiente', 'presupuesto enviado', 'aceptado', 'rechazado'],
   body: (x) => bx('Código postal', `<b>${esc(x.cp)}</b>`) + bx('Coche', x.coche ? `<a href="${B}/vehiculos/${x.coche}" target="_blank">${esc(x.cocheNombre)}</a>` : '—') });
+// Financiación: los datos que pide la financiera, con un botón para copiarlos y pegarlos en su portal
+const finTxt = (x) => { const d = x.fin || {}; return [`Nombre: ${x.nombre}`, `DNI/NIE: ${d.dni}`, `Estado civil: ${d.civil}`, `Móvil: ${x.telefono}`, `Email: ${x.email}`, `Dirección: ${d.direccion}, ${d.cp} ${d.poblacion}`, `Antigüedad laboral: ${d.antiguedad}`, `Salario neto: ${d.salario} €/mes`, `Vivienda: ${d.vivienda}${d.vivienda !== 'Sin gasto' ? ` (${d.gastoVivienda} €/mes)` : ''}`, x.cocheNombre ? `Coche: ${x.cocheNombre}${x.precio ? ' · ' + x.precio + ' €' : ''}` : ''].filter(Boolean).join('\n'); };
+V.financiaciones = inbox({ key: 'financiaciones', path: 'financiaciones', title: 'Financiación', labels: { pendiente: 'Nueva', enviada: 'Enviada a financiera', aprobada: 'Aprobada', denegada: 'Denegada', cerrada: 'Cerrada' },
+  sub: (l) => `${l.length} solicitud${l.length === 1 ? '' : 'es'} · ${l.filter((x) => x.status === 'pendiente').length} sin enviar a la financiera`, states: ['pendiente', 'enviada', 'aprobada', 'denegada', 'cerrada'],
+  body: (x) => { const d = x.fin || {}; return bx('Coche', x.coche ? `<a href="${B}/vehiculos/${x.coche}" target="_blank">${esc(x.cocheNombre)}</a>${x.precio ? `<br>${eur(x.precio)}` : ''}` : 'Aún no lo sabe') + bx('Datos personales', `DNI/NIE <b>${esc(d.dni)}</b><br>${esc(d.civil)}<br>${esc(d.direccion)}, ${esc(d.cp)} ${esc(d.poblacion)}`)
+    + bx('Trabajo y vivienda', `Antigüedad: <b>${esc(d.antiguedad)}</b><br>Neto: <b>${eur(d.salario)}/mes</b><br>${esc(d.vivienda)}${d.vivienda !== 'Sin gasto' ? `: <b>${eur(d.gastoVivienda)}/mes</b>` : ''}`)
+    + `<div class="row" style="flex-basis:100%;margin-top:4px"><button class="btn g s" type="button" data-cp="${esc(finTxt(x))}">Copiar datos para la financiera</button></div>`; } });
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-cp]'); if (!b) return; navigator.clipboard.writeText(b.dataset.cp).then(() => toast('Datos copiados'), () => toast('No se han podido copiar')); });
 V.mensajes = inbox({ key: 'mensajes', path: 'mensajes', title: 'Mensajes', sub: (l) => `${l.length} mensajes recibidos.`, states: ['pendiente', 'respondido'],
   body: (x) => (okAs(x.asunto) ? bx('Asunto', esc(x.asunto)) : '') + bx('Mensaje', `<span style="white-space:pre-line">${esc(x.mensaje)}</span>`) });
 
@@ -909,8 +918,8 @@ const MOT_PG = ['Precio', 'Financiación denegada', 'Compró otro', 'No contesta
 const COSTES_PG = { 'Coches.net': 707, 'Wallapop': 245.11 };
 const etq = (k) => ET_PG[k] || k;
 const optsPG = (sel) => TAB_PG.map((t) => `<optgroup label="${t.n}">${t.e.map((k) => `<option value="${k}"${k === sel ? ' selected' : ''}>${ET_PG[k]}</option>`).join('')}</optgroup>`).join('') + `<option value="perdido"${sel === 'perdido' ? ' selected' : ''}>Perdido</option>`;
-const TIPO = { cita: 'Cita', tasacion: 'Tasación', envio: 'Envío', mensaje: 'Mensaje', busqueda: 'Te lo buscamos', portal: 'Portal' };
-const RUTA = { cita: 'reservas', tasacion: 'valoraciones', envio: 'envios', mensajes: 'mensajes', mensaje: 'mensajes', busqueda: 'busquedas', portal: 'clientes' };
+const TIPO = { cita: 'Cita', tasacion: 'Tasación', envio: 'Envío', financiacion: 'Financiación', mensaje: 'Mensaje', busqueda: 'Te lo buscamos', portal: 'Portal' };
+const RUTA = { cita: 'reservas', tasacion: 'valoraciones', envio: 'envios', financiacion: 'financiaciones', mensajes: 'mensajes', mensaje: 'mensajes', busqueda: 'busquedas', portal: 'clientes' };
 // Cambia la etapa pidiendo lo que haga falta (motivo de pérdida, número de certificado)
 async function moverPG(c, e) {
   const body = { etapa: e };
@@ -1295,7 +1304,7 @@ async function boot() {
   // La app instalada antigua abría en #resumen: en Plata Garage, la primera vez se va a Leads
   if (PRIMERA) { PRIMERA = false; if (location.hash === '#resumen' || !location.hash) history.replaceState(null, '', location.pathname + '#leads'); }
   if (NEG !== 'garage') { route(); return; }
-  try { const s = await api('/admin/summary'); badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes }; route(); if (!polling) { poll(); polling = setInterval(poll, 60000); } } catch (e) { /* login ya mostrado */ }
+  try { const s = await api('/admin/summary'); badges = { reservas: s.citasPendientes, valoraciones: s.tasacionesNuevas, envios: s.enviosPendientes, financiaciones: s.financiacionesPendientes, mensajes: s.mensajesSinLeer, busquedas: s.busquedasPendientes }; route(); if (!polling) { poll(); polling = setInterval(poll, 60000); } } catch (e) { /* login ya mostrado */ }
 }
 let swReg = null;
 // Avisos push: llegan al móvil aunque la app esté cerrada (en iPhone, con la app añadida a la pantalla de inicio)
