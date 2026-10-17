@@ -889,3 +889,50 @@ ${avisado ? `<div class="cta" style="margin-top:24px"><h2>¡Gracias!</h2><p clas
   const script = `(()=>{const f=document.getElementById('pg');if(!f)return;f.onsubmit=async e=>{e.preventDefault();const bt=f.querySelector('button'),m=f.querySelector('.msg');bt.disabled=true;try{const r=await fetch('${B}/api/reserva/pagado',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({r:${JSON.stringify(b.id)},k:${JSON.stringify(k)}})});if(!r.ok)throw new Error((await r.json()).error||'Error');location.reload()}catch(x){m.textContent=x.message;m.className='msg err';bt.disabled=false}}})();`;
   return page({ noindex: true, title: 'Pagar la señal | Plata Garage', desc: 'Datos para pagar la señal de la reserva.', body, script, path: '/reserva/pago' });
 }
+
+// Email de confirmación al cliente cuando pide cita (mismo aspecto que la página de gracias)
+export function emailCita({ bk, car, origin, k }) {
+  const abs = (u) => (u && u.startsWith('/') ? origin + u : u);
+  const h = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const dia0 = new Date(bk.fecha + 'T12:00:00Z').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }); const dia = dia0[0].toUpperCase() + dia0.slice(1);
+  const nm = car ? `${carName(car)} (${car.year})` : '';
+  const [H, Mi] = bk.hora.split(':').map(Number); const pad = (n) => String(n).padStart(2, '0'); const end = H * 60 + Mi + 30;
+  const d0 = bk.fecha.replace(/-/g, '') + 'T' + pad(H) + pad(Mi) + '00', d1 = bk.fecha.replace(/-/g, '') + 'T' + pad(Math.floor(end / 60)) + pad(end % 60) + '00';
+  const tit = `Cita en Plata Garage${nm ? ' · ' + nm : ''}`, det = `Cita en Plata Garage (Sabadell). Si necesitas cambiarla: WhatsApp ${TEL}.`;
+  const gcal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(tit)}&dates=${d0}/${d1}&ctz=Europe/Madrid&details=${encodeURIComponent(det)}&location=Sabadell`;
+  const icsUrl = `${origin}${B}/api/cita.ics?r=${encodeURIComponent(bk.id)}&k=${k}`;
+  const nom = String(bk.nombre || '').trim().split(' ')[0]; const Nom = nom ? nom[0].toUpperCase() + nom.slice(1) : '';
+  const waUrl = wa(`Hola, soy ${bk.nombre}. Tengo cita el ${dia0} a las ${bk.hora}${nm ? ' para ver el ' + nm : ''}.`);
+  const lead = bk.propuesta ? `Nos propones venir a las ${h(bk.hora)}. Miramos si podemos atenderte a esa hora y te lo confirmamos en breve por WhatsApp o por teléfono.` : 'Te la confirmamos en breve por WhatsApp o por teléfono. Si te surge algo, avísanos y la cambiamos sin problema.';
+  const F = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  const lab = 'color:#8a8a8a;font-size:13px;padding:0 0 2px', val = 'color:#f5f5f5;font-size:17px;font-weight:700;padding:0 0 16px';
+  const btn = (href, t, main) => `<a href="${h(href)}" style="display:inline-block;margin:0 8px 10px 0;padding:13px 22px;border-radius:9999px;font-size:15px;font-weight:700;text-decoration:none;${main ? 'background:#f76806;color:#000' : 'background:#0d0d0d;color:#f5f5f5;border:1px solid #333'}">${t}</a>`;
+  const foto = car ? abs(cover(car)) : '';
+  const carBox = car ? `<tr><td style="padding:0 28px 28px"><a href="${origin}${B}/vehiculos/${car.slug}" style="text-decoration:none;color:inherit;display:block;border:1px solid #262626;border-radius:16px;overflow:hidden;background:#111">
+<img src="${h(foto)}" alt="${h(nm)}" width="544" style="display:block;width:100%;max-width:544px;height:auto;border:0">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:18px 20px">
+<div style="color:#f76806;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;margin-bottom:6px">El coche que vas a ver</div>
+<div style="font-size:20px;font-weight:700;color:#f5f5f5">${h(car.brand)} ${h(car.model)} <span style="color:#8a8a8a;font-weight:400">${h(car.version || '')}</span></div>
+<div style="font-size:20px;font-weight:700;color:#f76806;margin:6px 0 10px">${eur(car.price)}</div>
+<div style="color:#bdbdbd;font-size:14px">${[car.year, kms(car.km), car.fuel, car.trans].filter(Boolean).map(h).join(' &nbsp;·&nbsp; ')}</div>
+</td></tr></table></a></td></tr>` : '';
+  const html = `<div style="margin:0;padding:0;background:#050505;${F}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#050505;padding:24px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#0b0b0b;border:1px solid #262626;border-radius:18px;overflow:hidden">
+<tr><td style="padding:24px 28px;border-bottom:1px solid #1f1f1f"><img src="${origin}${ST}/assets/logo.png" alt="Plata Garage" height="38" style="height:38px;width:auto;display:block"></td></tr>
+<tr><td style="padding:30px 28px 8px">
+<span style="display:inline-block;border:1px solid #333;border-radius:9999px;padding:6px 14px;font-size:13px;color:#f5f5f5"><span style="color:#f76806">&#10003;</span>&nbsp; Solicitud recibida</span>
+<h1 style="margin:18px 0 12px;font-size:30px;line-height:1.15;color:#f5f5f5;font-weight:800">¡Gracias${Nom ? ', ' + h(Nom) : ''}! <span style="color:#f76806">${bk.propuesta ? 'Hemos recibido tu propuesta.' : 'Tu cita está pedida.'}</span></h1>
+<p style="margin:0 0 22px;color:#a8a8a8;font-size:16px;line-height:1.55">${lead}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #262626;border-radius:16px;background:#111"><tr><td style="padding:20px 22px 4px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="55%" valign="top"><div style="${lab}">Día</div><div style="${val}">${h(dia)}</div></td><td valign="top"><div style="${lab}">Hora</div><div style="${val}">${h(bk.hora)}</div></td></tr>
+<tr><td valign="top"><div style="${lab}">Dónde</div><div style="${val};padding-bottom:2px">Sabadell</div><div style="color:#8a8a8a;font-size:13px;padding-bottom:16px">Te pasamos la ubicación al confirmar</div></td><td valign="top"><div style="${lab}">Duración</div><div style="${val}">30 min, sin prisas</div></td></tr></table>
+</td></tr></table>
+<div style="margin:22px 0 14px">${btn(gcal, 'Añadir a Google Calendar', true)}${btn(icsUrl, 'Añadir a otro calendario')}${btn(waUrl, 'Escribirnos por WhatsApp')}</div>
+</td></tr>
+${carBox}
+<tr><td style="padding:18px 28px;border-top:1px solid #1f1f1f;background:#050505;color:#7a7a7a;font-size:12px;line-height:1.6;text-align:center">Plata Garage · Sabadell · <a href="tel:+34660493228" style="color:#a1a1a1;text-decoration:none">${TEL}</a> · <a href="${origin}" style="color:#a1a1a1;text-decoration:none">www.platagarage.com</a><br>Recibes este correo porque has pedido cita en nuestra web.</td></tr>
+</table></td></tr></table></div>`;
+  const text = `¡Gracias${Nom ? ', ' + Nom : ''}! ${bk.propuesta ? 'Hemos recibido tu propuesta.' : 'Tu cita está pedida.'}\n\n${lead}\n\nDía: ${dia}\nHora: ${bk.hora}\nDónde: Sabadell (te pasamos la ubicación al confirmar)\nDuración: 30 min${nm ? '\nCoche: ' + nm + ' · ' + eur(car.price) : ''}\n\nAñadir a Google Calendar: ${gcal}\nAñadir a otro calendario: ${icsUrl}\nWhatsApp: ${waUrl}\n\nPlata Garage · Sabadell · ${TEL}`;
+  const subject = bk.propuesta ? `Hemos recibido tu propuesta de cita · ${dia} a las ${bk.hora}` : `Tu cita en Plata Garage · ${dia} a las ${bk.hora}`;
+  return { subject, html, text, ics: ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Plata Garage//Cita//ES', 'BEGIN:VEVENT', `UID:${bk.id}@platagarage`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`, `DTSTART;TZID=Europe/Madrid:${d0}`, `DTEND;TZID=Europe/Madrid:${d1}`, `SUMMARY:${tit}`, `DESCRIPTION:${det}`, 'LOCATION:Sabadell', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n') };
+}

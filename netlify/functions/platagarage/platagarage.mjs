@@ -545,6 +545,13 @@ async function api(r, req, M, ip, url, context) {
   }
   if (r === '/hit' && M === 'POST') { await hit(req, context).catch(() => {}); return new Response(null, { status: 204 }); }
   if (r.startsWith('/w/') && M === 'POST') { await hitW(r.slice(3), req, context).catch(() => {}); return new Response(null, { status: 204 }); }
+  if (r === '/cita.ics' && M === 'GET') { // archivo de calendario de una cita (enlace del email de confirmación)
+    const id = url.searchParams.get('r') || '', k = url.searchParams.get('k') || '';
+    if (!id || k.length !== 16 || !eqHash(k, sign('ref|' + id).slice(0, 16))) return new Response('No encontrado', { status: 404 });
+    const bk = (await load('bookings')).find((x) => x.id === id); if (!bk || !bk.fecha || !bk.hora) return new Response('No encontrado', { status: 404 });
+    const car = bk.coche ? (await load('cars')).find((x) => x.slug === bk.coche) : null;
+    return new Response(V.emailCita({ bk, car, origin: url.origin, k }).ics, { headers: { 'content-type': 'text/calendar; charset=utf-8', 'content-disposition': 'attachment; filename="cita-plata-garage.ics"', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } });
+  }
   if (r.startsWith('/ical/') && M === 'GET') {
     const tok = r.slice(6).replace(/\.ics$/, '');
     if (!env('PG_ADMIN_PASSWORD') || tok.length !== 32 || !eqHash(tok, icalToken())) return new Response('No encontrado', { status: 404 });
@@ -652,6 +659,9 @@ async function api(r, req, M, ip, url, context) {
       list.unshift({ ...base, tipo: motivo === 'Reservar este coche' ? 'reserva' : 'cita', fecha, hora, motivo, ...(propuesta ? { propuesta: true } : {}), mensaje: clip(f.mensaje, 1000), ...carRef(f.coche) });
       await save('bookings', list);
       out.ref = base.id; out.k = sign('ref|' + base.id).slice(0, 16);
+      if (list[0].tipo === 'cita' && base.email) { // confirmación al cliente con el resumen de su cita
+        const car = list[0].coche ? cars.find((x) => x.slug === list[0].coche) : null; const em = V.emailCita({ bk: list[0], car, origin: (env('PG_SITE_URL') || url.origin).replace(/\/+$/, ''), k: out.k });
+        await sendMail({ to: base.email, subject: em.subject, html: em.html, text: em.text }).catch((e) => console.error('smtp cliente', e.message)); }
     } else if (r === '/tasacion') {
       const list = await load('tasaciones');
       list.unshift({ ...base, ...(f.coche ? { parteDePago: true, ...carRef(f.coche) } : {}), marca: clip(f.marca, 40), modelo: clip(f.modelo, 60), anio: num(f.anio), km: num(f.km), combustible: clip(f.combustible, 20), cambio: clip(f.cambio, 20), estado: clip(f.estado, 40), itv: clip(f.itv, 20), notas_cliente: clip(f.notas, 1500) });
