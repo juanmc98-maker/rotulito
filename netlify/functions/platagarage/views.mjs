@@ -769,37 +769,44 @@ ${CTX.gtag || CTX.pixel ? `<li><b>Publicidad (solo si aceptas):</b> ${CTX.gtag ?
 // Cartel A4 de una hoja para imprimir y poner en el coche (detrás del parabrisas), con QR a la ficha
 export function cartel({ car: c, qr = '', fichaUrl = '' }) {
   const etq = etiquetaDe(c);
-  const datos = [['Año', c.year], ['Kilómetros', kms(c.km)], ['Combustible', c.fuel], ['Cambio', c.trans], ['Potencia', c.cv ? c.cv + ' CV' : ''], ['Etiqueta DGT', etq], ['Color', c.color], ['Plazas', c.seats]].filter((r) => r[1] != null && r[1] !== '');
-  const feats = (c.features || []).slice(0, 6);
+  const datos = [['Año', c.year], ['Kilómetros', kms(c.km)], ['Combustible', c.fuel], ['Cambio', c.trans], ['Potencia', c.cv ? c.cv + ' CV' : ''], ['Etiqueta DGT', etq], ['Carrocería', c.body], ['Color', c.color], ['Plazas', c.seats], ['Puertas', c.doors]].filter((r) => r[1] != null && r[1] !== '').slice(0, 8);
+  const feats = (c.features || []).slice(0, 12);
+  const desc = (() => { const t = String(c.desc || '').replace(/\s+/g, ' ').trim(); if (t.length <= 330) return t; const cut = t.slice(0, 330); const i = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf(', ')); return (i > 180 ? cut.slice(0, i + 1) : cut.replace(/\s+\S*$/, '')) + (i > 180 && cut[i] === '.' ? '' : '…'); })();
   const foto = cover(c);
-  const web = String(fichaUrl).replace(/^https?:\/\//, '').replace(/^www\./, 'www.');
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Cartel ${esc(c.brand)} ${esc(c.model)} ${c.year} | Plata Garage</title>
+  const web = String(fichaUrl).replace(/^https?:\/\//, '');
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Ficha ${esc(c.brand)} ${esc(c.model)} ${c.year} | Plata Garage</title>
 <style>@font-face{font-family:Inter;font-weight:100 900;src:url(${ST}/assets/inter-latin.woff2) format('woff2')}@font-face{font-family:'Space Grotesk';font-weight:300 700;src:url(${ST}/assets/space-grotesk-latin.woff2) format('woff2')}
 @page{size:A4 portrait;margin:0}*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:Inter,Arial,sans-serif;color:#111;background:#e9e9e9}
 .hoja{width:210mm;height:297mm;margin:12px auto;background:#fff;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 4px 30px rgba(0,0,0,.15)}
-.top{background:#050505;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:9mm 12mm}
-.top img{height:20mm}.top .g{text-align:right;font:600 13pt 'Space Grotesk',sans-serif;line-height:1.35}.top .g span{display:block;color:#ff6a00;font-size:20pt}
-.cuerpo{padding:9mm 12mm 0;flex:1;display:flex;flex-direction:column;gap:6mm}
-h1{font:700 30pt/1.05 'Space Grotesk',sans-serif;letter-spacing:-.5px}h1 small{display:block;font:500 14pt Inter,sans-serif;color:#555;margin-top:2mm}
-.foto{height:72mm;border-radius:4mm;overflow:hidden;background:#f2f2f2}.foto img{width:100%;height:100%;object-fit:cover}
-.precio{display:flex;align-items:baseline;justify-content:space-between;border-top:1.2mm solid #ff6a00;padding-top:4mm}
-.precio b{font:700 46pt/1 'Space Grotesk',sans-serif;color:#111}.precio span{font:600 12pt Inter,sans-serif;color:#555;text-align:right}
-.datos{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm}.datos div{background:#f4f4f4;border-radius:3mm;padding:3mm 3.5mm}.datos span{display:block;font-size:9pt;color:#666;text-transform:uppercase;letter-spacing:.5px}.datos b{font:700 13pt 'Space Grotesk',sans-serif}
-.eq{display:grid;grid-template-columns:1fr 1fr;gap:2mm 6mm;font-size:11.5pt}.eq li{list-style:none;padding-left:5mm;position:relative}.eq li:before{content:'';position:absolute;left:0;top:2.2mm;width:2.4mm;height:2.4mm;border-radius:50%;background:#ff6a00}
-.pie{margin-top:auto;display:flex;align-items:center;gap:7mm;background:#050505;color:#fff;padding:7mm 12mm}
-.qr{width:38mm;height:38mm;background:#fff;padding:2.5mm;border-radius:2mm;flex:none}.qr svg{width:100%;height:100%;display:block}
-.pie p{font:600 16pt/1.3 'Space Grotesk',sans-serif}.pie p span{display:block;color:#ff6a00;font-size:22pt;margin-top:2mm}.pie small{display:block;font:400 10pt Inter,sans-serif;color:#bbb;margin-top:2mm}
+.top{background:#050505;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:6mm 11mm}
+.top img{height:15mm}.top .g{text-align:right;font:600 11pt 'Space Grotesk',sans-serif;line-height:1.3}.top .g span{display:block;color:#ff6a00;font-size:16pt}
+.cuerpo{padding:5.5mm 11mm 5mm;flex:1;display:flex;flex-direction:column;gap:3.6mm}
+.tit{display:flex;justify-content:space-between;align-items:flex-end;gap:6mm}
+h1{font:700 25pt/1.05 'Space Grotesk',sans-serif;letter-spacing:-.4px}h1 small{display:block;font:500 12pt Inter,sans-serif;color:#555;margin-top:1.5mm}
+.precio{text-align:right;white-space:nowrap}.precio b{display:block;font:700 34pt/1 'Space Grotesk',sans-serif}.precio span{font:600 9.5pt Inter,sans-serif;color:#666}
+.foto{height:92mm;border-radius:3.5mm;overflow:hidden;position:relative;background:#111}
+.foto .bgb{position:absolute;inset:-12px;width:calc(100% + 24px);height:calc(100% + 24px);object-fit:cover;filter:blur(14px) brightness(.55)}
+.foto .fg{position:relative;width:100%;height:100%;object-fit:contain;display:block}
+.datos{display:grid;grid-template-columns:repeat(4,1fr);gap:2.4mm}.datos div{background:#f4f4f4;border-radius:2.5mm;padding:2.2mm 3mm}.datos span{display:block;font-size:7.6pt;color:#666;text-transform:uppercase;letter-spacing:.5px}.datos b{font:700 11pt 'Space Grotesk',sans-serif}
+.desc{font-size:9.6pt;line-height:1.45;color:#333}
+h2{font:700 10.5pt 'Space Grotesk',sans-serif;text-transform:uppercase;letter-spacing:.8px;color:#ff6a00;margin-bottom:1.6mm}
+.eq{display:grid;grid-template-columns:1fr 1fr;gap:1.3mm 6mm;font-size:9.6pt}.eq li{list-style:none;padding-left:4.5mm;position:relative}.eq li:before{content:'';position:absolute;left:0;top:1.7mm;width:2.1mm;height:2.1mm;border-radius:50%;background:#ff6a00}
+.inc{display:flex;flex-wrap:wrap;gap:2mm}.inc span{border:1px solid #ddd;border-radius:99px;padding:1.2mm 3.2mm;font-size:8.8pt;font-weight:600}
+.pie{margin-top:auto;display:flex;align-items:center;gap:6mm;background:#050505;color:#fff;padding:5.5mm 11mm}
+.qr{width:33mm;height:33mm;background:#fff;padding:2mm;border-radius:2mm;flex:none}.qr svg{width:100%;height:100%;display:block}
+.pie p{font:600 13.5pt/1.3 'Space Grotesk',sans-serif}.pie p span{display:block;color:#ff6a00;font-size:20pt;margin-top:1.5mm}.pie small{display:block;font:400 8.5pt Inter,sans-serif;color:#bbb;margin-top:1.5mm}
 .bar{max-width:210mm;margin:16px auto 0;display:flex;gap:10px;justify-content:center;font:600 14px Inter,sans-serif}.bar button{background:#ff6a00;color:#fff;border:0;border-radius:8px;padding:12px 20px;font:inherit;cursor:pointer}
 @media print{body{background:#fff}.bar{display:none}.hoja{margin:0;box-shadow:none}}
 @media screen and (max-width:820px){.hoja{zoom:.45}}</style></head><body>
 <div class="bar"><button onclick="window.print()">Imprimir o guardar en PDF</button></div>
 <div class="hoja"><div class="top"><img src="${ST}/assets/logo.png" alt="Plata Garage"><div class="g">Garantía<span>12 meses</span></div></div>
-<div class="cuerpo"><h1>${esc(c.brand)} ${esc(c.model)}${c.version ? `<small>${esc(c.version)}</small>` : ''}</h1>
-<div class="foto"><img src="${esc(im(foto, 1200))}" alt=""></div>
-<div class="precio"><b>${eur(c.price)}</b><span>Precio final<br>Revisado en taller</span></div>
+<div class="cuerpo"><div class="tit"><h1>${esc(c.brand)} ${esc(c.model)}${c.version ? `<small>${esc(c.version)}</small>` : ''}</h1><div class="precio"><b>${eur(c.price)}</b><span>Precio final</span></div></div>
+<div class="foto"><img class="bgb" src="${esc(im(foto, 800))}" alt=""><img class="fg" src="${esc(im(foto, 1600))}" alt=""></div>
 <div class="datos">${datos.map(([k, v]) => `<div><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>
-${feats.length ? `<ul class="eq">${feats.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}</div>
+${desc ? `<p class="desc">${esc(desc)}</p>` : ''}
+${feats.length ? `<div><h2>Equipamiento destacado</h2><ul class="eq">${feats.map((f) => `<li>${esc(f)}</li>`).join('')}</ul></div>` : ''}
+<div class="inc"><span>Revisado en taller</span><span>Cambio de aceite hecho</span><span>Garantía de 12 meses</span><span>Financiación: consúltanos</span></div></div>
 <div class="pie"><div class="qr">${qr}</div><div><p>Escanea y mira todas las fotos, la ficha completa y pide cita<span>${TEL}</span></p><small>WhatsApp y teléfono · ${esc(web)}</small></div></div></div>
 </body></html>`;
 }
