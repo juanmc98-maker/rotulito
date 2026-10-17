@@ -1197,4 +1197,11 @@ export default {
   "Si no has llevado nunca un automático, en la visita te explicamos cómo funciona antes de decidir.": ["Si no has portat mai un automàtic, a la visita t'expliquem com funciona abans de decidir.","If you've never driven an automatic, we'll explain how it works during the visit before you decide."],
   "¿Puedo ver el coche antes?": ["Puc veure el cotxe abans?","Can I see the car first?"],
   "Sí. Pide cita y te lo tenemos preparado para verlo con calma. La prueba en carretera la reservamos para cuando hay compromiso de compra.": ["Sí. Demana cita i te'l tindrem preparat per veure'l amb calma. La prova a la carretera la reservem per a quan hi ha compromís de compra.","Yes. Book an appointment and we'll have it ready for you to see calmly. Road tests are reserved for when there is a commitment to buy."],
+  "Reservar": ["Reservar","Reserve"],
+  "Cita": ["Cita","Visit"],
+  "Reservarlo ya": ["Reservar-lo ja","Reserve it now"],
+  "Lo reservas en un minuto con una señal de {0} € que se descuenta del precio. Si se hubiera vendido justo antes, te la devolvemos.": ["El reserves en un minut amb una paga i senyal de {0} € que es descompta del preu. Si s'hagués venut just abans, te la tornem.","Reserve it in a minute with a €{0} deposit that is deducted from the price. If it had just been sold, we refund it."],
+  "¿Te gusta? Resérvalo antes de que se vaya.": ["T'agrada? Reserva'l abans que marxi.","Like it? Reserve it before it's gone."],
+  "Señal de {0} € que se descuenta del precio, o pide cita para verlo.": ["Paga i senyal de {0} € que es descompta del preu, o demana cita per veure'l.","A €{0} deposit deducted from the price, or book a visit to see it."],
+  "Sí, en un minuto: rellenas tus datos y pagas la señal de {0} €, que se descuenta del precio. En cuanto la recibimos te confirmamos la reserva y te enviamos el documento. Si se hubiera vendido justo antes, te la devolvemos.": ["Sí, en un minut: omples les teves dades i pagues la paga i senyal de {0} €, que es descompta del preu. Quan la rebem et confirmem la reserva i t'enviem el document. Si s'hagués venut just abans, te la tornem.","Yes, in a minute: fill in your details and pay the €{0} deposit, which is deducted from the price. As soon as we receive it we confirm the reservation and send you the document. If it had just been sold, we refund it."],
 };
