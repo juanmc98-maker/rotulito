@@ -144,7 +144,7 @@ const faqHtml = (list, title = 'Preguntas frecuentes') => `<div class="faq">${ti
 const ld = (o) => `<script type="application/ld+json">${JSON.stringify(o).replace(/</g, '\\u003c')}</script>`;
 
 function page({ title, desc, on = '', body, head = '', script = '', car = '', alert = false, path = '', image = '', noindex = false }) {
-  const canon = path ? `${CTX.site}${B}${path}` : '';
+  const canon = path && !noindex ? `${CTX.site}${B}${path}` : '';
   const ads = !!(CTX.gtag || CTX.pixel || CTX.clarity);
   const ogImg = abs(image || `${ST}/assets/hero.jpg`);
   const meta = `<meta name="robots" content="${CTX.index ? (noindex ? 'noindex,follow' : 'index,follow,max-image-preview:large') : 'noindex,nofollow'}">${canon ? `<link rel="canonical" href="${esc(canon)}">` : ''}<meta property="og:type" content="website"><meta property="og:site_name" content="Plata Garage"><meta property="og:locale" content="es_ES"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}">${canon ? `<meta property="og:url" content="${esc(canon)}">` : ''}<meta property="og:image" content="${esc(ogImg)}"><meta name="twitter:card" content="summary_large_image">`;
@@ -426,7 +426,7 @@ export function ficha({ car: c, cars, holders, qr = '', fichaUrl = '' }) {
   const fq = [[`¿Puedo ver el ${name}?`, `Sí. Pide cita en esta página eligiendo día y hora y te lo tenemos preparado en Sabadell. Atendemos de lunes a viernes de 9:30 a 19:30 y los sábados de 10:00 a 14:00. La prueba en carretera la reservamos para cuando hay compromiso de compra.`], [`¿El ${c.brand} ${c.model} tiene garantía?`, 'Sí, garantía de 12 meses. Según la antigüedad del coche, se puede ampliar con coste adicional.'], ...(c.reserve > 0 && c.status === 'disponible' ? [['¿Puedo reservarlo?', `Sí, en un minuto: rellenas tus datos y pagas la señal de ${eur(c.reserve)}, que se descuenta del precio. En cuanto la recibimos te confirmamos la reserva y te enviamos el documento. Si se hubiera vendido justo antes, te la devolvemos.`]] : []), ['¿Me lo podéis llevar a casa?', 'Sí, es posible. Pide presupuesto del envío con tu código postal aquí abajo, sin compromiso.'], ['¿Puedo financiarlo?', 'Consúltanos y te explicamos las opciones y condiciones antes de decidir.']];
   const twin = (cars || []).some((x) => x.id !== c.id && x.brand === c.brand && x.model === c.model && String(x.year) === String(c.year)); // dos coches iguales: el título lleva los km para que Google no los vea duplicados
   const title = twin ? `${c.brand} ${c.model} ${c.year} de ${kms(c.km)} en Sabadell | Plata Garage` : (() => { const full = `${name} ${c.year} de segunda mano en Sabadell | Plata Garage`; if (full.length <= 60) return full; const s = `${c.brand} ${c.model} ${c.year} de segunda mano en Sabadell | Plata Garage`; return s.length <= 60 ? s : `${c.brand} ${c.model} ${c.year} en Sabadell | Plata Garage`; })();
-  const desc = `${name} ${c.year}, ${kms(c.km)}, ${c.fuel.toLowerCase()}, ${c.trans.toLowerCase()}. ${eur(c.price)}. Garantía de 12 meses en Sabadell. Pide cita.`.slice(0, 158);
+  const desc = `${name} ${c.year}, ${kms(c.km)}, ${c.fuel.toLowerCase()}, ${c.trans.toLowerCase()}. ${eur(c.price)}. Garantía de 12 meses y financiación en Sabadell. Pide cita sin compromiso.`.slice(0, 158);
   const ldCar = { '@context': 'https://schema.org', '@type': ['Product', 'Car'], name: `${name} ${c.year}`, brand: { '@type': 'Brand', name: c.brand }, model: c.model, vehicleModelDate: String(c.year), mileageFromOdometer: { '@type': 'QuantitativeValue', value: c.km, unitCode: 'KMT' }, fuelType: c.fuel, vehicleTransmission: c.trans, color: c.color || undefined, bodyType: c.body || undefined, numberOfDoors: c.doors || undefined, vehicleSeatingCapacity: c.seats || undefined, vehicleEngine: c.cv ? { '@type': 'EngineSpecification', enginePower: { '@type': 'QuantitativeValue', value: c.cv, unitCode: 'BHP' } } : undefined, image: imgs.map(abs), url: abs(`${B}/vehiculos/${c.slug}`), description: (c.desc || '').slice(0, 500), offers: { '@type': 'Offer', price: c.price, priceCurrency: 'EUR', availability: c.status === 'reservado' ? 'https://schema.org/LimitedAvailability' : c.status === 'preparacion' ? 'https://schema.org/PreOrder' : 'https://schema.org/InStock', itemCondition: 'https://schema.org/UsedCondition', seller: { '@id': `${CTX.site}${B}/#negocio` } } };
   const crumbs = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Inicio', item: abs(`${B}/`) }, { '@type': 'ListItem', position: 2, name: 'Vehículos', item: abs(`${B}/vehiculos/`) }, { '@type': 'ListItem', position: 3, name }] };
   const ph = (i) => imgs[i] ? `<div class="ai" data-i="${i}"><img src="${esc(im(imgs[i], 900))}" alt="${esc(name)} ${c.year} – foto ${i + 1}" loading="lazy" width="800" height="600"></div>` : '';
@@ -491,7 +491,7 @@ ${FORM_JS}${SLOTS_JS}`;
 export function cita({ cars, coche, motivo }) {
   const body = `<section style="padding-top:56px"><div class="w"><div class="pill">${ic.cal}Agenda</div><h1 class="s">Reserva tu visita<br><span class="gr">en menos de un minuto.</span></h1>
 <p class="lead" style="max-width:640px">Elige el día y la hora que mejor te vengan. Te recibimos en Sabadell, te enseñamos los coches que te interesen y resolvemos todas tus dudas.</p>${INFO3}${citaForm({ cars, coche, motivo })}</div></section>`;
-  return page({ title: 'Pedir cita para ver un coche en Sabadell | Plata Garage', desc: 'Pide cita para ver un coche en Plata Garage (Sabadell). Elige día y hora y te lo tenemos preparado.', on: 'cita', body, script: FORM_JS + SLOTS_JS + PICK_JS, path: '/cita', noindex: !!(coche || motivo) });
+  return page({ title: 'Pedir cita para ver un coche en Sabadell | Plata Garage', desc: 'Pide cita para ver un coche de ocasión en Plata Garage, en Sabadell. Elige día y hora y te lo tenemos preparado, sin compromiso.', on: 'cita', body, script: FORM_JS + SLOTS_JS + PICK_JS, path: '/cita', noindex: !!(coche || motivo) });
 }
 
 export function contacto() {
@@ -499,7 +499,7 @@ export function contacto() {
 <p class="lead">Atendemos con cita previa en Sabadell, de lunes a viernes de 9:30 a 19:30 y los sábados de 10:00 a 14:00. Lo más rápido es <a href="${wa('Hola, quería información.')}" style="color:var(--or)">WhatsApp</a> o el ${TEL}.</p>
 <div class="two" style="align-items:start;gap:28px"><div class="box" style="padding:28px"><h3>Envíanos un mensaje</h3><form class="f" data-api="${B}/api/mensaje" data-t="mensaje" novalidate>${hp()}${contactFields()}<label>Asunto<input name="asunto" maxlength="120"></label><label>Mensaje *<textarea name="mensaje" required maxlength="3000"></textarea></label>${priv()}<div class="msg" role="alert"></div><button class="btn" type="submit">Enviar mensaje</button></form></div>
 <div class="box" id="tasacion" style="padding:28px"><h3>¿Quieres vender tu coche?</h3><p class="mu" style="margin:0 0 16px">Te damos una valoración orientativa gratis, hecha por una persona, en 24 horas laborables. Son 4 preguntas rápidas.</p><a class="btn" href="${B}/cuanto-vale-mi-coche">Valorar mi coche</a><p class="note" style="margin-top:14px">También puedes entregarlo como parte del pago de uno de nuestros coches.</p></div></div></div></section>`;
-  return page({ title: 'Contacto y tasación | Plata Garage', desc: 'Contacta con Plata Garage en Sabadell o pide la tasación de tu coche.', on: 'con', body, script: FORM_JS, path: '/contacto' });
+  return page({ title: 'Contacto y tasación | Plata Garage', desc: 'Contacta con Plata Garage, compraventa de coches de ocasión en Sabadell, o pide la tasación gratuita de tu coche. Te respondemos lo antes posible.', on: 'con', body, script: FORM_JS, path: '/contacto' });
 }
 
 export function gracias(t, { bk = null, car = null, cars = [] } = {}) {
@@ -538,7 +538,7 @@ export function privacidad() {
 <h2>5. Destinatarios</h2><p>No cedemos tus datos a terceros salvo obligación legal. Usamos proveedores que actúan como encargados del tratamiento: Netlify (alojamiento de la web y de los datos, y envío de los avisos internos por correo), Google (correo electrónico)${CTX.clarity ? ' y, solo si aceptas las cookies de analítica, Microsoft (Clarity)' : ''}. Si nos escribes por WhatsApp, se aplican también las condiciones de WhatsApp (Meta).</p>
 <h2>6. Tus derechos</h2><p>Puedes pedir acceso, rectificación, supresión, oposición, limitación y portabilidad, y retirar tu consentimiento en cualquier momento, escribiendo a info@platagarage.com. Si crees que no hemos atendido bien tu petición, puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).</p>
 <h2>7. Cookies</h2><p>${CTX.gtag || CTX.pixel ? 'Solo si lo aceptas, usamos cookies de Google y Meta para medir nuestros anuncios.' : 'Esta web no instala cookies de publicidad ni de analítica.'} Los favoritos y tu elección sobre cookies se guardan solo en tu navegador. Tienes el detalle en la <a href="${B}/cookies">política de cookies</a>.</p></div></section>`;
-  return page({ title: 'Política de privacidad | Plata Garage', desc: 'Política de privacidad de Plata Garage', body, path: '/privacidad' });
+  return page({ title: 'Política de privacidad | Plata Garage', desc: 'Política de privacidad de Plata Garage: qué datos recogemos, para qué los usamos, cuánto tiempo los guardamos y cómo ejercer tus derechos.', body, path: '/privacidad' });
 }
 
 export function avisoLegal() {
@@ -549,7 +549,7 @@ export function avisoLegal() {
 <h2>4. Propiedad intelectual</h2><p>Los textos, fotografías, logotipos y el diseño de esta web pertenecen a sus titulares o se usan con autorización. No se pueden reproducir sin permiso.</p>
 <h2>5. Responsabilidad</h2><p>No nos hacemos responsables de los daños derivados de un uso indebido de la web ni de interrupciones del servicio por causas ajenas. Los enlaces a otras webs se ofrecen solo como referencia.</p>
 <h2>6. Legislación aplicable</h2><p>Este aviso se rige por la legislación española. Para cualquier controversia, y salvo que la normativa de consumidores disponga otra cosa, serán competentes los juzgados y tribunales del domicilio del consumidor.</p></div></section>`;
-  return page({ title: 'Aviso legal | Plata Garage', desc: 'Aviso legal de Plata Garage', body, path: '/aviso-legal' });
+  return page({ title: 'Aviso legal | Plata Garage', desc: 'Aviso legal de Plata Garage, compraventa de coches de ocasión en Sabadell: titular de la web, condiciones de uso y propiedad intelectual.', body, path: '/aviso-legal' });
 }
 
 export function condiciones() {
@@ -563,7 +563,7 @@ export function condiciones() {
 <h2>7. Derecho de desistimiento</h2><p>7.1. Si la reserva se contrata a distancia, como consumidor dispones de catorce (14) días naturales para desistir de ella sin dar explicaciones, según el TRLGDCU y salvo las excepciones previstas en la ley.</p><p>7.2. Para ejercerlo basta con comunicarlo de forma clara a info@platagarage.com.</p><p>7.3. La compraventa del vehículo se firma y se entrega de forma presencial.</p><p>7.4. Las reservas hechas en persona, en nuestras instalaciones, no son contratos a distancia y no tienen este derecho de desistimiento; se rigen por el documento de reserva firmado.</p>
 <h2>8. Protección de datos</h2><p>Tratamos los datos de la reserva o la compra según nuestra <a href="${B}/privacidad">política de privacidad</a>.</p>
 <h2>9. Legislación aplicable</h2><p>Estas condiciones se rigen por la legislación española. Para cualquier controversia son competentes los juzgados y tribunales de Sabadell (Barcelona), salvo el fuero que la ley reconozca al consumidor.</p></div></section>`;
-  return page({ title: 'Condiciones de contratación | Plata Garage', desc: 'Condiciones de reserva y compraventa de vehículos de Plata Garage', body, path: '/condiciones-de-contratacion' });
+  return page({ title: 'Condiciones de contratación | Plata Garage', desc: 'Condiciones de reserva y compraventa de vehículos de Plata Garage: señal, plazo de reserva, garantía de 12 meses y derecho de desistimiento.', body, path: '/condiciones-de-contratacion' });
 }
 
 const opts = (name, list, type = 'radio') => `<div class="ops">${list.map((o) => `<label><input type="${type}" name="${name}" value="${esc(o)}"><span>${esc(o)}</span></label>`).join('')}</div>`;
@@ -580,7 +580,7 @@ export function teLoBuscamos({ cars }) {
 <label>Cambio<select name="cambio"><option value="">Me da igual</option><option>Manual</option><option>Automático</option></select></label>
 <label>Cuéntanos algo más<textarea name="mensaje" maxlength="1500" placeholder="Uso que le darás, plazas, maletero, color…"></textarea></label>
 ${contactFields()}${priv()}<div class="msg" role="alert"></div><button class="btn" type="submit">Que me lo busquen</button></form></div></div></section>`;
-  return page({ title: 'Te buscamos coche en Sabadell | Plata Garage', desc: 'Dinos qué coche de segunda mano buscas y tu presupuesto y te lo buscamos. Sin compromiso.', body, script: FORM_JS, path: '/te-lo-buscamos' });
+  return page({ title: 'Te buscamos coche en Sabadell | Plata Garage', desc: 'Dinos qué coche de segunda mano buscas y tu presupuesto y te lo buscamos. Sin compromiso y con la garantía de 12 meses de Plata Garage, en Sabadell.', body, script: FORM_JS, path: '/te-lo-buscamos' });
 }
 
 export function cuantoVale({ car, z } = {}) {
@@ -651,7 +651,7 @@ export function blogList({ posts }) {
   posts = posts.sort((a, b) => (b.publishedAt || '').localeCompare(a.publishedAt || ''));
   const body = `<section style="padding-top:56px"><div class="w"><div class="pill"><i></i>Blog</div><h1 class="s">Consejos para <span class="gr">comprar bien tu coche</span></h1>
 <div class="grid" style="margin-top:36px">${posts.map((p) => `<a class="card" href="${B}/blog/${p.slug}">${p.cover ? `<div class="ph"><img src="${esc(p.cover)}" alt="${esc(p.title)}" loading="lazy" width="400" height="300"></div>` : ''}<div class="b"><div class="br">${fechaLarga(p.publishedAt)}</div><div class="md"><b>${esc(p.title)}</b></div><p class="mu" style="margin:0;font-size:14px">${esc(p.excerpt)}</p></div></a>`).join('') || '<p class="mu">Pronto publicaremos los primeros artículos.</p>'}</div></div></section>`;
-  return page({ title: 'Blog de coches de segunda mano | Plata Garage', desc: 'Guías y consejos para comprar un coche de segunda mano en Sabadell.', on: 'blog', body, path: '/blog/' });
+  return page({ title: 'Blog de coches de segunda mano | Plata Garage', desc: 'Guías y consejos para comprar un coche de segunda mano en Sabadell: qué revisar, cómo financiarlo, qué motor elegir y mucho más.', on: 'blog', body, path: '/blog/' });
 }
 
 export function blogPost({ post: p, cars }) {
@@ -765,7 +765,7 @@ ${CTX.clarity ? '<li><b>Analítica (solo si aceptas):</b> Microsoft Clarity (Mic
 ${CTX.gtag || CTX.pixel ? `<li><b>Publicidad (solo si aceptas):</b> ${CTX.gtag ? 'Google Ads / Google Analytics (Google Ireland Ltd.)' : ''}${CTX.gtag && CTX.pixel ? ' y ' : ''}${CTX.pixel ? 'Meta Pixel (Meta Platforms Ireland Ltd.)' : ''}, para medir qué anuncios funcionan y mostrar anuncios relevantes. Pueden implicar transferencias internacionales con las garantías de sus proveedores.</li>` : '<li><b>Publicidad:</b> ahora mismo no usamos cookies de publicidad. Si las activamos, te pediremos permiso antes.</li>'}</ul>
 <h2>2. Cómo cambiar tu elección</h2><p>${ads ? 'Puedes aceptar, rechazar o elegir por tipo cuando quieras desde "Configurar cookies", al pie de cada página. Rechazarlas no impide usar la web.' : 'No hace falta: no instalamos cookies que requieran consentimiento.'} También puedes borrar las cookies desde la configuración de tu navegador.</p>
 <h2>3. Más información</h2><p>Consulta nuestra <a href="${B}/privacidad">política de privacidad</a> o escríbenos a info@platagarage.com.</p></div></section>`;
-  return page({ title: 'Política de cookies | Plata Garage', desc: 'Política de cookies de Plata Garage', body, path: '/cookies' });
+  return page({ title: 'Política de cookies | Plata Garage', desc: 'Política de cookies de Plata Garage: qué cookies y herramientas de medición usa la web, para qué sirven y cómo gestionarlas o rechazarlas.', body, path: '/cookies' });
 }
 
 

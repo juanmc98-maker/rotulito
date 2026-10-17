@@ -162,7 +162,8 @@ export function decorate(html, lang, path, site) {
       ? localize(attrKeys(t, (k, nums) => { const tr = look(k, L); return tr == null ? null : fill(tr, nums, []); }), L, site) : t).join('');
     out = out.replace(/<script\b[\s\S]*?<\/script>/g, (t) => scriptTr(t, L));
     out = out.replace('<html lang="es"', `<html lang="${L}"`).replace('content="es_ES"', `content="${L === 'ca' ? 'ca_ES' : 'en_GB'}"`)
-      .replace(/(<link rel="canonical" href=")([^"]*)(")/, (m, a, v, b) => a + urlOf(L) + b);
+      .replace(/(<link rel="canonical" href=")([^"]*)(")/, (m, a, v, b) => a + urlOf(L) + b)
+      .replace(/(<meta property="og:url" content=")([^"]*)(")/, (m, a, v, b) => a + urlOf(L) + b);
   }
   out = out.replace('</head>', `${alt}${css}</head>`).replace('<div class="hr">', `<div class="hr">${flags}`);
   if (!lang) return out;

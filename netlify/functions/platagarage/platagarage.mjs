@@ -375,7 +375,7 @@ const inner = async (req, context) => {
     const site = (env('PG_SITE_URL') || url.origin).replace(/\/+$/, '');
     V.setCtx({ site, index: INDEX(), gtag: clip(env('PG_GTAG_ID'), 20), pixel: clip(env('PG_META_PIXEL'), 20), clarity: clip(env('PG_CLARITY') || 'yx42pl2vd4', 20), gsv: clip(env('PG_GSV'), 80) });
     const cars = await load('cars');
-    if (sub === '/robots.txt') return text(`User-agent: *\n${INDEX() ? `Allow: /\nDisallow: ${BASE}/admin\nDisallow: ${BASE}/api/\nDisallow: ${BASE}/gracias\n` : 'Disallow: /\n'}\nSitemap: ${site}${BASE}/sitemap.xml\n`, 'text/plain');
+    if (sub === '/robots.txt') return text(`User-agent: *\n${INDEX() ? `Allow: /\nDisallow: ${BASE}/admin\nDisallow: ${BASE}/api/\nDisallow: ${BASE}/gracias\nDisallow: /ca/gracias\nDisallow: /en/gracias\nDisallow: /reservar\nDisallow: /ca/reservar\nDisallow: /en/reservar\nDisallow: /favoritos\nDisallow: /ca/favoritos\nDisallow: /en/favoritos\nDisallow: /*/cartel\n` : 'Disallow: /\n'}\nSitemap: ${site}${BASE}/sitemap.xml\n`, 'text/plain');
     if (sub === `/${INDEXNOW_KEY}.txt`) return text(INDEXNOW_KEY, 'text/plain');
     if (sub === '/sitemap.xml') return text(sitemap(site, pubCars(cars), (await load('posts')).filter((x) => x.published)), 'application/xml');
     if (sub === '/llms.txt') return text(llms(site, pubCars(cars)), 'text/plain');
