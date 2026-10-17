@@ -16,3 +16,4 @@
   for = "/img/*"
   [headers.values]
     X-Robots-Tag = "noindex"
+
