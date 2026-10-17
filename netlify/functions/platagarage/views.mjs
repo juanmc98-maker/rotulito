@@ -865,11 +865,12 @@ export const FIN_FAQ = [
 // Tarifas de las financieras para la calculadora de cuota de las fichas (sin seguro). Actualizar cuando lleguen tarifas nuevas.
 // Confía: coeficiente = cuota por euro financiado, con la comisión de apertura del 5 % ya incluida (tarifas del 15/10/2026).
 // Lendrock: el TIN elegido es el más bajo que aún deja comisión al colaborador; comisión de apertura del 3 % financiada (simulador del 17/10/2026).
+// Lendrock solo deja plazos en los que la antigüedad del coche más los años del préstamo no pasan de 19 (p. ej. coche de 10 años: hasta 108 meses; de 14: hasta 60).
 export const TARIFA = {
   confia: { fecha: '15/10/2026', entidad: 'Unión Financiera Asturiana, S.A., E.F.C. (Confía)', apertura: 5, plazos: [24, 36, 48, 60, 72, 84, 96, 108],
     alto: { tin: [9.99, 9.99, 9.99, 9.99, 9.99, 9.99, 9.99, 9.99], coef: [0.048447, 0.033876, 0.026626, 0.022304, 0.019447, 0.017426, 0.015927, 0.014777] }, // desde 13.000 €
     bajo: { tin: [10.99, 11.99, 11.99, 13.49, 13.49, 13.49, 13.49, 13.49], coef: [0.048933, 0.03487, 0.027645, 0.024155, 0.02135, 0.019382, 0.017937, 0.016838] } }, // menos de 13.000 €
-  lendrock: { fecha: '17/10/2026', entidad: 'Lendrock (WiZink Bank, S.A.U.)', apertura: 3, min: 3000, max: 40000, cuotaMin: 70, edadMax: 16,
+  lendrock: { fecha: '17/10/2026', entidad: 'Lendrock (WiZink Bank, S.A.U.)', apertura: 3, min: 3000, max: 40000, cuotaMin: 70, edadMax: 16, maxAnos: 19,
     hasta10: { 36: 8.99, 48: 7.99, 60: 7.99, 72: 6.99, 84: 6.99, 96: 6.99, 108: 6.99, 120: 6.99 }, // coches de hasta 10 años
     hasta16: { 36: 9.99, 48: 9.99, 60: 8.99, 72: 8.99, 84: 8.99, 96: 8.99 } } }; // de 11 a 16 años
 export const PLAZOS = [24, 36, 48, 60, 72, 84, 96, 108, 120];
@@ -877,12 +878,12 @@ export const PLAZOS = [24, 36, 48, 60, 72, 84, 96, 108, 120];
 // Coches de Juan: solo Confía. Coches de Cristina: también Lendrock si la antigüedad y el importe lo permiten.
 // Confía: más de 12 años, máx. 96 meses; menos de 5.000 €, máx. 60; 108 meses por debajo de 13.000 € solo desde 10.000 €.
 const CALC_JS = (c, cris) => `(()=>{const el=document.getElementById('calc');if(!el)return;const T=${JSON.stringify(TARIFA)},PL=${JSON.stringify(PLAZOS)},P=${Number(c.price) || 0},Y=${Number(c.year) || 0},CR=${cris ? 1 : 0},LG=(document.documentElement.lang||'es').slice(0,2);
-const ent=document.getElementById('cEnt'),pl=document.getElementById('cPl'),out=document.getElementById('cOut'),leg=document.getElementById('cLeg'),go=document.getElementById('cGo');let n=72;
+const ent=document.getElementById('cEnt'),pl=document.getElementById('cPl'),out=document.getElementById('cOut'),leg=document.getElementById('cLeg'),go=document.getElementById('cGo');let n=0;
 const f0=v=>new Intl.NumberFormat('es-ES',{useGrouping:'always',maximumFractionDigits:0}).format(v),f2=v=>new Intl.NumberFormat('es-ES',{useGrouping:'always',minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
 const edad=Y?new Date().getFullYear()-Y:99;
 const tae=(A,c,m)=>{let i=0.01;for(let k=0;k<100;k++){let f=-A,d=0;for(let j=1;j<=m;j++){f+=c/Math.pow(1+i,j);d-=j*c/Math.pow(1+i,j+1)}const s=f/d;i-=s;if(Math.abs(s)<1e-12)break}return(Math.pow(1+i,12)-1)*100};
 const conf=(A,m)=>{const C=T.confia,k=C.plazos.indexOf(m);if(k<0||(edad>12&&m>96)||(A<5000&&m>60)||(m===108&&A<10000))return null;const tb=A>=13000?C.alto:C.bajo;return{c:Math.round(A*tb.coef[k]*100)/100,t:tb.tin[k],ap:C.apertura,ent:C.entidad,f:C.fecha}};
-const lend=(A,m)=>{const L=T.lendrock;if(!CR||edad>L.edadMax||A<L.min||A>L.max)return null;const t=(edad<=10?L.hasta10:L.hasta16)[m];if(!t)return null;const r=t/1200,c=Math.round(A*(1+L.apertura/100)*r/(1-Math.pow(1+r,-m))*100)/100;if(c<L.cuotaMin)return null;return{c,t,ap:L.apertura,ent:L.entidad,f:L.fecha}};
+const lend=(A,m)=>{const L=T.lendrock;if(!CR||edad>L.edadMax||A<L.min||A>L.max)return null;if(edad+m/12>L.maxAnos)return null;const t=(edad<=10?L.hasta10:L.hasta16)[m];if(!t)return null;const r=t/1200,c=Math.round(A*(1+L.apertura/100)*r/(1-Math.pow(1+r,-m))*100)/100;if(c<L.cuotaMin)return null;return{c,t,ap:L.apertura,ent:L.entidad,f:L.fecha}};
 const best=(A,m)=>[conf(A,m),lend(A,m)].filter(Boolean).sort((a,b)=>a.c-b.c)[0]||null;
 const L={es:['meses','','Ejemplo para {A} € a {n} meses: cuota de {c} €, TIN {t} %, TAE {e} %. Incluye la comisión de apertura del {ap} % ({co} €), financiada. Importe total adeudado: {tot} €. Financiación de {ent}, sujeta a su aprobación. Cálculo orientativo con sus condiciones del {f}: no es una oferta vinculante.','Con esa entrada no queda nada por financiar.'],
 ca:['mesos','','Exemple per a {A} € a {n} mesos: quota de {c} €, TIN {t} %, TAE {e} %. Inclou la comissió d\\'obertura del {ap} % ({co} €), finançada. Import total degut: {tot} €. Finançament de {ent}, subjecte a la seva aprovació. Càlcul orientatiu amb les seves condicions del {f}: no és una oferta vinculant.','Amb aquesta entrada no queda res per finançar.'],
@@ -890,7 +891,7 @@ en:['months','','Example for {A} € over {n} months: monthly payment {c} €, i
 const run=()=>{const e=Math.max(0,Number(String(ent.value).replace(/[^0-9]/g,''))||0),A=P-e;
 const ok=A>0?PL.filter(m=>best(A,m)):[];
 if(!ok.length){out.textContent='';leg.textContent=A>0?'':L[3];pl.innerHTML='';go.href=go.dataset.u;return}
-if(!ok.includes(n))n=ok.includes(72)?72:ok[ok.length-1];
+if(!ok.includes(n))n=ok[ok.length-1];
 pl.innerHTML=ok.map(m=>'<label><input type="radio" name="cpl" value="'+m+'"'+(m===n?' checked':'')+'><span>'+m+'</span></label>').join('');
 pl.querySelectorAll('input').forEach(r=>r.onchange=()=>{n=+r.value;run()});
 const o=best(A,n),ta=tae(A,o.c,n);
