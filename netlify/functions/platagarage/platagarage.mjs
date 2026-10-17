@@ -98,7 +98,7 @@ async function rateLimited(ip, kind, max) {
 async function readForm(req) {
   const ct = req.headers.get('content-type') || '';
   if (ct.includes('application/json')) return await req.json();
-  const fd = await req.formData(); const o = {}; for (const [k, v] of fd) o[k] = typeof v === 'string' ? v : ''; return o;
+  const fd = await req.formData(); const o = { _files: [] }; for (const [k, v] of fd) { if (typeof v === 'string') o[k] = v; else if (v && v.size) o._files.push({ campo: k, file: v }); } return o;
 }
 // Devuelve {error} o {data} con nombre/teléfono/email validados
 function checkContact(f, { emailReq = false } = {}) {
@@ -665,14 +665,23 @@ async function api(r, req, M, ip, url, context) {
     if (!vivienda || (vivienda !== 'Sin gasto' && (gastoVivienda < 1 || gastoVivienda > 20000))) return json({ error: 'Dinos cuánto pagas de vivienda al mes.' }, 400);
     if (f.cesion !== 'si') return json({ error: 'Marca la casilla para que podamos enviar tus datos a la financiera.' }, 400);
     if (await rateLimited(ip, 'form', 8)) return json({ error: 'Has enviado demasiadas solicitudes. Escríbenos por WhatsApp.' }, 429);
+    // Nóminas (opcional): hasta 3 archivos PDF o foto, 4 MB cada uno, guardados cifrados
+    const noms = (f._files || []).filter((x) => x.campo === 'nomina');
+    if (noms.length > 3) return json({ error: 'Puedes subir como máximo 3 archivos.' }, 400);
+    const OKM = /^(application\/pdf|image\/(jpeg|png|webp|heic|heif))$/;
+    for (const x of noms) { if (!OKM.test(x.file.type || '')) return json({ error: 'La nómina tiene que ser un PDF o una foto.' }, 400); if (x.file.size > 4.2e6) return json({ error: 'Cada archivo puede pesar como máximo 4 MB.' }, 400); }
     const cars = await load('cars'); const c = cars.find((x) => x.slug === clip(f.coche, 120) && !x.sold);
     const base = { id: uid(), ...chk.data, created: new Date().toISOString(), status: 'pendiente', notas: '' };
-    const it = { ...base, ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}), fin: { dni, direccion, cp, poblacion, civil, antiguedad, salario, vivienda, gastoVivienda, cesion: base.created } };
-    // Conservación: como máximo 12 meses (política de privacidad)
-    const lim = new Date(Date.now() - 365 * 864e5).toISOString();
-    const list = (await load('financiaciones')).filter((x) => (x.created || '') > lim); list.unshift(it); await save('financiaciones', list);
+    const docs = [];
+    for (const x of noms) { const buf = Buffer.from(await x.file.arrayBuffer()); const id = 'n' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'); const iv = crypto.randomBytes(12); const ci = crypto.createCipheriv('aes-256-gcm', docKey(), iv);
+      const enc = Buffer.concat([ci.update(buf), ci.final()]); await media().set('nomina/' + id, Buffer.concat([iv, ci.getAuthTag(), enc])); docs.push({ id, nombre: clip(x.file.name, 120) || 'nomina', mime: x.file.type, size: buf.length }); }
+    const it = { ...base, ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}), fin: { dni, direccion, cp, poblacion, civil, antiguedad, salario, vivienda, gastoVivienda, cesion: base.created, docs } };
+    // Conservación: como máximo 12 meses (política de privacidad); con la solicitud se borran sus nóminas
+    const lim = new Date(Date.now() - 365 * 864e5).toISOString(); const all = await load('financiaciones');
+    for (const x of all.filter((y) => (y.created || '') <= lim)) for (const d of x.fin?.docs || []) await media().delete('nomina/' + d.id).catch(() => {});
+    const list = all.filter((x) => (x.created || '') > lim); list.unshift(it); await save('financiaciones', list);
     // En el aviso por correo solo lo justo: el DNI y los ingresos se ven en el panel
-    await notify('financiacion', { ...base, cocheNombre: it.cocheNombre, motivo: 'Solicitud de financiación' }, url.origin).catch(() => {});
+    await notify('financiacion', { ...base, cocheNombre: it.cocheNombre, motivo: 'Solicitud de financiación' + (docs.length ? ` (adjunta ${docs.length} nómina${docs.length > 1 ? 's' : ''})` : '') }, url.origin).catch(() => {});
     await bump('ev', 'form-financiacion').catch(() => {}); await bump('lp', base.origen || '/').catch(() => {}); await bump('lsrc', base.canal || 'directo').catch(() => {});
     return json({ ok: true });
   }
@@ -1298,12 +1307,18 @@ async function adminApi(r, req, M, me, url) {
       return json({ ok: true, enviado: !!ok });
     }
   }
+  if (seg[0] === 'financiaciones' && seg[2] === 'doc' && seg[3] && M === 'GET') { // nómina adjunta (descifrada solo para el panel)
+    const x = (await load('financiaciones')).find((y) => y.id === seg[1]); const meta = (x?.fin?.docs || []).find((d) => d.id === seg[3]); if (!meta) return json({ error: 'No encontrado' }, 404);
+    const r = await media().get('nomina/' + meta.id, { type: 'arrayBuffer' }); if (!r) return json({ error: 'No encontrado' }, 404);
+    const buf = Buffer.from(r); const dec = crypto.createDecipheriv('aes-256-gcm', docKey(), buf.subarray(0, 12)); dec.setAuthTag(buf.subarray(12, 28));
+    return new Response(Buffer.concat([dec.update(buf.subarray(28)), dec.final()]), { headers: { 'content-type': meta.mime || 'application/octet-stream', 'content-disposition': `inline; filename*=UTF-8''${encodeURIComponent(meta.nombre)}`, 'cache-control': 'private, no-store' } });
+  }
   const map = { reservas: 'bookings', tasaciones: 'tasaciones', envios: 'envios', financiaciones: 'financiaciones', mensajes: 'mensajes', alertas: 'alertas', busquedas: 'busquedas', portales: 'portales' };
   if (map[seg[0]]) {
     const key = map[seg[0]]; const list = await load(key);
     if (M === 'GET') return json(list);
     const i = list.findIndex((x) => x.id === seg[1]); if (i < 0) return json({ error: 'No existe' }, 404);
-    if (M === 'DELETE') { list.splice(i, 1); await save(key, list); return json({ ok: true }); }
+    if (M === 'DELETE') { for (const d of list[i].fin?.docs || []) await media().delete('nomina/' + d.id).catch(() => {}); list.splice(i, 1); await save(key, list); return json({ ok: true }); }
     if (M === 'PUT') {
       const allowed = { bookings: ['pendiente', 'confirmada', 'cancelada', 'completada'], tasaciones: ['pendiente', 'contactado', 'ofertado', 'visto', 'comprado', 'gestion', 'vendido', 'descartado', 'cerrada'], envios: ['pendiente', 'presupuesto enviado', 'aceptado', 'rechazado'], financiaciones: ['pendiente', 'enviada', 'aprobada', 'denegada', 'cerrada'], mensajes: ['pendiente', 'respondido'], alertas: ['activa', 'avisado', 'baja'], busquedas: ['pendiente', 'buscando', 'propuesto', 'cerrada'], portales: ['pendiente', 'contactado', 'cita', 'descartado'] }[key];
       if ('status' in body && allowed.includes(body.status) && body.status !== list[i].status) { const d = new Date().toISOString(); list[i].historial = [{ d, t: `Paso: ${list[i].status || 'pendiente'} → ${body.status}` }, ...(list[i].historial || [])].slice(0, 50); list[i].status = body.status; list[i].desde = d; }
