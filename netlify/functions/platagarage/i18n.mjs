@@ -57,6 +57,17 @@ export const look = (key, lang) => {
   const v = DICT[key]; if (v) return v[IDX[lang]];
   if (EXTRA && EXTRA[key]) return EXTRA[key];
   for (const [re, f] of RULES) { const m = key.match(re); if (m) return f(m)[IDX[lang]]; }
+  // Tiras de enlaces o negritas seguidas (menús, botones): se traduce cada trozo por separado
+  if (/<\/?[a-z]+>/.test(key)) {
+    const parts = key.split(/(<\/?[a-z]+>)/); let ok = true;
+    const out = parts.map((p) => {
+      if (!ok || p[0] === '<' || !LETTER.test(p)) return p;
+      const t = p.trim(), idx = []; const k = t.replace(/\{(\d+)\}/g, (m, n) => { idx.push(n); return `{${idx.length - 1}}`; });
+      const v = DICT[k]; if (!v || k === key) { ok = false; return p; }
+      return p.match(/^\s*/)[0] + v[IDX[lang]].replace(/\{(\d+)\}/g, (m, n) => `{${idx[+n]}}`) + p.match(/\s*$/)[0];
+    });
+    if (ok) return out.join('');
+  }
   return null;
 };
 
