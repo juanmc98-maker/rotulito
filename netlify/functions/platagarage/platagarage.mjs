@@ -101,7 +101,7 @@ async function readForm(req) {
   const fd = await req.formData(); const o = { _files: [] }; for (const [k, v] of fd) { if (typeof v === 'string') o[k] = v; else if (v && v.size) o._files.push({ campo: k, file: v }); } return o;
 }
 // Devuelve {error} o {data} con nombre/teléfono/email validados
-function checkContact(f, { emailReq = false } = {}) {
+function checkContact(f, { emailReq = true } = {}) { // nombre, teléfono y email obligatorios en todos los formularios
   if (f.web) return { spam: true };                                        // honeypot
   const t = Number(f.t || 0); if (!t || Date.now() - t < 3000) return { spam: true };   // enviado demasiado rápido
   if (f.privacidad !== 'si' && f.privacidad !== true && f.privacidad !== 'on') return { error: 'Debes aceptar la política de privacidad.' };
@@ -136,7 +136,7 @@ function cleanCar(b, old = {}) {
   if ('bastidor' in b) c.bastidor = clip(String(b.bastidor).toUpperCase().replace(/[\s-]/g, ''), 17);
   if ('desc' in b) c.desc = clip(b.desc, 8000);
   if ('comment' in b) c.comment = clip(b.comment, 3000);
-  ['year', 'km', 'price', 'cv', 'doors', 'seats', 'monthly', 'term', 'reserve'].forEach((k) => { if (k in b) c[k] = num(b[k]); });
+  ['year', 'km', 'price', 'cv', 'doors', 'seats', 'monthly', 'term', 'reserve', 'reserveFix'].forEach((k) => { if (k in b) c[k] = num(b[k]); });
   if ('features' in b) c.features = (Array.isArray(b.features) ? b.features : String(b.features).split('\n')).map((x) => clip(x, 120)).filter(Boolean).slice(0, 80);
   if ('images' in b) c.images = (b.images || []).filter((u) => typeof u === 'string' && u.startsWith(BASE + '/')).slice(0, 40);
   ['featured', 'sold', 'hidden'].forEach((k) => { if (k in b) c[k] = !!b[k]; });
@@ -173,7 +173,7 @@ const xesc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 function sitemap(site, cars, posts) {
   const u = (path, lastmod, img = []) => `<url><loc>${xesc(site + BASE + path)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ''}${img.slice(0, 10).map((i) => `<image:image><image:loc>${xesc(i.startsWith('http') ? i : site + i)}</image:loc></image:image>`).join('')}</url>`;
   const newest = cars.map((c) => c.updated || c.created || '').sort().pop() || today();
-  const rows = [u('/', newest), u('/vehiculos/', newest), u('/cita'), u('/te-lo-buscamos'), u('/cuanto-vale-mi-coche'), u('/preguntas-frecuentes'), u('/contacto'), u('/blog/'), u('/aviso-legal'), u('/privacidad'), u('/cookies'), u('/condiciones-de-contratacion')];
+  const rows = [u('/', newest), u('/vehiculos/', newest), u('/cita'), u('/te-lo-buscamos'), u('/cuanto-vale-mi-coche'), u('/preguntas-frecuentes'), u('/como-comprar'), u('/contacto'), u('/blog/'), u('/aviso-legal'), u('/privacidad'), u('/cookies'), u('/condiciones-de-contratacion')];
   cars.forEach((c) => rows.push(u(`/vehiculos/${c.slug}`, c.updated || c.created, c.images || [])));
   SEO.tiposConStock(cars).forEach((t) => rows.push(u(`/coches/${t.slug}`, newest)));
   SEO.marcas(cars).forEach((m) => rows.push(u(`/coches/${m.slug}`, newest)));
@@ -342,6 +342,21 @@ async function avisarBajada(c, origin) {
   if (n) await save('alertas', list);
 }
 
+// Aviso a quien pidió coches con una cuota: cuando entra (o baja) un coche que encaja, una sola vez por coche
+async function avisarCuota(c, origin) {
+  if (!env('PG_SMTP_USER') || !env('PG_SMTP_PASS') || c.sold || c.hidden || c.status === 'reservado') return;
+  const list = await load('alertas'); const cand = list.filter((a) => a.tipo === 'cuota' && a.status === 'activa' && !(a.avisados || []).includes(c.slug)); if (!cand.length) return;
+  V.setCtx({ holders: await load('holders') }); V.setTarifa(await load('tarifas')); const q = V.cuotaDesde(c); if (!q) return;
+  const nm = `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''} (${c.year})`, fichaUrl = `${origin}${BASE}/vehiculos/${c.slug}`, cu = Math.round(q.c); let n = 0;
+  for (const a of cand.filter((x) => q.c <= x.cuota)) {
+    const baja = `${origin}${BASE}/api/baja?id=${a.id}&k=${sign('baja|' + a.id).slice(0, 22)}`;
+    const ok = await sendMail({ to: a.email, subject: `Ha entrado un coche desde ${cu} €/mes: ${nm} · Plata Garage`, text: `Hola${a.nombre ? ' ' + a.nombre : ''},\n\nNos pediste que te avisáramos de coches con cuota de hasta ${a.cuota} € al mes. Acaba de entrar el ${nm}, desde ${cu} €/mes sin entrada (cuota orientativa, sujeta a la aprobación de la financiera; tienes el ejemplo completo en la ficha).\n\nFotos, datos y cuota: ${fichaUrl}\n\nUn saludo,\nPlata Garage · 660 49 32 28\n\nSi no quieres más avisos: ${baja}`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111"><p>Hola${a.nombre ? ' ' + hesc(a.nombre) : ''},</p><p>Nos pediste que te avisáramos de coches con cuota de hasta <b>${a.cuota} € al mes</b>. Acaba de entrar el <b>${hesc(nm)}</b>, desde <b>${cu} €/mes</b> sin entrada.</p><p style="font-size:12px;color:#555">Cuota orientativa, sujeta a la aprobación de la financiera. Tienes el ejemplo completo con TIN y TAE en la ficha.</p><p><a href="${fichaUrl}" style="display:inline-block;background:#f76806;color:#000;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px">Ver el coche</a></p><p>Un saludo,<br>Plata Garage · 660 49 32 28</p><p style="font-size:12px;color:#777">Si no quieres más avisos, <a href="${baja}">date de baja aquí</a>.</p></div>` }).catch(() => false);
+    if (ok) { a.avisados = [...(a.avisados || []), c.slug].slice(-50); a.avisadoEl = today(); n++; }
+  }
+  if (n) await save('alertas', list);
+}
+
 // ---------- router ----------
 const inner = async (req, context) => {
   const url = new URL(req.url);
@@ -376,6 +391,7 @@ const inner = async (req, context) => {
     const site = (env('PG_SITE_URL') || url.origin).replace(/\/+$/, '');
     V.setCtx({ site, index: INDEX(), gtag: clip(env('PG_GTAG_ID'), 20), pixel: clip(env('PG_META_PIXEL'), 20), clarity: clip(env('PG_CLARITY') || 'yx42pl2vd4', 20), gsv: clip(env('PG_GSV'), 80) });
     const [cars, holdersPub, tarifasPub] = await Promise.all([load('cars'), load('holders'), load('tarifas')]);
+    cars.forEach((c) => { c.reserve = V.senalDe(c); }); // señal automática según precio, o la puesta a mano en el panel
     V.setCtx({ holders: holdersPub }); V.setTarifa(tarifasPub);
     if (sub === '/robots.txt') return text(`User-agent: *\n${INDEX() ? `Allow: /\nDisallow: ${BASE}/admin\nDisallow: ${BASE}/api/\nDisallow: ${BASE}/gracias\nDisallow: /ca/gracias\nDisallow: /en/gracias\nDisallow: /reservar\nDisallow: /ca/reservar\nDisallow: /en/reservar\nDisallow: /financiar\nDisallow: /ca/financiar\nDisallow: /en/financiar\nDisallow: /favoritos\nDisallow: /ca/favoritos\nDisallow: /en/favoritos\nDisallow: /*/cartel\n` : 'Disallow: /\n'}\nSitemap: ${site}${BASE}/sitemap.xml\n`, 'text/plain');
     if (sub === `/${INDEXNOW_KEY}.txt`) return text(INDEXNOW_KEY, 'text/plain');
@@ -384,6 +400,7 @@ const inner = async (req, context) => {
     if (sub === '/') return html(V.home({ cars: pubCars(cars), sched: await load('schedule') }));
     if (sub === '/vehiculos') return html(V.catalog({ cars: pubCars(cars), q: Object.fromEntries(url.searchParams), vendido: url.searchParams.get('vendido') ? cars.find((c) => c.slug === url.searchParams.get('vendido') && c.sold) || null : null }));
     if (sub === '/preguntas-frecuentes') return html(V.faqPage({ cars: pubCars(cars) }));
+    if (sub === '/como-comprar') return html(V.comoComprar({ cars: pubCars(cars) }));
     if (sub.startsWith('/coches-segunda-mano-')) {
       const z = SEO.ZONAS.find((x) => x.slug === sub.slice(21));
       if (!z) return redirect(`${BASE}/vehiculos/`);
@@ -596,11 +613,13 @@ async function api(r, req, M, ip, url, context) {
     const f = await readForm(req);
     if (f.web || !Number(f.t) || Date.now() - Number(f.t) < 2500) return json({ ok: true });
     const email = clip(f.email, 200).toLowerCase(); if (!email || !isEmail(email)) return json({ error: 'Escribe un email válido.' }, 400);
+    const nombre = clip(f.nombre, 80); if (!isName(nombre)) return json({ error: 'Escribe tu nombre.' }, 400);
+    const telefono = normPhone(f.telefono); if (!telefono) return json({ error: 'Escribe un teléfono válido.' }, 400);
     if (f.consent !== 'si') return json({ error: 'Marca la casilla para que podamos avisarte.' }, 400);
     if (await rateLimited(ip, 'alerta', 5)) return json({ error: 'Demasiadas solicitudes. Prueba más tarde.' }, 429);
     const list = await load('alertas');
     const coche = clip(f.coche, 120); const car = coche ? (await load('cars')).find((x) => x.slug === coche && !x.sold) : null;
-    const it = { canal: clip(f.canal, 60), id: uid('a'), email, busca: car ? `Bajada de precio: ${car.brand} ${car.model} (${car.year})` : clip(f.busca, 120), max: num(f.max), created: new Date().toISOString(), status: 'activa', origen: clip(f.origen, 120), ...(car ? { coche: car.slug, tipo: 'precio', precio: car.price } : {}) };
+    const it = { canal: clip(f.canal, 60), id: uid('a'), nombre, telefono, email, busca: car ? `Bajada de precio: ${car.brand} ${car.model} (${car.year})` : clip(f.busca, 120), max: num(f.max), created: new Date().toISOString(), status: 'activa', origen: clip(f.origen, 120), ...(car ? { coche: car.slug, tipo: 'precio', precio: car.price } : {}) };
     const i = list.findIndex((x) => x.email === email && (x.coche || '') === (it.coche || '')); if (i >= 0) list[i] = { ...list[i], ...it, id: list[i].id }; else list.unshift(it);
     await save('alertas', list); await notify('alerta', it, url.origin).catch(() => {}); await bump('lp', (it.origen || '/').split('?')[0]).catch(() => {}); await bump('lsrc', it.canal || 'directo').catch(() => {}); return json({ ok: true });
   }
@@ -619,7 +638,7 @@ async function api(r, req, M, ip, url, context) {
     if (poblacion.length < 2) return json({ error: 'Escribe tu población.' }, 400);
     if (f.condiciones !== 'si') return json({ error: 'Marca que has leído las condiciones de la reserva.' }, 400);
     if (await rateLimited(ip, 'form', 8)) return json({ error: 'Has enviado demasiadas solicitudes. Escríbenos por WhatsApp.' }, 429);
-    const cars = await load('cars'); const c = cars.find((x) => x.slug === clip(f.coche, 120) && !x.sold && !x.hidden);
+    const cars = await load('cars'); const c = cars.find((x) => x.slug === clip(f.coche, 120) && !x.sold && !x.hidden); if (c) c.reserve = V.senalDe(c);
     if (!c || !(c.reserve > 0)) return json({ error: 'Este coche ya no se puede reservar desde la web. Escríbenos por WhatsApp.' }, 409);
     const base = { id: uid(), ...chk.data, created: new Date().toISOString(), status: 'pendiente', notas: '' };
     const it = { ...base, tipo: 'reserva', motivo: 'Reservar este coche', mensaje: clip(f.mensaje, 1000), coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), res: { dni, direccion, cp, poblacion, condiciones: base.created } };
@@ -643,6 +662,71 @@ async function api(r, req, M, ip, url, context) {
       await sendMail({ subject: `Señal pagada (revisar banco) — ${b.nombre} (${b.cocheNombre})`, text: `${b.nombre} dice que ha pagado la señal de ${b.senal || ''} € del ${b.cocheNombre}.\nConcepto: ${V.conceptoReserva(b, b.carSnap || {})}\n\nRevisa el banco y, si ha entrado, confirma la reserva en el panel: ${url.origin}${BASE}/admin#reservas/todas` }).catch(() => {});
     }
     return json({ ok: true });
+  }
+
+  if (r === '/cuota' && M === 'POST') { // el cliente pide que le enviemos la cuota calculada (y, si quiere, avisos de coches con esa cuota)
+    const f = await readForm(req);
+    const chk = checkContact(f);
+    if (chk.spam) return json({ ok: true });
+    if (chk.error) return json({ error: chk.error }, 400);
+    if (await rateLimited(ip, 'form', 8)) return json({ error: 'Has enviado demasiadas solicitudes. Escríbenos por WhatsApp.' }, 429);
+    const cars = await load('cars'); const c = cars.find((x) => x.slug === clip(f.coche, 120) && !x.sold && !x.hidden);
+    if (!c) return json({ error: 'Este coche ya no está disponible.' }, 409);
+    V.setCtx({ holders: await load('holders') }); V.setTarifa(await load('tarifas'));
+    const ent = Math.max(0, Math.round(Number(String(f.entrada || '').replace(/[.\s€]/g, '')) || 0)), A = Number(c.price) + V.cambioNombre(c) - ent;
+    let n = V.PLAZOS.includes(Number(f.plazo)) ? Number(f.plazo) : 0; let q = n ? V.cuotaPara(c, A, n) : null; if (!q) { q = V.cuotaDesde(c); n = q ? q.n : 0; }
+    if (!q || A <= 0) return json({ error: 'No hemos podido calcular la cuota de este coche. Escríbenos por WhatsApp.' }, 400);
+    const eurf = (v, d = 2) => new Intl.NumberFormat('es-ES', { useGrouping: 'always', minimumFractionDigits: d, maximumFractionDigits: d }).format(v) + ' €';
+    const nm = `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''} (${c.year})`, fichaUrl = `${url.origin}${BASE}/vehiculos/${c.slug}`;
+    const ej = `Ejemplo para ${eurf(A, 0)} a ${n} meses${ent ? ` (con ${eurf(ent, 0)} de entrada)` : ''}: cuota de ${eurf(q.c)}, TIN ${q.t.toFixed(2).replace('.', ',')} %, TAE ${q.tae.toFixed(2).replace('.', ',')} %. Incluye el cambio de nombre y la comisión de apertura del ${q.ap} % financiada. Importe total adeudado: ${eurf(q.c * n)}. Financiación de ${q.ent}, sujeta a su aprobación. Cálculo orientativo con sus condiciones del ${q.f}: no es una oferta vinculante.`;
+    await sendMail({ to: chk.data.email, subject: `Tu cuota para el ${nm} · Plata Garage`, text: `Hola ${chk.data.nombre},\n\nEsta es la cuota que has calculado para el ${nm}: ${eurf(q.c)} al mes durante ${n} meses.\n\n${ej}\n\nCuando quieras, pides la financiación desde la ficha en 2 minutos y nosotros la tramitamos: ${fichaUrl}\n\nUn saludo,\nPlata Garage · 660 49 32 28`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111"><p>Hola ${hesc(chk.data.nombre)},</p><p>Esta es la cuota que has calculado para el <b>${hesc(nm)}</b>:</p><p style="font-size:26px;margin:8px 0"><b>${eurf(q.c)}</b> al mes · ${n} meses</p><p style="font-size:12px;color:#555">${hesc(ej)}</p><p>Cuando quieras, pides la financiación desde la ficha en 2 minutos y nosotros la tramitamos.</p><p><a href="${fichaUrl}" style="display:inline-block;background:#f76806;color:#000;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px">Ver el coche y pedir la financiación</a></p><p>Un saludo,<br>Plata Garage · 660 49 32 28</p></div>` }).catch((e) => console.error('cuota', e.message));
+    const base = { id: uid(), ...chk.data, created: new Date().toISOString(), status: 'pendiente', notas: '' };
+    const msgs = await load('mensajes'); msgs.unshift({ ...base, asunto: 'Pidió su cuota por email', mensaje: `${nm}: ${eurf(q.c)}/mes a ${n} meses${ent ? `, entrada ${eurf(ent, 0)}` : ''} (${q.fin === 'lendrock' ? 'Lendrock' : 'Confía'})${f.avisos === 'si' ? '. Quiere avisos de coches con esa cuota o menos.' : ''}`, coche: c.slug, cocheNombre: nm, leido: false }); await save('mensajes', msgs);
+    if (f.avisos === 'si') { const al = await load('alertas'); const tope = Math.ceil(q.c / 10) * 10;
+      const it = { id: uid('a'), nombre: chk.data.nombre, telefono: chk.data.telefono, email: chk.data.email, tipo: 'cuota', cuota: tope, busca: `Coches con cuota hasta ${tope} €/mes`, created: base.created, status: 'activa', origen: base.origen, canal: base.canal, avisados: [c.slug] };
+      const i = al.findIndex((x) => x.email === it.email && x.tipo === 'cuota'); if (i >= 0) al[i] = { ...al[i], ...it, id: al[i].id, avisados: [...new Set([...(al[i].avisados || []), c.slug])] }; else al.unshift(it); await save('alertas', al); }
+    await notify('mensaje', { ...base, cocheNombre: nm, motivo: 'Pidió su cuota por email' + (f.avisos === 'si' ? ' y avisos de coches con esa cuota' : '') }, url.origin).catch(() => {});
+    await bump('ev', 'form-cuota').catch(() => {}); return json({ ok: true });
+  }
+
+  if (r === '/favoritos' && M === 'POST') { // el cliente se envía sus favoritos por email (y, si quiere, avisos de bajada de precio)
+    const f = await readForm(req);
+    const chk = checkContact(f);
+    if (chk.spam) return json({ ok: true });
+    if (chk.error) return json({ error: chk.error }, 400);
+    if (await rateLimited(ip, 'form', 8)) return json({ error: 'Has enviado demasiadas solicitudes. Escríbenos por WhatsApp.' }, 429);
+    const slugs = String(f.coches || '').split(',').map((s) => clip(s, 120)).filter(Boolean).slice(0, 30);
+    const cars = (await load('cars')).filter((c) => slugs.includes(c.slug) && !c.sold && !c.hidden);
+    if (!cars.length) return json({ error: 'No tienes coches guardados que sigan a la venta.' }, 400);
+    const eurf = (v) => new Intl.NumberFormat('es-ES', { useGrouping: 'always' }).format(v) + ' €';
+    const nm = (c) => `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''} (${c.year})`, lk = (c) => `${url.origin}${BASE}/vehiculos/${c.slug}`;
+    const cmp = cars.length > 1 ? `${url.origin}${BASE}/comparar?c=${cars.slice(0, 3).map((c) => c.slug).join(',')}` : '';
+    await sendMail({ to: chk.data.email, subject: `Tus coches guardados · Plata Garage`, text: `Hola ${chk.data.nombre},\n\nEstos son los coches que has guardado:\n\n${cars.map((c) => `- ${nm(c)} · ${eurf(c.price)} · ${lk(c)}`).join('\n')}${cmp ? `\n\nCompáralos: ${cmp}` : ''}\n\nUn saludo,\nPlata Garage · 660 49 32 28`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111"><p>Hola ${hesc(chk.data.nombre)},</p><p>Estos son los coches que has guardado:</p><ul style="padding-left:18px">${cars.map((c) => `<li style="margin-bottom:8px"><a href="${lk(c)}" style="color:#f76806;font-weight:bold">${hesc(nm(c))}</a> · ${eurf(c.price)}</li>`).join('')}</ul>${cmp ? `<p><a href="${cmp}" style="display:inline-block;background:#f76806;color:#000;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px">Compararlos</a></p>` : ''}<p>Un saludo,<br>Plata Garage · 660 49 32 28</p></div>` }).catch((e) => console.error('favs', e.message));
+    const base = { id: uid(), ...chk.data, created: new Date().toISOString(), status: 'pendiente', notas: '' };
+    const msgs = await load('mensajes'); msgs.unshift({ ...base, asunto: 'Se envió sus favoritos', mensaje: cars.map(nm).join(' · ') + (f.avisos === 'si' ? '. Quiere avisos si bajan de precio.' : ''), leido: false }); await save('mensajes', msgs);
+    if (f.avisos === 'si') { const al = await load('alertas');
+      for (const c of cars) { const it = { id: uid('a'), nombre: chk.data.nombre, telefono: chk.data.telefono, email: chk.data.email, busca: `Bajada de precio: ${c.brand} ${c.model} (${c.year})`, coche: c.slug, tipo: 'precio', precio: c.price, created: base.created, status: 'activa', origen: base.origen, canal: base.canal };
+        const i = al.findIndex((x) => x.email === it.email && x.coche === c.slug); if (i >= 0) al[i] = { ...al[i], ...it, id: al[i].id }; else al.unshift(it); }
+      await save('alertas', al); }
+    await notify('mensaje', { ...base, motivo: `Se envió sus ${cars.length} favoritos por email` }, url.origin).catch(() => {});
+    await bump('ev', 'form-favoritos').catch(() => {}); return json({ ok: true });
+  }
+
+  if (r === '/financiacion-parcial' && M === 'POST') { // solo el contacto del primer paso, por si no termina el formulario
+    const f = await readForm(req);
+    const chk = checkContact(f);
+    if (chk.spam) return json({ ok: true });
+    if (chk.error) return json({ error: chk.error }, 400);
+    if (await rateLimited(ip, 'parcial', 10)) return json({ ok: true });
+    const cars = await load('cars'); const c = cars.find((x) => x.slug === clip(f.coche, 120) && !x.sold);
+    const list = await load('financiaciones'); const pid = clip(f.pid, 40);
+    const prev = pid ? list.find((x) => x.id === pid && x.status === 'incompleta') : null;
+    const it = { ...(prev || { id: uid(), created: new Date().toISOString(), notas: '' }), ...chk.data, status: 'incompleta', ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}) };
+    if (prev) Object.assign(prev, it); else list.unshift(it);
+    await save('financiaciones', list); await bump('ev', 'fin-parcial').catch(() => {});
+    return json({ ok: true, id: it.id });
   }
 
   if (r === '/financiacion' && M === 'POST') {
@@ -684,7 +768,7 @@ async function api(r, req, M, ip, url, context) {
     // Conservación: como máximo 12 meses (política de privacidad); con la solicitud se borran sus nóminas
     const lim = new Date(Date.now() - 365 * 864e5).toISOString(); const all = await load('financiaciones');
     for (const x of all.filter((y) => (y.created || '') <= lim)) for (const d of x.fin?.docs || []) await media().delete('nomina/' + d.id).catch(() => {});
-    const list = all.filter((x) => (x.created || '') > lim); list.unshift(it); await save('financiaciones', list);
+    const pidF = clip(f.pid, 40); const list = all.filter((x) => (x.created || '') > lim && !(pidF && x.id === pidF && x.status === 'incompleta')); list.unshift(it); await save('financiaciones', list);
     // En el aviso por correo solo lo justo: el DNI y los ingresos se ven en el panel
     await notify('financiacion', { ...base, cocheNombre: it.cocheNombre, motivo: 'Solicitud de financiación' + (docs.length ? ` (adjunta ${docs.length} nómina${docs.length > 1 ? 's' : ''})` : '') }, url.origin).catch(() => {});
     await bump('ev', 'form-financiacion').catch(() => {}); await bump('lp', base.origen || '/').catch(() => {}); await bump('lsrc', base.canal || 'directo').catch(() => {});
@@ -693,7 +777,7 @@ async function api(r, req, M, ip, url, context) {
 
   if (['/cita', '/tasacion', '/envio', '/mensaje', '/busqueda'].includes(r) && M === 'POST') {
     const f = await readForm(req);
-    const chk = checkContact(f, { emailReq: r === '/cita' });
+    const chk = checkContact(f);
     if (chk.spam) return json({ ok: true }); // no damos pistas al bot
     if (chk.error) return json({ error: chk.error }, 400);
     if (await rateLimited(ip, 'form', 8)) return json({ error: 'Has enviado demasiadas solicitudes. Escríbenos por WhatsApp.' }, 429);
@@ -870,7 +954,7 @@ async function hit(req, context) {
   }
   else if (b.e === 'cmp') { const par = String(b.c || '').split('+').map((x) => clip(x, 120)).filter(Boolean).slice(0, 3); if (par.length > 1) { inc('tot', 'comparaciones'); inc('cmppar', par.join('+')); } }
   else if (b.e === 'cmpc') { inc('tot', 'cmpcontacto'); inc('cmpk', b.k === 'wa' ? 'WhatsApp' : 'Pedir cita'); if (b.c) inc('cmpcar', clip(b.c, 120)); }
-  else if (b.e === 'calc') { const k = clip(b.k, 12); if (/^(uso|entrada|solicitar|p\d{2,3}|f\d{3})$/.test(k)) { inc('calc', k); if (b.c && (k === 'uso' || k === 'solicitar')) inc('calccar', `${clip(b.c, 120)}|${k}`); } }
+  else if (b.e === 'calc') { const k = clip(b.k, 12); if (/^(uso|entrada|solicitar|email|p\d{2,3}|f\d{3})$/.test(k)) { inc('calc', k); if (b.c && (k === 'uso' || k === 'solicitar')) inc('calccar', `${clip(b.c, 120)}|${k}`); } }
   else if (['wa', 'tel', 'pdf'].includes(b.e)) { inc('ev', b.e); if (b.c) inc('carev', `${clip(b.c, 120)}|${b.e}`); }
   await db().setJSON(k, st);
 }
@@ -916,7 +1000,7 @@ async function adminApi(r, req, M, me, url) {
       ultimasReservas: [...b].sort((a, z) => String(z.created || '').localeCompare(String(a.created || ''))).slice(0, 5),
       manana: b.filter((x) => x.fecha === addDays(td, 1) && x.status !== 'cancelada').sort((a, z) => a.hora.localeCompare(z.hora)),
       tasacionesNuevas: t.filter((x) => x.status === 'pendiente').length, ultimasTasaciones: t.slice(0, 5),
-      enviosPendientes: e.filter((x) => x.status === 'pendiente').length, mensajesSinLeer: m.filter((x) => !x.leido).length, alertasActivas: al.filter((x) => x.status === 'activa').length, busquedasPendientes: bu.filter((x) => x.status === 'pendiente').length, financiacionesPendientes: fi.filter((x) => x.status === 'pendiente').length, financiacionesSinContestar: fi.filter((x) => x.status === 'pendiente' && Date.now() - Date.parse(x.created || '') > 2 * 3600e3).map((x) => ({ nombre: x.nombre, telefono: x.telefono, cocheNombre: x.cocheNombre || 'Sin coche decidido', created: x.created })),
+      enviosPendientes: e.filter((x) => x.status === 'pendiente').length, mensajesSinLeer: m.filter((x) => !x.leido).length, alertasActivas: al.filter((x) => x.status === 'activa').length, busquedasPendientes: bu.filter((x) => x.status === 'pendiente').length, financiacionesPendientes: fi.filter((x) => x.status === 'pendiente' || x.status === 'incompleta').length, financiacionesSinContestar: fi.filter((x) => (x.status === 'pendiente' || x.status === 'incompleta') && Date.now() - Date.parse(x.created || '') > 2 * 3600e3).map((x) => ({ nombre: x.nombre, telefono: x.telefono, cocheNombre: x.cocheNombre || 'Sin coche decidido', created: x.created })),
       valorStock: cars.filter((c) => !c.sold).reduce((s, c) => s + (c.price || 0), 0),
       porDueno: ['Cristina', 'Juan', ''].map((o) => { const l = cars.filter((c) => !c.sold && (c.owner || '') === o); return { o: o || 'Sin asignar', n: l.length, v: l.reduce((s, c) => s + (c.price || 0), 0) }; }).filter((x) => x.n),
     });
@@ -929,7 +1013,7 @@ async function adminApi(r, req, M, me, url) {
     if (M === 'POST' && !seg[1]) {
       const c = cleanCar(body, { id: uid('c'), featured: false, sold: false, images: [], features: [], status: 'disponible', created: today(), llegada: today() });
       const e = carErrors(c); if (e.length) return json({ error: 'Faltan datos: ' + e.join(', ') }, 400);
-      c.slug = uniqueSlug(cars, c); c.updated = today(); await holderPorDueno(c); cars.unshift(c); await save('cars', cars); if (!c.hidden) await indexNow(url.origin, [c.slug]); return json(c);
+      c.slug = uniqueSlug(cars, c); c.updated = today(); await holderPorDueno(c); cars.unshift(c); await save('cars', cars); if (!c.hidden) { await indexNow(url.origin, [c.slug]); await avisarCuota(c, url.origin).catch((e) => console.error('cuota', e.message)); } return json(c);
     }
     const i = cars.findIndex((x) => x.id === seg[1]); if (i < 0) return json({ error: 'No existe' }, 404);
     if (M === 'DELETE') { const [old] = cars.splice(i, 1); await save('cars', cars); await dropMedia(old.images); if (old.video?.url) await dropVideo(old.video.url); await indexNow(url.origin, [old.slug]); return json({ ok: true }); }
@@ -951,6 +1035,7 @@ async function adminApi(r, req, M, me, url) {
       if (chg.length) c.log = [...(old.log || []), { d: new Date().toISOString(), by: me.name, t: chg.join(', ') }].slice(-60);
       c.updated = today(); cars[i] = c; await save('cars', cars);
       if (!c.sold && !c.hidden && old.price && c.price < old.price) await avisarBajada(c, url.origin).catch((e) => console.error('bajada', e.message));
+      if (!c.sold && !c.hidden) await avisarCuota(c, url.origin).catch((e) => console.error('cuota', e.message));
       await dropMedia((old.images || []).filter((u) => !(c.images || []).includes(u)));
       if (old.video?.url && old.video.url !== c.video?.url) await dropVideo(old.video.url);
       await indexNow(url.origin, [c.slug]);
