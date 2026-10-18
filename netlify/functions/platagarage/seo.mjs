@@ -1,4 +1,8 @@
 // Páginas de SEO local: zonas del Vallès, tipos de coche y marcas (se generan solas a partir del stock)
+// Cuota «desde» de cada coche (la pone views.mjs con las tarifas de las financieras)
+let CUOTA = () => null;
+export const setCuota = (f) => { CUOTA = f; };
+export const cuotaDe = (c) => { const q = CUOTA(c); return q ? q.c : null; };
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 // Distancias en línea recta desde el centro de Sabadell, redondeadas (orientativas)
@@ -53,6 +57,11 @@ export const TIPOS = [
   { slug: 'menos-de-10000', h: 'Coches por menos de 10.000 €', f: (c) => c.price <= 10000, txt: 'Coches de segunda mano por menos de 10.000 €, revisados y con garantía de 12 meses.' },
   { slug: 'menos-de-15000', h: 'Coches por menos de 15.000 €', f: (c) => c.price <= 15000, txt: 'Coches de segunda mano por menos de 15.000 €, revisados y con garantía de 12 meses.' },
   { slug: 'menos-de-20000', h: 'Coches por menos de 20.000 €', f: (c) => c.price <= 20000, txt: 'Coches de segunda mano por menos de 20.000 €, revisados y con garantía de 12 meses.' },
+  // Por cuota: sin entrada, al plazo más largo y con la financiera más barata para cada coche
+  { slug: 'menos-de-150-al-mes', cuota: 150, h: 'Coches por menos de 150 € al mes', f: (c) => { const q = cuotaDe(c); return q != null && q <= 150; }, txt: 'Coches de segunda mano con cuota de menos de 150 € al mes, financiados sin entrada.' },
+  { slug: 'menos-de-200-al-mes', cuota: 200, h: 'Coches por menos de 200 € al mes', f: (c) => { const q = cuotaDe(c); return q != null && q <= 200; }, txt: 'Coches de segunda mano con cuota de menos de 200 € al mes, financiados sin entrada.' },
+  { slug: 'menos-de-250-al-mes', cuota: 250, h: 'Coches por menos de 250 € al mes', f: (c) => { const q = cuotaDe(c); return q != null && q <= 250; }, txt: 'Coches de segunda mano con cuota de menos de 250 € al mes, financiados sin entrada.' },
+  { slug: 'menos-de-300-al-mes', cuota: 300, h: 'Coches por menos de 300 € al mes', f: (c) => { const q = cuotaDe(c); return q != null && q <= 300; }, txt: 'Coches de segunda mano con cuota de menos de 300 € al mes, financiados sin entrada.' },
   { slug: 'pocos-kilometros', h: 'Coches con pocos kilómetros', f: (c) => c.km != null && c.km <= 80000, txt: 'Coches de segunda mano con menos de 80.000 km.' },
 ];
 
@@ -80,6 +89,12 @@ export const EXTRA = {
   },
 };
 
+// Texto propio de las páginas por cuota
+for (const t of TIPOS.filter((x) => x.cuota)) EXTRA[t.slug] = {
+  p: ['La cuota de cada coche la calculamos con las tarifas reales de las financieras con las que trabajamos (Confía y Lendrock), sin entrada y al plazo más largo que permite cada coche según su antigüedad. Ya incluye el cambio de nombre y la comisión de apertura.', 'Si das entrada o eliges menos meses, la cuota cambia. En la ficha de cada coche tienes la calculadora para verlo al momento y pedir la financiación en 2 minutos, sin compromiso.'],
+  faq: [['¿La cuota es definitiva?', 'Es orientativa. La financiera estudia cada caso y la aprobación depende de ella. Te confirmamos la cuota final antes de firmar nada.'], ['¿Hace falta dar entrada?', 'No. Las cuotas de esta página son sin entrada. Si das entrada, la cuota baja.'], ['¿Cómo pido la financiación?', 'Desde la ficha del coche: rellenas tus datos en 2 minutos, nosotros lo tramitamos con la financiera y te decimos la respuesta.']],
+};
+
 export const slugBrand = (b) => norm(b).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 export function marcas(cars) {
   const m = new Map(); cars.forEach((c) => { const s = slugBrand(c.brand); if (!m.has(s)) m.set(s, { slug: s, name: c.brand, n: 0 }); m.get(s).n++; });
@@ -88,7 +103,7 @@ export function marcas(cars) {
 // Resuelve /coches/<slug> → {kind, h1, cars, txt}
 export function landing(slug, cars) {
   const t = TIPOS.find((x) => x.slug === slug);
-  if (t) return { kind: 'tipo', slug, h: t.h, txt: t.txt, cars: cars.filter(t.f) };
+  if (t) return { kind: 'tipo', slug, h: t.h, txt: t.txt, cuota: t.cuota || 0, cars: cars.filter(t.f) };
   const mk = marcas(cars).find((x) => x.slug === slug);
   if (mk) return { kind: 'marca', slug, h: `${mk.name}`, txt: `${mk.name} de segunda mano en stock en Sabadell, revisados y con garantía de 12 meses.`, cars: cars.filter((c) => slugBrand(c.brand) === slug), brand: mk.name };
   return null;
