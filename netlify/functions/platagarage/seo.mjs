@@ -7,13 +7,24 @@ const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 
 // Distancias en línea recta desde el centro de Sabadell, redondeadas (orientativas)
 // Solo estas zonas se indexan (las demás quedan con noindex,follow y fuera del sitemap: evitan páginas casi iguales)
-export const ZONAS_IDX = ['sabadell', 'terrassa', 'sant-cugat', 'barbera-del-valles'];
+export const ZONAS_IDX = ['sabadell', 'terrassa', 'sant-cugat', 'barbera-del-valles', 'cerdanyola', 'rubi', 'mollet-del-valles', 'barcelona', 'badalona', 'granollers', 'martorell', 'mataro', 'manresa', 'vilafranca-del-penedes', 'igualada'];
 // Texto propio de cada zona indexable
 export const ZONA_MAS = {
   sabadell: 'Somos una compraventa pequeña de Sabadell: cada coche lo elegimos nosotros, lo revisamos en taller y le cambiamos el aceite antes de entregarlo. Atendemos con cita para enseñarte el coche con calma, sin prisas y sin colas, y si te encaja lo puedes reservar con una señal que se descuenta del precio.',
   terrassa: 'Entre Terrassa y Sabadell hay unos 9 km por la C-58, así que puedes venir a ver el coche en la misma tarde. Si lo prefieres, te mandamos antes por WhatsApp las fotos y los datos que nos pidas para que no hagas el viaje en balde.',
   'sant-cugat': 'Desde Sant Cugat se llega a Sabadell en pocos minutos. En el stock puedes filtrar por automáticos, SUV o precio para ver solo lo que te encaja y pedir cita para ese coche.',
   'barbera-del-valles': 'Barberà del Vallès y Sabadell están pegadas, así que es la visita más cómoda: pide cita a la hora que te vaya bien y te tenemos el coche preparado.',
+  cerdanyola: 'Cerdanyola del Vallès está a unos 7 km, así que es fácil venir a ver el coche al salir del trabajo. Pide cita y te lo tenemos preparado, con la ficha y los papeles a mano y la garantía de 12 meses explicada.',
+  rubi: 'Desde Rubí se llega a Sabadell en pocos minutos. Si buscas algo concreto que ahora no tenemos, dínoslo en «Te lo buscamos» y te avisamos cuando entre un coche que encaje.',
+  'mollet-del-valles': 'Mollet del Vallès está a un paso de Sabadell. Pide cita a la hora que te vaya bien y te tenemos el coche preparado; si quieres asegurarlo antes de venir, lo puedes reservar con una señal que se descuenta del precio.',
+  barcelona: 'Mucha gente de Barcelona viene a Sabadell a buscar coche: te enseñamos el coche con calma, con cita y sin colas. Si no te va bien subir, pídenos presupuesto para llevártelo a casa; y si lo vas a financiar, la solicitud la haces desde la ficha del coche sin moverte.',
+  badalona: 'Desde Badalona estás a unos 16 km de Sabadell en línea recta. Mira el stock, calcula la cuota de cada coche en su ficha y pide cita para venir a verlo; si no puedes venir, te pasamos presupuesto de envío.',
+  granollers: 'Entre Granollers y Sabadell hay unos 16 km. Si estás en el Vallès Oriental, pide cita el día que te vaya bien y te enseñamos el coche sin prisas; y si tienes coche, te lo valoramos como parte de pago.',
+  martorell: 'Desde Martorell tienes Sabadell a unos 17 km. Te enseñamos el coche con cita, sin colas, y si lo necesitas tramitamos nosotros la financiación con la entidad.',
+  mataro: 'Desde Mataró y el Maresme, Sabadell queda a unos 28 km en línea recta. Mira el stock con calma en la web, filtra por cuota al mes si vas a financiar y, cuando tengas uno claro, pide cita para venir a verlo.',
+  manresa: 'Desde Manresa y el Bages, Sabadell queda a unos 30 km en línea recta. Para que no hagas el viaje en balde, antes de venir te resolvemos por WhatsApp las dudas del coche que te interese y te lo tenemos preparado a la hora de la cita.',
+  'vilafranca-del-penedes': 'Si eres de Vilafranca del Penedès, puedes hacer casi todo a distancia: calcular la cuota, pedir la financiación y reservar el coche con la señal. Cuando esté todo listo, vienes a recogerlo o te pasamos presupuesto para llevártelo.',
+  igualada: 'Si vienes desde Igualada o el Anoia, te recomendamos reservar antes el coche que te interese para no encontrarte con que se ha vendido: la señal se descuenta del precio y, si lo compras con financiación y no te la aprueban, te la devolvemos.',
 };
 export const ZONAS = [
   { slug: 'sabadell', name: 'Sabadell', km: 0, txt: 'Estamos en Sabadell. Si eres de aquí, pide cita y ven a ver el coche con calma, el día y la hora que mejor te vayan.' },
@@ -29,6 +40,14 @@ export const ZONAS = [
   { slug: 'polinya', name: 'Polinyà', km: 4, txt: 'Desde Polinyà llegas a Sabadell en nada. Pide cita y ven a ver el coche cuando te vaya bien.' },
   { slug: 'rubi', name: 'Rubí', km: 9, txt: 'Si eres de Rubí, Sabadell te queda a pocos minutos. Elige día y hora y te atendemos personalmente.' },
   { slug: 'montcada-i-reixac', name: 'Montcada i Reixac', km: 10, txt: 'Desde Montcada i Reixac estás cerca de Sabadell por la C-58. Pide cita y ven a ver el coche sin prisas.' },
+  { slug: 'mollet-del-valles', name: 'Mollet del Vallès', km: 9, txt: 'Mollet del Vallès está al lado de Sabadell. Pide cita y ven a ver el coche cuando te vaya bien.' },
+  { slug: 'badalona', name: 'Badalona', km: 16, txt: 'Desde Badalona llegas a Sabadell sin complicaciones. Pide cita para ver el coche o pide el envío a casa.' },
+  { slug: 'granollers', name: 'Granollers', km: 16, txt: 'Desde Granollers llegas a Sabadell en poco rato. Elige día y hora y ven a ver el coche sin prisas.' },
+  { slug: 'martorell', name: 'Martorell', km: 17, txt: 'Desde Martorell llegas a Sabadell en poco rato. Pide cita y te enseñamos el coche sin prisas.' },
+  { slug: 'mataro', name: 'Mataró', km: 28, txt: 'Desde Mataró estás a menos de una hora de Sabadell. Pide cita y ven a ver el coche con calma, o pide el envío a casa.' },
+  { slug: 'manresa', name: 'Manresa', km: 30, txt: 'Si eres de Manresa, Sabadell te queda a menos de una hora en coche. Pide cita y te tenemos el coche preparado, o pide el envío a casa.' },
+  { slug: 'vilafranca-del-penedes', name: 'Vilafranca del Penedès', km: 41, txt: 'Desde Vilafranca del Penedès estás a algo menos de una hora de Sabadell. Pide cita para ver el coche o pide el envío a casa.' },
+  { slug: 'igualada', name: 'Igualada', km: 41, txt: 'Desde Igualada estás a algo menos de una hora de Sabadell. Reserva el coche, pide cita o pide el envío a casa.' },
   { slug: 'barcelona', name: 'Barcelona', km: 19, txt: 'Desde Barcelona estás a unos 25-30 minutos de Sabadell por la C-58, según el tráfico. Y si no puedes venir, te pasamos presupuesto para llevarte el coche a casa.' },
 ];
 
