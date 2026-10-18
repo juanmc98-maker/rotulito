@@ -32,7 +32,21 @@ const fill = (tr, nums, tags) => {
 // Frases que dependen de cada coche: así los coches nuevos salen traducidos sin tocar el diccionario
 const FUEL = { gasolina: ['gasolina', 'petrol'], 'diésel': ['dièsel', 'diesel'], 'híbrido': ['híbrid', 'hybrid'], 'eléctrico': ['elèctric', 'electric'], glp: ['GLP', 'LPG'] };
 const TRANS = { manual: ['manual', 'manual'], 'automático': ['automàtic', 'automatic'] };
+// Páginas de zona (Manresa, Mataró…): el nombre de la población se queda igual
+const ZT = (t, i) => (DICT[t] ? DICT[t][i] : null);
 const RULES = [
+  [/^Coches de segunda mano cerca de (.+) \| Plata Garage$/, (m) => [`Cotxes de segona mà a prop de ${m[1]} | Plata Garage`, `Used cars near ${m[1]} | Plata Garage`]],
+  [/^Coches de ocasión cerca de (.+) \| Plata Garage$/, (m) => [`Cotxes d'ocasió a prop de ${m[1]} | Plata Garage`, `Used cars near ${m[1]} | Plata Garage`]],
+  [/^Coches de segunda mano para (.+): (\{\d+\}) en stock en Sabadell con garantía de (\{\d+\}) meses\. Pide cita o pide el envío a casa\.$/, (m) => [`Cotxes de segona mà per a ${m[1]}: ${m[2]} en estoc a Sabadell amb garantia de ${m[3]} mesos. Demana cita o demana l'enviament a casa.`, `Used cars for ${m[1]}: ${m[2]} in stock in Sabadell with a ${m[3]}-month warranty. Book a visit or ask for home delivery.`]],
+  [/^cerca de (.+)$/, (m) => [`a prop de ${m[1]}`, `near ${m[1]}`]],
+  [/^Estamos en Sabadell, a unos (\{\d+\}) km de (.+) en línea recta\. Atendemos con cita previa: al pedirla te indicamos cómo llegar\.$/, (m) => [`Som a Sabadell, a uns ${m[1]} km de ${m[2]} en línia recta. Atenem amb cita prèvia: quan la demanis t'indiquem com arribar-hi.`, `We're in Sabadell, about ${m[1]} km from ${m[2]} as the crow flies. Visits by appointment: when you book, we'll tell you how to get here.`]],
+  [/^¿Me podéis llevar el coche a (.+)\?$/, (m) => [`Em podeu portar el cotxe a ${m[1]}?`, `Can you deliver the car to ${m[1]}?`]],
+  [/^¿Dónde estáis\? ¿Me queda lejos desde (.+)\?$/, (m) => [`On sou? Em queda lluny des de ${m[1]}?`, `Where are you? Is it far from ${m[1]}?`]],
+  [/^Coches de segunda mano cerca de (.+)$/, (m) => [`Cotxes de segona mà a prop de ${m[1]}`, `Used cars near ${m[1]}`]],
+  [/^Hola, soy de (.+) y quería información sobre un coche\.$/, (m) => [`Hola, sóc de ${m[1]} i volia informació sobre un cotxe.`, `Hi, I'm from ${m[1]} and I'd like information about a car.`]],
+  [/^También atendemos a clientes de (.+)\.$/, (m) => [`També atenem clients de ${m[1]}.`, `We also serve customers from ${m[1]}.`]],
+  [/^<b>Coches por zona<\/b>(.*)$/, (m) => [`<b>Cotxes per zona</b>${m[1]}`, `<b>Cars by area</b>${m[1]}`]],
+  [/^(.+) Tenemos (\{\d+\}) coches en stock, todos con garantía de (\{\d+\}) meses\.$/, (m) => (ZT(m[1], 0) ? [`${ZT(m[1], 0)} Tenim ${m[2]} cotxes en estoc, tots amb garantia de ${m[3]} mesos.`, `${ZT(m[1], 1)} We have ${m[2]} cars in stock, all with a ${m[3]}-month warranty.`] : null)],
   [/^Financiar (.+) \| Plata Garage$/, (m) => [`Finançar ${m[1]} | Plata Garage`, `Finance the ${m[1]} | Plata Garage`]],
   [/^Financia el (.+)<br>$/, (m) => [`Finança el ${m[1]}<br>`, `Finance the ${m[1]}<br>`]],
   [/^¿Puedo ver el (.+)\?$/, (m) => [`Puc veure el ${m[1]}?`, `Can I see the ${m[1]}?`]],
@@ -56,7 +70,7 @@ let EXTRA = null; // traducciones automáticas de esta petición (Google), si ha
 export const look = (key, lang) => {
   const v = DICT[key]; if (v) return v[IDX[lang]];
   if (EXTRA && EXTRA[key]) return EXTRA[key];
-  for (const [re, f] of RULES) { const m = key.match(re); if (m) return f(m)[IDX[lang]]; }
+  for (const [re, f] of RULES) { const m = key.match(re); if (m) { const r = f(m); if (r) return r[IDX[lang]]; } }
   // Tiras de enlaces o negritas seguidas (menús, botones): se traduce cada trozo por separado
   if (/<\/?[a-z]+>/.test(key)) {
     const parts = key.split(/(<\/?[a-z]+>)/); let ok = true;
