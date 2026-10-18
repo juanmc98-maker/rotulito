@@ -63,8 +63,11 @@ export const look = (key, lang) => {
     const out = parts.map((p) => {
       if (!ok || p[0] === '<' || !LETTER.test(p)) return p;
       const t = p.trim(), idx = []; const k = t.replace(/\{(\d+)\}/g, (m, n) => { idx.push(n); return `{${idx.length - 1}}`; });
-      const v = DICT[k]; if (!v || k === key) { ok = false; return p; }
-      return p.match(/^\s*/)[0] + v[IDX[lang]].replace(/\{(\d+)\}/g, (m, n) => `{${idx[+n]}}`) + p.match(/\s*$/)[0];
+      let v = DICT[k], suf = '';
+      // «Texto ({n})»: se traduce el texto y se conserva el número; las marcas sueltas (Audi, BMW…) se quedan igual
+      if (!v && k !== key) { const mm = k.match(/^(.*) \((\{\d+\})\)$/); const base = mm ? mm[1] : k; if (mm && DICT[base]) { v = DICT[base]; suf = ` (${mm[2]})`; } else if (/^[A-Z0-9][A-Za-z0-9-]*$/.test(base)) { v = [k, k]; } }
+      if (!v || k === key) { ok = false; return p; }
+      return p.match(/^\s*/)[0] + (v[IDX[lang]] + suf).replace(/\{(\d+)\}/g, (m, n) => `{${idx[+n]}}`) + p.match(/\s*$/)[0];
     });
     if (ok) return out.join('');
   }
