@@ -870,7 +870,7 @@ async function hit(req, context) {
   }
   else if (b.e === 'cmp') { const par = String(b.c || '').split('+').map((x) => clip(x, 120)).filter(Boolean).slice(0, 3); if (par.length > 1) { inc('tot', 'comparaciones'); inc('cmppar', par.join('+')); } }
   else if (b.e === 'cmpc') { inc('tot', 'cmpcontacto'); inc('cmpk', b.k === 'wa' ? 'WhatsApp' : 'Pedir cita'); if (b.c) inc('cmpcar', clip(b.c, 120)); }
-  else if (b.e === 'calc') { const k = clip(b.k, 12); if (/^(uso|entrada|solicitar|p\d{2,3})$/.test(k)) { inc('calc', k); if (b.c && (k === 'uso' || k === 'solicitar')) inc('calccar', `${clip(b.c, 120)}|${k}`); } }
+  else if (b.e === 'calc') { const k = clip(b.k, 12); if (/^(uso|entrada|solicitar|p\d{2,3}|f\d{3})$/.test(k)) { inc('calc', k); if (b.c && (k === 'uso' || k === 'solicitar')) inc('calccar', `${clip(b.c, 120)}|${k}`); } }
   else if (['wa', 'tel', 'pdf'].includes(b.e)) { inc('ev', b.e); if (b.c) inc('carev', `${clip(b.c, 120)}|${b.e}`); }
   await db().setJSON(k, st);
 }
@@ -916,7 +916,7 @@ async function adminApi(r, req, M, me, url) {
       ultimasReservas: [...b].sort((a, z) => String(z.created || '').localeCompare(String(a.created || ''))).slice(0, 5),
       manana: b.filter((x) => x.fecha === addDays(td, 1) && x.status !== 'cancelada').sort((a, z) => a.hora.localeCompare(z.hora)),
       tasacionesNuevas: t.filter((x) => x.status === 'pendiente').length, ultimasTasaciones: t.slice(0, 5),
-      enviosPendientes: e.filter((x) => x.status === 'pendiente').length, mensajesSinLeer: m.filter((x) => !x.leido).length, alertasActivas: al.filter((x) => x.status === 'activa').length, busquedasPendientes: bu.filter((x) => x.status === 'pendiente').length, financiacionesPendientes: fi.filter((x) => x.status === 'pendiente').length,
+      enviosPendientes: e.filter((x) => x.status === 'pendiente').length, mensajesSinLeer: m.filter((x) => !x.leido).length, alertasActivas: al.filter((x) => x.status === 'activa').length, busquedasPendientes: bu.filter((x) => x.status === 'pendiente').length, financiacionesPendientes: fi.filter((x) => x.status === 'pendiente').length, financiacionesSinContestar: fi.filter((x) => x.status === 'pendiente' && Date.now() - Date.parse(x.created || '') > 2 * 3600e3).map((x) => ({ nombre: x.nombre, telefono: x.telefono, cocheNombre: x.cocheNombre || 'Sin coche decidido', created: x.created })),
       valorStock: cars.filter((c) => !c.sold).reduce((s, c) => s + (c.price || 0), 0),
       porDueno: ['Cristina', 'Juan', ''].map((o) => { const l = cars.filter((c) => !c.sold && (c.owner || '') === o); return { o: o || 'Sin asignar', n: l.length, v: l.reduce((s, c) => s + (c.price || 0), 0) }; }).filter((x) => x.n),
     });
