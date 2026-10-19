@@ -1057,13 +1057,34 @@ V.leads = async (m) => {
       ${hoyAv(c).length ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Hoy te toca:</b> ${esc(hoyAv(c).join(' · '))}</p>` : ''}<p>${esc(l.resumen || '')}</p>${car ? `<p class="mu sm">Coche: <a href="${WEB}/vehiculos/${car.slug}" target="_blank" rel="noopener" style="color:var(--or)">${esc(car.brand)} ${esc(car.model)}</a> · ${car.year || '—'} · <b style="color:var(--tx)">${car.price ? eur(car.price) : '—'}</b>${own ? ' · de ' + esc(own) : ''}</p>` : ''}
       <div class="row">${!c.telefono ? (() => { const pt = /coches/i.test(l.fuente || '') ? ['Coches.net', 'https://pro.coches.net/'] : /wallapop/i.test(l.fuente || '') ? ['Wallapop', 'https://es.wallapop.com/app/chat'] : null; return pt ? `<a class="btn s" target="_blank" rel="noopener" data-rp="${c.key}" href="${pt[1]}">Responder en ${pt[0]}</a>` : ''; })() : own === 'Cristina' || own === 'Juan' ? bt(own) : bt('Cristina') + bt('Juan')}<a class="btn s g" href="#cliente/${c.key}">Ver ficha</a><select class="s" data-mv="${c.key}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsPG('')}</select><button class="btn r s" data-del="${c.key}">Eliminar</button></div></div>`; };
   const sec = (t, l, vacio) => `<h3 class="lh">${t} <span>${l.length}</span></h3>${l.length ? l.map(card).join('') : `<p class="mu">${vacio}</p>`}`;
-  m.innerHTML = top('Leads', 'Los nuevos arriba. Al pulsar "Soy Cristina" o "Soy Juan" se abre WhatsApp con el mensaje escrito y el lead pasa a contactado.', `<a class="btn g" href="#clientes">Embudo completo</a>`) +
+  m.innerHTML = top('Leads', 'Los nuevos arriba. Al pulsar "Soy Cristina" o "Soy Juan" se abre WhatsApp con el mensaje escrito y el lead pasa a contactado.', `<button class="btn" id="nl">+ Nuevo lead</button><a class="btn g" href="#clientes">Embudo completo</a>`) +
     sec('Nuevos sin contestar', nuevos, 'No hay leads nuevos.') + sec('Hoy te toca seguimiento', hoy, 'Nada pendiente de seguimiento hoy.') + sec('Pendientes', pend, 'Nada pendiente.') + sec('En marcha', resto, 'Nada en marcha.');
   m.querySelectorAll('[data-mv]').forEach((el) => (el.onchange = guard(async () => { const c = all.find((x) => x.key === el.dataset.mv); if (!c || !el.value) return; if (!(await moverPG(c, el.value))) { el.value = ''; return; } route(); })));
   m.querySelectorAll('[data-del]').forEach((b) => (b.onclick = guard(async () => { const c = all.find((x) => x.key === b.dataset.del); if (!c || !confirm(`¿Quitar a ${c.nombre} de la lista? Si vuelve a escribir, aparecerá otra vez.`)) return; await api('/admin/clientes/' + c.key, { method: 'DELETE' }); toast(`${c.nombre}: eliminado`); route(); })));
+  $('#nl').onclick = () => nuevoLeadPG(cars);
   m.querySelectorAll('a[data-rp]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.rp); if (c && c.etapa === 'nuevo') api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: 'contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
   m.querySelectorAll('a[data-k]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.k); if (c) a.href = waLink(c.telefono, msgWa(a.dataset.q, cocheDe(c, cars), c.nombre)); if (c && c.etapa === 'nuevo') api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: 'contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
 };
+// Añadir un lead a mano (llamada, WhatsApp, visita, portal…)
+const ORIG_PG = ['WhatsApp', 'Llamada', 'Wallapop', 'Coches.net', 'Presencial', 'Instagram', 'Referido', 'Otro'];
+function nuevoLeadPG(cars) {
+  const stock = cars.filter((c) => !c.sold).sort((a, b) => `${a.brand} ${a.model}`.localeCompare(`${b.brand} ${b.model}`));
+  const dm = modal(`<h3 style="margin-bottom:12px">Nuevo lead</h3><form id="lf" class="fg" style="grid-template-columns:1fr">
+    <label>Nombre<input name="nombre" required autocomplete="off"></label>
+    <label>Teléfono<input name="telefono" inputmode="tel" autocomplete="off"></label>
+    <label>Email<input name="email" type="email" autocomplete="off"></label>
+    <label>Origen<select name="origen">${ORIG_PG.map((o) => `<option>${o}</option>`).join('')}</select></label>
+    <label>Coche que le interesa<select name="coche" id="lfc"><option value="">— No está en stock / no lo sé —</option>${stock.map((c) => `<option value="${esc(c.slug)}">${esc(c.brand)} ${esc(c.model)}${c.year ? ' · ' + c.year : ''}${c.price ? ' · ' + eur(c.price) : ''}</option>`).join('')}</select></label>
+    <label id="lft">Qué busca<input name="cocheTxt" placeholder="Ej.: SUV automático hasta 15.000 €"></label>
+    <label>Nota<textarea name="nota" rows="3" placeholder="Ej.: entrega un Mercedes ML 2003"></textarea></label>
+    <label class="row" style="gap:8px;align-items:center"><input type="checkbox" name="contactado" style="width:auto"> Ya he hablado con él (entra como contactado)</label>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn g" id="lfx">Cancelar</button><button class="btn">Añadir</button></div></form>`);
+  $('#lfc', dm).onchange = (e) => ($('#lft', dm).style.display = e.target.value ? 'none' : '');
+  $('#lfx', dm).onclick = () => dm.remove();
+  $('#lf', dm).onsubmit = guard(async (e) => { e.preventDefault(); const f = e.target; const b = Object.fromEntries(new FormData(f)); b.contactado = f.contactado.checked;
+    if (!b.telefono.trim() && !b.email.trim()) { toast('Pon al menos el teléfono o el email', true); return; }
+    await api('/admin/clientes', { method: 'POST', body: b }); dm.remove(); toast(`${b.nombre}: añadido`); route(); });
+}
 let CARS_C = [];
 V.cliente = async (m, key) => {
   const [cl, cs] = await Promise.all([api('/admin/clientes'), api('/admin/cars').catch(() => [])]); CARS_C = cs; const c = cl.find((x) => x.key === key); m = shell('clientes');
@@ -1202,8 +1223,10 @@ V.nleads = async (m) => {
     ${avN(c).length ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Hoy te toca:</b> ${esc(avN(c).join(' · '))}</p>` : ''}${c.interes ? `<p>${esc(c.interes)}</p>` : ''}${c.email ? `<p class="mu sm">${esc(c.email)}</p>` : ''}
     <div class="row">${c.telefono ? `<a class="btn s" target="_blank" rel="noopener" data-wa="${c.id}" href="${waLink(c.telefono)}">${IC.wa}WhatsApp</a>` : ''}<a class="btn s g" href="#ncliente/${c.id}">Ver ficha</a><select data-mv="${c.id}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsN(d, '')}</select><button class="btn r s" data-del="${c.id}">Eliminar</button></div></div>`;
   const sec = (t, l, vacio) => `<h3 class="lh">${t} <span>${l.length}</span></h3>${l.length ? l.map(card).join('') : `<p class="mu">${vacio}</p>`}`;
-  m.innerHTML = top(`Leads · ${NEGS[NEG].n}`, 'Los nuevos arriba. Al pulsar WhatsApp, un comprador nuevo pasa a contactado.', `<a class="btn g" href="#clientes">Embudo completo</a>`) +
+  m.innerHTML = top(`Leads · ${NEGS[NEG].n}`, 'Los nuevos arriba. Al pulsar WhatsApp, un comprador nuevo pasa a contactado.', `<button class="btn" id="nl">+ Nuevo lead</button><a class="btn g" href="#clientes">Embudo completo</a>`) +
     sec('Nuevos sin contestar', nuevos, 'No hay leads nuevos.') + sec('Hoy te toca seguimiento', hoy, 'Nada pendiente de seguimiento hoy.') + sec('En marcha', marcha, 'Nada en marcha.');
+  $('#nl').onclick = () => { const dm = modal(`<h3 style="margin-bottom:12px">Nuevo lead</h3><form id="nf" class="fg" style="grid-template-columns:1fr">${NEG === 'marine' ? '<label>Tipo<select name="tipo"><option>Comprador</option><option>Vendedor</option></select></label>' : ''}<label>Nombre<input name="nombre" required autocomplete="off"></label><label>Teléfono<input name="telefono" inputmode="tel" autocomplete="off"></label><label>Email<input name="email" type="email" autocomplete="off"></label><label>Origen<input name="origen" placeholder="WhatsApp, Meta, llamada…"></label><label>Interés<input name="interes" placeholder="${NEG === 'marine' ? 'Qué busca o qué vende' : 'Qué web necesita'}"></label><div class="row" style="justify-content:flex-end"><button type="button" class="btn g" id="nc">Cancelar</button><button class="btn">Añadir</button></div></form>`);
+    $('#nc', dm).onclick = () => dm.remove(); $('#nf', dm).onsubmit = guard(async (e) => { e.preventDefault(); const b = Object.fromEntries(new FormData(e.target)); if (!b.telefono.trim() && !b.email.trim()) { toast('Pon al menos el teléfono o el email', true); return; } await nApi('', { method: 'POST', body: b }); dm.remove(); toast(`${b.nombre}: añadido`); route(); }); };
   m.querySelectorAll('[data-wa]').forEach((a) => (a.onclick = () => { const c = d.leads.find((x) => x.id === a.dataset.wa); if (c && c.etapa === 'Nuevo' && d.etapas.includes('Contactado')) nApi('/' + c.id, { method: 'PUT', body: { etapa: 'Contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
   m.querySelectorAll('[data-mv]').forEach((el) => (el.onchange = guard(async () => { const c = d.leads.find((x) => x.id === el.dataset.mv); if (!c || !el.value) return; await moverN(d, c, el.value); route(); })));
   m.querySelectorAll('[data-del]').forEach((b) => (b.onclick = guard(async () => { const c = d.leads.find((x) => x.id === b.dataset.del); if (!c || !confirm(`¿Eliminar a ${c.nombre}? Se borra del embudo.`)) return; await nApi('/' + c.id, { method: 'DELETE' }); toast(`${c.nombre}: eliminado`); route(); })));
