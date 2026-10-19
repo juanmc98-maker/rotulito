@@ -282,7 +282,7 @@ export default {
   "Contacto": ["Contacte","Contact"],
   "Hablemos": ["Parlem","Let's talk"],
   "sin compromiso": ["sense compromís","no obligation"],
-  "Atendemos con cita previa en Sabadell, de lunes a viernes de {0}:{1} a {2}:{3} y los sábados de {4}:{5} a {6}:{7}. Lo más rápido es <a>WhatsApp</a> o el +{8} {9} {10} {11} {12}.": ["Atenem amb cita prèvia a Sabadell, de dilluns a divendres de {0}:{1} a {2}:{3} i els dissabtes de {4}:{5} a {6}:{7}. El més ràpid és <a>WhatsApp</a> o el +{8} {9} {10} {11} {12}.","We see customers by appointment in Sabadell, Monday to Friday from {0}:{1} to {2}:{3} and on Saturdays from {4}:{5} to {6}:{7}. The quickest way is <a>WhatsApp</a> or +{8} {9} {10} {11} {12}."],
+  "También puedes escribirnos a <a>info@platagarage.com</a>.": ["També ens pots escriure a <a>info@platagarage.com</a>.","You can also email us at <a>info@platagarage.com</a>."], "Atendemos con cita previa en Sabadell, de lunes a viernes de {0}:{1} a {2}:{3} y los sábados de {4}:{5} a {6}:{7}. Lo más rápido es <a>WhatsApp</a> o el +{8} {9} {10} {11} {12}.": ["Atenem amb cita prèvia a Sabadell, de dilluns a divendres de {0}:{1} a {2}:{3} i els dissabtes de {4}:{5} a {6}:{7}. El més ràpid és <a>WhatsApp</a> o el +{8} {9} {10} {11} {12}.","We see customers by appointment in Sabadell, Monday to Friday from {0}:{1} to {2}:{3} and on Saturdays from {4}:{5} to {6}:{7}. The quickest way is <a>WhatsApp</a> or +{8} {9} {10} {11} {12}."],
   "Envíanos un mensaje": ["Envia'ns un missatge","Send us a message"],
   "Asunto": ["Assumpte","Subject"],
   "Mensaje *": ["Missatge *","Message *"],
