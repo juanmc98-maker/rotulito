@@ -861,7 +861,7 @@ const LABEL = { nombre: 'Nombre', telefono: 'Teléfono', email: 'Email', fecha: 
 async function sendMail({ to, subject, html: body, text: txt, replyTo }) {
   const user = env('PG_SMTP_USER'), pass = env('PG_SMTP_PASS'); if (!user || !pass) return false;
   const { default: nm } = await import('nodemailer');
-  const tr = nm.createTransport({ host: 'smtp.gmail.com', port: 465, secure: true, auth: { user, pass } });
+  const tr = nm.createTransport({ host: env('PG_SMTP_HOST') || 'smtp.gmail.com', port: Number(env('PG_SMTP_PORT') || 465), secure: Number(env('PG_SMTP_PORT') || 465) === 465, requireTLS: Number(env('PG_SMTP_PORT') || 465) !== 465, auth: { user, pass } });
   await tr.sendMail({ from: `"Plata Garage" <${user}>`, to: to || env('PG_NOTIFY_TO') || user, subject, html: body, text: txt, replyTo });
   return true;
 }
