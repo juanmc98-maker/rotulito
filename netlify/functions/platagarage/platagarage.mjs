@@ -770,7 +770,7 @@ async function api(r, req, M, ip, url, context) {
     for (const x of all.filter((y) => (y.created || '') <= lim)) for (const d of x.fin?.docs || []) await media().delete('nomina/' + d.id).catch(() => {});
     const pidF = clip(f.pid, 40); const list = all.filter((x) => (x.created || '') > lim && !(pidF && x.id === pidF && x.status === 'incompleta')); list.unshift(it); await save('financiaciones', list);
     // En el aviso por correo solo lo justo: el DNI y los ingresos se ven en el panel
-    await notify('financiacion', { ...base, cocheNombre: it.cocheNombre, motivo: 'Solicitud de financiación' + (docs.length ? ` (adjunta ${docs.length} nómina${docs.length > 1 ? 's' : ''})` : '') }, url.origin).catch(() => {});
+    await notify('financiacion', { ...base, cocheNombre: it.cocheNombre, motivo: 'Solicitud de financiación' + (plazoF ? ` · a ${plazoF} meses${entradaF ? `, entrada ${entradaF} €` : ''}${est ? `, cuota aprox. ${est.c.toFixed(2).replace('.', ',')} €/mes (${est.fin === 'lendrock' ? 'Lendrock' : 'Confía'})` : ''}` : '') + (docs.length ? ` (adjunta ${docs.length} nómina${docs.length > 1 ? 's' : ''})` : '') }, url.origin).catch(() => {});
     await bump('ev', 'form-financiacion').catch(() => {}); await bump('lp', base.origen || '/').catch(() => {}); await bump('lsrc', base.canal || 'directo').catch(() => {});
     return json({ ok: true });
   }

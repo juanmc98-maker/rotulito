@@ -1346,6 +1346,7 @@ export default {
   "Calcula tu cuota": ["Calcula la teva quota", "Work out your payment"],
   "Entrada (opcional)": ["Entrada (opcional)", "Down payment (optional)"],
   "Plazo en meses": ["Termini en mesos", "Term in months"],
+  "¿A cuántos meses lo quieres?": ["A quants mesos el vols?", "Over how many months?"],
   "Entrada de {0} € · {1} meses": ["Entrada de {0} € · {1} mesos", "{0} € down payment · {1} months"],
   "+ {0} € de cambio de nombre": ["+ {0} € de canvi de nom", "+ {0} € registration transfer"],
   "<a>o desde <b>{0} €/mes</b><small>{1} meses sin entrada · TIN {2} % · TAE {3} % · ver ejemplo</small></a>": ["<a>o des de <b>{0} €/mes</b><small>{1} mesos sense entrada · TIN {2} % · TAE {3} % · veure exemple</small></a>", "<a>or from <b>{0} €/month</b><small>{1} months, no down payment · TIN {2} % · APR {3} % · see example</small></a>"],
