@@ -903,28 +903,32 @@ export const FIN_FAQ = [
 ];
 // Tarifas de las financieras para la calculadora de cuota (sin seguro). Se pueden cambiar desde el panel (Financiación → Tarifas) sin publicar la web.
 // Confía: TIN por plazo según importe (desde 13.000 € / menos); la cuota sale del TIN con la comisión de apertura financiada (cuadra con sus coeficientes).
-// Lendrock: el TIN es el más bajo que aún deja comisión al colaborador; comisión de apertura financiada.
+// Lendrock (decisión de Juan y Cristina, 19/10/2026): TIN fijo del 9,99 % sin seguro en todos los plazos (de 36 meses en adelante); comisión de apertura financiada.
 // Lendrock solo deja plazos en los que la antigüedad del coche más los años del préstamo no pasan de 19 (coche de 10 años: hasta 108 meses; de 14: hasta 60).
 export const TARIFA_DEF = {
   confia: { fecha: '15/10/2026', entidad: 'Unión Financiera Asturiana, S.A., E.F.C. (Confía)', apertura: 5, plazos: [24, 36, 48, 60, 72, 84, 96, 108], edadLarga: 12,
     alto: [9.99, 9.99, 9.99, 9.99, 9.99, 9.99, 9.99, 9.99], // desde 13.000 €
     bajo: [10.99, 11.99, 11.99, 13.49, 13.49, 13.49, 13.49, 13.49] }, // menos de 13.000 €
   lendrock: { fecha: '17/10/2026', entidad: 'Lendrock (WiZink Bank, S.A.U.)', apertura: 3, min: 3000, max: 40000, cuotaMin: 70, edadMax: 16, maxAnos: 19,
-    hasta10: { 36: 8.99, 48: 7.99, 60: 7.99, 72: 6.99, 84: 6.99, 96: 6.99, 108: 6.99, 120: 6.99 }, // coches de hasta 10 años
-    hasta16: { 36: 9.99, 48: 9.99, 60: 8.99, 72: 8.99, 84: 8.99, 96: 8.99 } } }; // de 11 a 16 años
+    tinFijo: 9.99,
+    hasta10: { 36: 9.99, 48: 9.99, 60: 9.99, 72: 9.99, 84: 9.99, 96: 9.99, 108: 9.99, 120: 9.99 }, // coches de hasta 10 años
+    hasta16: { 36: 9.99, 48: 9.99, 60: 9.99, 72: 9.99, 84: 9.99, 96: 9.99 } } }; // de 11 a 16 años
 export let TARIFA = TARIFA_DEF;
 export const setTarifa = (t) => { TARIFA = t && t.confia && t.lendrock ? { confia: { ...TARIFA_DEF.confia, ...t.confia }, lendrock: { ...TARIFA_DEF.lendrock, ...t.lendrock } } : TARIFA_DEF; };
 export const PLAZOS = [24, 36, 48, 60, 72, 84, 96, 108, 120];
 // Motor de la calculadora: lo usan la web (en el navegador), las cuotas "desde" y el servidor (cuota estimada de cada solicitud).
-// Para cada plazo, la opción más barata para el cliente entre las financieras que puede usar el coche.
-// Coches de Juan: solo Confía. Coches de Cristina: también Lendrock si la antigüedad y el importe lo permiten.
+// Coches de Juan: solo Confía.
+// Coches de Cristina (regla del 19/10/2026): si Lendrock admite el coche, en los plazos que cubre Lendrock va siempre Lendrock;
+// en los plazos más largos que Lendrock no cubre, Confía (antes que perder al cliente); y no se ofrece menos de 36 meses.
+// Si Lendrock no admite el coche (antigüedad o importe), todo con Confía.
 // Confía: más de 12 años, máx. 96 meses; menos de 5.000 €, máx. 60; 108 meses por debajo de 13.000 € solo desde 10.000 €.
 export function calcCore(T, CR, edad) {
   const PL = [24, 36, 48, 60, 72, 84, 96, 108, 120];
   const ann = (t, m) => { const r = t / 1200; return r / (1 - Math.pow(1 + r, -m)); };
   const conf = (A, m) => { const C = T.confia, k = C.plazos.indexOf(m); if (k < 0 || (edad > C.edadLarga && m > 96) || (A < 5000 && m > 60) || (m === 108 && A < 10000)) return null; const t = (A >= 13000 ? C.alto : C.bajo)[k]; if (!t) return null; const coef = Math.round(ann(t, m) * (1 + C.apertura / 100) * 1e6) / 1e6; return { c: Math.round(A * coef * 100) / 100, t, ap: C.apertura, ent: C.entidad, f: C.fecha, fin: 'confia' }; };
-  const lend = (A, m) => { const L = T.lendrock; if (!CR || edad > L.edadMax || A < L.min || A > L.max || edad + m / 12 > L.maxAnos) return null; const t = (edad <= 10 ? L.hasta10 : L.hasta16)[m]; if (!t) return null; const c = Math.round(A * (1 + L.apertura / 100) * ann(t, m) * 100) / 100; if (c < L.cuotaMin) return null; return { c, t, ap: L.apertura, ent: L.entidad, f: L.fecha, fin: 'lendrock' }; };
-  const best = (A, m) => [conf(A, m), lend(A, m)].filter(Boolean).sort((a, b) => a.c - b.c)[0] || null;
+  const lend = (A, m) => { const L = T.lendrock; if (!CR || edad > L.edadMax || A < L.min || A > L.max || edad + m / 12 > L.maxAnos) return null; const tab = edad <= 10 ? L.hasta10 : L.hasta16; const t = L.tinFijo ? (m >= 36 && m <= (edad <= 10 ? 120 : 96) ? L.tinFijo : null) : tab[m]; if (!t) return null; const c = Math.round(A * (1 + L.apertura / 100) * ann(t, m) * 100) / 100; if (c < L.cuotaMin) return null; return { c, t, ap: L.apertura, ent: L.entidad, f: L.fecha, fin: 'lendrock' }; };
+  const lendOk = (A) => PL.some((m) => lend(A, m));
+  const best = (A, m) => { const l = lend(A, m); if (l) return l; if (lendOk(A) && m < 36) return null; return conf(A, m); };
   const tae = (A, c, m) => { let i = 0.01; for (let k = 0; k < 100; k++) { let f = -A, d = 0; for (let j = 1; j <= m; j++) { f += c / Math.pow(1 + i, j); d -= j * c / Math.pow(1 + i, j + 1); } const s = f / d; i -= s; if (Math.abs(s) < 1e-12) break; } return (Math.pow(1 + i, 12) - 1) * 100; };
   const desde = (A) => { let o = null, n = 0; for (const m of PL) { const x = best(A, m); if (x && (!o || x.c < o.c)) { o = x; n = m; } } return o ? { ...o, n, tae: tae(A, o.c, n) } : null; };
   return { PL, best, tae, desde };
