@@ -1311,6 +1311,17 @@ async function adminApi(r, req, M, me, url) {
   if (seg[0] === 'ical' && M === 'GET') return json({ url: `${url.origin}${BASE}/api/ical/${icalToken()}.ics`, portales: `${url.origin}${BASE}/api/portal/${ingestToken()}` });
   if (seg[0] === 'clientes') {
     if (M === 'GET') return json(await buildClientes());
+    // Lead añadido a mano desde la app (llamada, WhatsApp, visita, portal…): entra como un aviso de portal más
+    if (M === 'POST' && !seg[1]) {
+      const nombre = clip(body.nombre, 80), tel = normPhone(body.telefono) || clip(body.telefono, 20), email = clip(body.email, 200).toLowerCase();
+      if (!nombre) return json({ error: 'Pon el nombre del cliente.' }, 400);
+      if (!pkey(tel) && !email) return json({ error: 'Pon al menos el teléfono o el email.' }, 400);
+      const cars = await load('cars'); const car = body.coche ? cars.find((c) => c.slug === body.coche) : null;
+      const list = await load('portales'); const d = new Date().toISOString();
+      const it = { id: uid('w'), ref: 'manual:' + uid(), fuente: clip(body.origen, 30) || 'Otro', tipoContacto: 'A mano', nombre, telefono: tel, email, coche: car ? car.slug : '', cocheNombre: car ? `${car.brand} ${car.model} ${car.year || ''}`.trim() : clip(body.cocheTxt, 120), mensaje: clip(body.nota, 2000), created: d, status: body.contactado ? 'contactado' : 'pendiente', notas: '', por: me.name };
+      list.unshift(it); await save('portales', list.slice(0, 3000));
+      return json({ ok: true, key: pkey(tel) || '' });
+    }
     if (M === 'PUT' && seg[1]) {
       const cl = await load('clientes'); const k = pkey(seg[1]); if (!k) return json({ error: 'Cliente no válido' }, 400);
       let it = cl.find((x) => x.key === k); if (!it) { it = { key: k }; cl.push(it); }
