@@ -1,6 +1,7 @@
 // Plata Garage · web pública + panel de gestión (Netlify Functions + Netlify Blobs)
 import { getStore as nfGetStore } from '@netlify/blobs';
 import crypto from 'node:crypto';
+import zlib from 'node:zlib';
 import seed from './seed.mjs';
 import astSeed from './astilleros-seed.mjs';
 import * as V from './views.mjs';
@@ -268,6 +269,18 @@ async function buildClientes() {
 // ---------- calendario iCal (suscripción desde Google o Apple Calendar) ----------
 const icalToken = () => sign('ical-v1').slice(0, 32);
 const ingestToken = () => sign('portales-v1').slice(0, 32);
+// ---------- copia de seguridad diaria (Google Drive), siempre cifrada ----------
+// Se cifra con la clave pública que Juan crea en el panel; la clave privada solo la tiene él (archivo + contraseña).
+// Sin esa clave, lo que sale de aquí no se puede leer, ni aquí ni en Drive.
+const backupToken = () => sign('copia-cifrada-v1').slice(0, 32);
+const BACKUP_KEYS = ['cars', 'holders', 'schedule', 'bookings', 'tasaciones', 'envios', 'financiaciones', 'mensajes', 'posts', 'alertas', 'busquedas', 'clientes', 'portales', 'docs', 'tarifas'];
+async function seal(buf) {
+  const pk = await db().get('backupkey', { type: 'json' }); if (!pk?.jwk) return null;
+  const pub = crypto.createPublicKey({ key: pk.jwk, format: 'jwk' }); const k = crypto.randomBytes(32), iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv('aes-256-gcm', k, iv); const ct = Buffer.concat([c.update(buf), c.final(), c.getAuthTag()]);
+  const w = crypto.publicEncrypt({ key: pub, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha256' }, k);
+  const h = Buffer.alloc(6); h.write('PGC1'); h.writeUInt16BE(w.length, 4); return Buffer.concat([h, w, iv, ct]);
+}
 // Otros negocios en el mismo panel: Plata Marine y Rotulito (embudo propio para cada uno)
 // Cada negocio con sus tableros (máx. 7 pasos cada uno) y una columna común "Perdido" con motivo obligatorio
 const NEGS = {
@@ -587,6 +600,29 @@ async function api(r, req, M, ip, url, context) {
     const arr = (Array.isArray(b) ? b : [b]).slice(0, 50); for (const x of arr) if (await addNegLead(neg, x)) n++;
     if (n) await pushAll(neg, `${n > 1 ? n + ' leads nuevos' : 'Nuevo lead'} · ${NEGS[neg].nombre || neg}`, n > 1 ? '' : [clip(arr[0].nombre, 60), clip(arr[0].interes || arr[0].origen, 60)].filter(Boolean).join(' · '), 'lead-' + neg).catch((e) => console.error('push', e.message));
     return json({ ok: true, nuevos: n });
+  }
+  if (r.startsWith('/backup/') && M === 'GET') { // lo pide cada día el script de copia (Google Drive de juanmc98); todo sale cifrado
+    const [tok, kind, carpeta, id] = r.slice(8).split('/');
+    if (!env('PG_ADMIN_PASSWORD') || (tok || '').length !== 32 || !eqHash(tok, backupToken())) return json({ error: 'No autorizado' }, 401);
+    if (!(await db().get('backupkey', { type: 'json' }))?.jwk) return json({ error: 'Falta crear la clave de la copia en el panel.' }, 409);
+    const bin = (b) => new Response(b, { headers: { 'content-type': 'application/octet-stream', 'cache-control': 'no-store', 'x-robots-tag': 'noindex' } });
+    if (!kind) { // todos los datos (sin contraseñas ni claves internas), comprimidos y cifrados
+      const datos = {}; for (const k of BACKUP_KEYS) datos[k] = (await db().get(k, { type: 'json' })) ?? null;
+      return bin(await seal(zlib.gzipSync(Buffer.from(JSON.stringify({ fecha: new Date().toISOString(), datos })))));
+    }
+    if (kind === 'lista') { // solo identificadores, sin nombres ni datos
+      const fin = (await db().get('financiaciones', { type: 'json' })) || [], docs = (await db().get('docs', { type: 'json' })) || {};
+      return json([...fin.flatMap((x) => (x.fin?.docs || []).map((d) => ({ c: 'nomina', id: d.id }))), ...Object.values(docs).flatMap((v) => (v.files || []).map((d) => ({ c: 'doc', id: d.id })))]);
+    }
+    if (kind === 'file' && /^(nomina|doc)$/.test(carpeta || '') && /^[a-z0-9]{6,40}$/.test(id || '')) { // documento cifrado con su nombre dentro
+      const raw = await media().get(carpeta + '/' + id, { type: 'arrayBuffer' }); if (!raw) return json({ error: 'No encontrado' }, 404);
+      const buf = Buffer.from(raw); const dec = crypto.createDecipheriv('aes-256-gcm', docKey(), buf.subarray(0, 12)); dec.setAuthTag(buf.subarray(12, 28));
+      let nombre = id; if (carpeta === 'nomina') { for (const x of (await db().get('financiaciones', { type: 'json' })) || []) { const d = (x.fin?.docs || []).find((y) => y.id === id); if (d) { nombre = `${x.nombre || 'cliente'} - ${d.tipo || 'nomina'} - ${d.nombre}`; break; } } }
+      else { for (const [k, v] of Object.entries((await db().get('docs', { type: 'json' })) || {})) { const d = (v.files || []).find((y) => y.id === id); if (d) { nombre = `${k.replace(':', ' ')} - ${d.nombre}`; break; } } }
+      const nb = Buffer.from(nombre.replace(/[\\/:*?"<>|]/g, ' ').slice(0, 200)); const hd = Buffer.alloc(2); hd.writeUInt16BE(nb.length);
+      return bin(await seal(Buffer.concat([hd, nb, dec.update(buf.subarray(28)), dec.final()])));
+    }
+    return json({ error: 'No válido' }, 400);
   }
   if (r.startsWith('/portal/') && M === 'POST') {
     const tok = r.slice(8); if (!env('PG_ADMIN_PASSWORD') || tok.length !== 32 || !eqHash(tok, ingestToken())) return json({ error: 'No autorizado' }, 401);
@@ -1338,6 +1374,14 @@ async function adminApi(r, req, M, me, url) {
     await save('pushsubs', subs.slice(0, 40));
     await pushAll('garage', 'Avisos activados', 'Te llegarán aquí los leads nuevos', 'test', sub.endpoint).catch(() => {});
     return json({ ok: true });
+  }
+  if (seg[0] === 'copia') { // copia de seguridad cifrada: solo quien lleva los dos negocios (Juan)
+    if (!['garage', 'marine'].every((n) => (me.negs || []).includes(n))) return json({ error: 'No tienes acceso.' }, 403);
+    const pk = await db().get('backupkey', { type: 'json' });
+    if (M === 'GET') return json({ clave: pk ? pk.creada : '', url: `${url.origin}${BASE}/api/backup/${backupToken()}` });
+    if (M === 'PUT') { const j = body.jwk || {}; if (j.kty !== 'RSA' || typeof j.n !== 'string' || j.n.length < 600 || j.e !== 'AQAB' || j.d) return json({ error: 'Clave no válida' }, 400);
+      try { crypto.createPublicKey({ key: { kty: 'RSA', n: j.n, e: j.e }, format: 'jwk' }); } catch (e) { return json({ error: 'Clave no válida' }, 400); }
+      await save('backupkey', { jwk: { kty: 'RSA', n: j.n, e: j.e }, creada: new Date().toISOString() }); return json({ ok: true }); }
   }
   if (seg[0] === 'ical' && M === 'GET') return json({ url: `${url.origin}${BASE}/api/ical/${icalToken()}.ics`, portales: `${url.origin}${BASE}/api/portal/${ingestToken()}` });
   if (seg[0] === 'clientes') {
