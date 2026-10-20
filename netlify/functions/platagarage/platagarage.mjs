@@ -157,6 +157,12 @@ async function holderPorDueno(c) {
 function carErrors(c) {
   const e = [];
   if (!c.brand) e.push('marca'); if (!c.model) e.push('modelo');
+  // En preparación («Próximamente») se puede publicar sin precio, km, año ni descripción: se completan más tarde
+  if (c.status === 'preparacion') {
+    if (c.year != null && (c.year < 1950 || c.year > 2100)) e.push('año');
+    if (c.km != null && c.km < 0) e.push('kilómetros'); if (c.price != null && c.price < 0) e.push('precio');
+    return e;
+  }
   if (!c.year || c.year < 1950 || c.year > 2100) e.push('año');
   if (c.km == null || c.km < 0) e.push('kilómetros'); if (!c.price || c.price < 0) e.push('precio');
   if (!c.fuel) e.push('combustible'); if (!c.trans) e.push('cambio'); if (!c.desc) e.push('descripción');
@@ -185,7 +191,7 @@ function sitemap(site, cars, posts) {
 }
 function llms(site, cars) {
   const S = site + BASE;
-  const eur = (n) => new Intl.NumberFormat('es-ES', { useGrouping: 'always' }).format(n) + ' €';
+  const eur = (n) => (Number(n) > 0 ? new Intl.NumberFormat('es-ES', { useGrouping: 'always' }).format(n) + ' €' : 'precio próximamente');
   return `# Plata Garage
 
 > Compraventa de coches de segunda mano en Sabadell (Barcelona, Vallès Occidental). Todos los coches tienen garantía de 12 meses. Atención con cita previa: lunes a viernes de 9:30 a 19:30 y sábados de 10:00 a 14:00. Teléfono y WhatsApp: +34 660 49 32 28.
@@ -200,7 +206,7 @@ Atendemos a clientes de Sabadell, Terrassa, Sant Cugat, Barberà del Vallès, Ce
 - [Preguntas frecuentes](${S}/preguntas-frecuentes)
 
 ## Coches en stock (${cars.length})
-${cars.map((c) => `- [${c.brand} ${c.model}${c.version ? ' ' + c.version : ''} (${c.year})](${S}/vehiculos/${c.slug}): ${eur(c.price)}, ${new Intl.NumberFormat('es-ES', { useGrouping: 'always' }).format(c.km)} km, ${c.fuel}, ${c.trans}`).join('\n')}
+${cars.map((c) => `- [${c.brand} ${c.model}${c.version ? ' ' + c.version : ''}${c.year ? ` (${c.year})` : ''}](${S}/vehiculos/${c.slug}): ${[eur(c.price), c.km != null ? new Intl.NumberFormat('es-ES', { useGrouping: 'always' }).format(c.km) + ' km' : '', c.fuel, c.trans].filter(Boolean).join(', ')}`).join('\n')}
 
 Los datos son orientativos y no vinculantes; confírmalos con Plata Garage antes de decidir.
 `;
@@ -262,7 +268,7 @@ async function buildClientes() {
     const desde = fechas[etapa] || (etapa === st.etapa ? st.at : '') || (etapa === 'vendido' && venta?.soldAt) || c.last || '';
     return { ...c, etapa, auto, manual: st.etapa || '', notas: st.notas || '', motivo, motivoTxt: st.motivoTxt || '', llego, desde, fechas, origen: ORIGEN_PG(c.leads), primero: c.leads[c.leads.length - 1]?.created || '',
       banco: st.banco || '', finEstado: st.finEstado || '', certificado: st.certificado || '', vendidoEl: venta?.soldAt || fechas.vendido || '', importe: venta?.price || 0,
-      compras: bought.map((x) => ({ id: x.id, slug: x.slug, nombre: `${x.brand} ${x.model} (${x.year})`, sold: x.sold, soldAt: x.soldAt })), alerta: al.some((a) => a.email && a.email === c.email && a.status === 'activa') };
+      compras: bought.map((x) => ({ id: x.id, slug: x.slug, nombre: `${x.brand} ${x.model}${x.year ? ` (${x.year})` : ''}`, sold: x.sold, soldAt: x.soldAt })), alerta: al.some((a) => a.email && a.email === c.email && a.status === 'activa') };
   });
   // Los que se han quitado de la lista no salen, salvo que vuelvan a escribir después
   return out.filter((c) => { const st = cl.find((x) => x.key === c.key); return !(st && st.borrado && (c.last || '') <= st.borrado); }).sort((a, z) => (z.last || '').localeCompare(a.last || ''));
@@ -347,9 +353,10 @@ async function avisarBajada(c, origin) {
   if (!env('PG_SMTP_USER') || !env('PG_SMTP_PASS')) return;
   const list = await load('alertas'); const fichaUrl = `${origin}${BASE}/vehiculos/${c.slug}`; let n = 0;
   const eurf = (v) => new Intl.NumberFormat('es-ES', { useGrouping: 'always' }).format(v) + ' €';
-  for (const a of list.filter((x) => x.coche === c.slug && x.status === 'activa' && (x.ultimoAviso || x.precio || Infinity) > c.price)) {
+  if (!(Number(c.price) > 0)) return;
+  for (const a of list.filter((x) => x.coche === c.slug && x.status === 'activa' && Number(x.ultimoAviso || x.precio) > 0 && (x.ultimoAviso || x.precio) > c.price)) {
     const baja = `${origin}${BASE}/api/baja?id=${a.id}&k=${sign('baja|' + a.id).slice(0, 22)}`;
-    const nm = `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''} (${c.year})`;
+    const nm = `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''}${c.year ? ` (${c.year})` : ''}`;
     const ok = await sendMail({ to: a.email, subject: `Ha bajado de precio: ${nm} · Plata Garage`, text: `Hola,\n\nNos pediste que te avisáramos si bajaba de precio el ${nm}. Ahora está a ${eurf(c.price)}.\n\nFotos, datos y cita: ${fichaUrl}\n\nUn saludo,\nPlata Garage · 660 49 32 28\n\nSi no quieres más avisos: ${baja}`,
       html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111"><p>Hola,</p><p>Nos pediste que te avisáramos si bajaba de precio el <b>${hesc(nm)}</b>. Ahora está a <b>${eurf(c.price)}</b>.</p><p><a href="${fichaUrl}" style="display:inline-block;background:#f76806;color:#000;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px">Ver el coche</a></p><p>Un saludo,<br>Plata Garage · 660 49 32 28</p><p style="font-size:12px;color:#777">Recibes este correo porque lo pediste en www.platagarage.com. <a href="${baja}" style="color:#777">Darme de baja</a>.</p></div>` }).catch(() => false);
     if (ok) { a.ultimoAviso = c.price; a.avisadoEl = today(); n++; }
@@ -357,12 +364,18 @@ async function avisarBajada(c, origin) {
   if (n) await save('alertas', list);
 }
 
+// Coche que estaba sin precio y ya lo tiene: las alertas de bajada que se pidieron sin precio toman este como referencia
+async function precioInicialAlertas(c) {
+  const list = await load('alertas'); let n = 0;
+  for (const a of list) if (a.coche === c.slug && a.tipo === 'precio' && !(Number(a.ultimoAviso || a.precio) > 0)) { a.precio = c.price; n++; }
+  if (n) await save('alertas', list);
+}
 // Aviso a quien pidió coches con una cuota: cuando entra (o baja) un coche que encaja, una sola vez por coche
 async function avisarCuota(c, origin) {
   if (!env('PG_SMTP_USER') || !env('PG_SMTP_PASS') || c.sold || c.hidden || c.status === 'reservado') return;
   const list = await load('alertas'); const cand = list.filter((a) => a.tipo === 'cuota' && a.status === 'activa' && !(a.avisados || []).includes(c.slug)); if (!cand.length) return;
   V.setCtx({ holders: await load('holders') }); V.setTarifa(await load('tarifas')); const q = V.cuotaDesde(c); if (!q) return;
-  const nm = `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''} (${c.year})`, fichaUrl = `${origin}${BASE}/vehiculos/${c.slug}`, cu = Math.round(q.c); let n = 0;
+  const nm = `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''}${c.year ? ` (${c.year})` : ''}`, fichaUrl = `${origin}${BASE}/vehiculos/${c.slug}`, cu = Math.round(q.c); let n = 0;
   for (const a of cand.filter((x) => q.c <= x.cuota)) {
     const baja = `${origin}${BASE}/api/baja?id=${a.id}&k=${sign('baja|' + a.id).slice(0, 22)}`;
     const ok = await sendMail({ to: a.email, subject: `Ha entrado un coche desde ${cu} €/mes: ${nm} · Plata Garage`, text: `Hola${a.nombre ? ' ' + a.nombre : ''},\n\nNos pediste que te avisáramos de coches con cuota de hasta ${a.cuota} € al mes. Acaba de entrar el ${nm}, desde ${cu} €/mes sin entrada (cuota orientativa, sujeta a la aprobación de la financiera; tienes el ejemplo completo en la ficha).\n\nFotos, datos y cuota: ${fichaUrl}\n\nUn saludo,\nPlata Garage · 660 49 32 28\n\nSi no quieres más avisos: ${baja}`,
@@ -673,7 +686,7 @@ async function api(r, req, M, ip, url, context) {
     if (await rateLimited(ip, 'alerta', 5)) return json({ error: 'Demasiadas solicitudes. Prueba más tarde.' }, 429);
     const list = await load('alertas');
     const coche = clip(f.coche, 120); const car = coche ? (await load('cars')).find((x) => x.slug === coche && !x.sold) : null;
-    const it = { canal: clip(f.canal, 60), id: uid('a'), nombre, telefono, email, busca: car ? `Bajada de precio: ${car.brand} ${car.model} (${car.year})` : clip(f.busca, 120), max: num(f.max), created: new Date().toISOString(), status: 'activa', origen: clip(f.origen, 120), ...(car ? { coche: car.slug, tipo: 'precio', precio: car.price } : {}) };
+    const it = { canal: clip(f.canal, 60), id: uid('a'), nombre, telefono, email, busca: car ? `Bajada de precio: ${car.brand} ${car.model}${car.year ? ` (${car.year})` : ''}` : clip(f.busca, 120), max: num(f.max), created: new Date().toISOString(), status: 'activa', origen: clip(f.origen, 120), ...(car ? { coche: car.slug, tipo: 'precio', precio: car.price } : {}) };
     const i = list.findIndex((x) => x.email === email && (x.coche || '') === (it.coche || '')); if (i >= 0) list[i] = { ...list[i], ...it, id: list[i].id }; else list.unshift(it);
     await save('alertas', list); await notify('alerta', it, url.origin).catch(() => {}); await bump('lp', (it.origen || '/').split('?')[0]).catch(() => {}); await bump('lsrc', it.canal || 'directo').catch(() => {}); return json({ ok: true });
   }
@@ -695,7 +708,7 @@ async function api(r, req, M, ip, url, context) {
     const cars = await load('cars'); const c = cars.find((x) => x.slug === clip(f.coche, 120) && !x.sold && !x.hidden); if (c) c.reserve = V.senalDe(c);
     if (!c || !(c.reserve > 0)) return json({ error: 'Este coche ya no se puede reservar desde la web. Escríbenos por WhatsApp.' }, 409);
     const base = { id: uid(), ...chk.data, created: new Date().toISOString(), status: 'pendiente', notas: '' };
-    const it = { ...base, tipo: 'reserva', motivo: 'Reservar este coche', mensaje: clip(f.mensaje, 1000), coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), res: { dni, direccion, cp, poblacion, condiciones: base.created } };
+    const it = { ...base, tipo: 'reserva', motivo: 'Reservar este coche', mensaje: clip(f.mensaje, 1000), coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''}${c.year ? ` (${c.year})` : ''}`.replace(/\s+/g, ' '), res: { dni, direccion, cp, poblacion, condiciones: base.created } };
     it.senal = c.reserve; it.carSnap = { slug: c.slug, brand: c.brand, model: c.model, version: c.version, year: c.year, km: c.km, price: c.price, reserve: c.reserve, matricula: c.matricula, bastidor: c.bastidor, holder: c.holder };
     const list = await load('bookings'); list.unshift(it); await save('bookings', list);
     const kRef = sign('ref|' + it.id).slice(0, 16); const pagoUrl = `${url.origin}${BASE}/reserva/pago?r=${it.id}&k=${kRef}`;
@@ -731,7 +744,7 @@ async function api(r, req, M, ip, url, context) {
     let n = V.PLAZOS.includes(Number(f.plazo)) ? Number(f.plazo) : 0; let q = n ? V.cuotaPara(c, A, n) : null; if (!q) { q = V.cuotaDesde(c); n = q ? q.n : 0; }
     if (!q || A <= 0) return json({ error: 'No hemos podido calcular la cuota de este coche. Escríbenos por WhatsApp.' }, 400);
     const eurf = (v, d = 2) => new Intl.NumberFormat('es-ES', { useGrouping: 'always', minimumFractionDigits: d, maximumFractionDigits: d }).format(v) + ' €';
-    const nm = `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''} (${c.year})`, fichaUrl = `${url.origin}${BASE}/vehiculos/${c.slug}`;
+    const nm = `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''}${c.year ? ` (${c.year})` : ''}`, fichaUrl = `${url.origin}${BASE}/vehiculos/${c.slug}`;
     const ej = `Ejemplo para ${eurf(A, 0)} a ${n} meses${ent ? ` (con ${eurf(ent, 0)} de entrada)` : ''}: cuota de ${eurf(q.c)}, TIN ${q.t.toFixed(2).replace('.', ',')} %, TAE ${q.tae.toFixed(2).replace('.', ',')} %. Incluye el cambio de nombre y la comisión de apertura del ${q.ap} % financiada. Importe total adeudado: ${eurf(q.c * n)}. Financiación de ${q.ent}, sujeta a su aprobación. Cálculo orientativo con sus condiciones del ${q.f}: no es una oferta vinculante.`;
     await sendMail({ to: chk.data.email, subject: `Tu cuota para el ${nm} · Plata Garage`, text: `Hola ${chk.data.nombre},\n\nEsta es la cuota que has calculado para el ${nm}: ${eurf(q.c)} al mes durante ${n} meses.\n\n${ej}\n\nCuando quieras, pides la financiación desde la ficha en 2 minutos y nosotros la tramitamos: ${fichaUrl}\n\nUn saludo,\nPlata Garage · 660 49 32 28`,
       html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111"><p>Hola ${hesc(chk.data.nombre)},</p><p>Esta es la cuota que has calculado para el <b>${hesc(nm)}</b>:</p><p style="font-size:26px;margin:8px 0"><b>${eurf(q.c)}</b> al mes · ${n} meses</p><p style="font-size:12px;color:#555">${hesc(ej)}</p><p>Cuando quieras, pides la financiación desde la ficha en 2 minutos y nosotros la tramitamos.</p><p><a href="${fichaUrl}" style="display:inline-block;background:#f76806;color:#000;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px">Ver el coche y pedir la financiación</a></p><p>Un saludo,<br>Plata Garage · 660 49 32 28</p></div>` }).catch((e) => console.error('cuota', e.message));
@@ -754,14 +767,14 @@ async function api(r, req, M, ip, url, context) {
     const cars = (await load('cars')).filter((c) => slugs.includes(c.slug) && !c.sold && !c.hidden);
     if (!cars.length) return json({ error: 'No tienes coches guardados que sigan a la venta.' }, 400);
     const eurf = (v) => new Intl.NumberFormat('es-ES', { useGrouping: 'always' }).format(v) + ' €';
-    const nm = (c) => `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''} (${c.year})`, lk = (c) => `${url.origin}${BASE}/vehiculos/${c.slug}`;
+    const nm = (c) => `${c.brand} ${c.model}${c.version ? ' ' + c.version : ''}${c.year ? ` (${c.year})` : ''}`, lk = (c) => `${url.origin}${BASE}/vehiculos/${c.slug}`;
     const cmp = cars.length > 1 ? `${url.origin}${BASE}/comparar?c=${cars.slice(0, 3).map((c) => c.slug).join(',')}` : '';
-    await sendMail({ to: chk.data.email, subject: `Tus coches guardados · Plata Garage`, text: `Hola ${chk.data.nombre},\n\nEstos son los coches que has guardado:\n\n${cars.map((c) => `- ${nm(c)} · ${eurf(c.price)} · ${lk(c)}`).join('\n')}${cmp ? `\n\nCompáralos: ${cmp}` : ''}\n\nUn saludo,\nPlata Garage · 660 49 32 28`,
-      html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111"><p>Hola ${hesc(chk.data.nombre)},</p><p>Estos son los coches que has guardado:</p><ul style="padding-left:18px">${cars.map((c) => `<li style="margin-bottom:8px"><a href="${lk(c)}" style="color:#f76806;font-weight:bold">${hesc(nm(c))}</a> · ${eurf(c.price)}</li>`).join('')}</ul>${cmp ? `<p><a href="${cmp}" style="display:inline-block;background:#f76806;color:#000;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px">Compararlos</a></p>` : ''}<p>Un saludo,<br>Plata Garage · 660 49 32 28</p></div>` }).catch((e) => console.error('favs', e.message));
+    await sendMail({ to: chk.data.email, subject: `Tus coches guardados · Plata Garage`, text: `Hola ${chk.data.nombre},\n\nEstos son los coches que has guardado:\n\n${cars.map((c) => `- ${nm(c)} · ${c.price > 0 ? eurf(c.price) : 'Precio próximamente'} · ${lk(c)}`).join('\n')}${cmp ? `\n\nCompáralos: ${cmp}` : ''}\n\nUn saludo,\nPlata Garage · 660 49 32 28`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#111"><p>Hola ${hesc(chk.data.nombre)},</p><p>Estos son los coches que has guardado:</p><ul style="padding-left:18px">${cars.map((c) => `<li style="margin-bottom:8px"><a href="${lk(c)}" style="color:#f76806;font-weight:bold">${hesc(nm(c))}</a> · ${c.price > 0 ? eurf(c.price) : 'Precio próximamente'}</li>`).join('')}</ul>${cmp ? `<p><a href="${cmp}" style="display:inline-block;background:#f76806;color:#000;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px">Compararlos</a></p>` : ''}<p>Un saludo,<br>Plata Garage · 660 49 32 28</p></div>` }).catch((e) => console.error('favs', e.message));
     const base = { id: uid(), ...chk.data, created: new Date().toISOString(), status: 'pendiente', notas: '' };
     const msgs = await load('mensajes'); msgs.unshift({ ...base, asunto: 'Se envió sus favoritos', mensaje: cars.map(nm).join(' · ') + (f.avisos === 'si' ? '. Quiere avisos si bajan de precio.' : ''), leido: false }); await save('mensajes', msgs);
     if (f.avisos === 'si') { const al = await load('alertas');
-      for (const c of cars) { const it = { id: uid('a'), nombre: chk.data.nombre, telefono: chk.data.telefono, email: chk.data.email, busca: `Bajada de precio: ${c.brand} ${c.model} (${c.year})`, coche: c.slug, tipo: 'precio', precio: c.price, created: base.created, status: 'activa', origen: base.origen, canal: base.canal };
+      for (const c of cars) { const it = { id: uid('a'), nombre: chk.data.nombre, telefono: chk.data.telefono, email: chk.data.email, busca: `Bajada de precio: ${c.brand} ${c.model}${c.year ? ` (${c.year})` : ''}`, coche: c.slug, tipo: 'precio', precio: c.price, created: base.created, status: 'activa', origen: base.origen, canal: base.canal };
         const i = al.findIndex((x) => x.email === it.email && x.coche === c.slug); if (i >= 0) al[i] = { ...al[i], ...it, id: al[i].id }; else al.unshift(it); }
       await save('alertas', al); }
     await notify('mensaje', { ...base, motivo: `Se envió sus ${cars.length} favoritos por email` }, url.origin).catch(() => {});
@@ -777,7 +790,7 @@ async function api(r, req, M, ip, url, context) {
     const cars = await load('cars'); const c = cars.find((x) => x.slug === clip(f.coche, 120) && !x.sold);
     const list = await load('financiaciones'); const pid = clip(f.pid, 40);
     const prev = pid ? list.find((x) => x.id === pid && x.status === 'incompleta') : null;
-    const it = { ...(prev || { id: uid(), created: new Date().toISOString(), notas: '' }), ...chk.data, status: 'incompleta', ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}) };
+    const it = { ...(prev || { id: uid(), created: new Date().toISOString(), notas: '' }), ...chk.data, status: 'incompleta', ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''}${c.year ? ` (${c.year})` : ''}`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}) };
     if (prev) Object.assign(prev, it); else list.unshift(it);
     await save('financiaciones', list); await bump('ev', 'fin-parcial').catch(() => {});
     // Aviso al móvil en cuanto deja el contacto, aunque no termine el formulario (solo la primera vez)
@@ -856,8 +869,8 @@ async function api(r, req, M, ip, url, context) {
       const enc = Buffer.concat([ci.update(buf), ci.final()]); await media().set('nomina/' + id, Buffer.concat([iv, ci.getAuthTag(), enc])); docs.push({ id, nombre: clip(x.file.name, 120) || x.tipo || 'nomina', mime: x.file.type, size: buf.length, ...(x.tipo ? { tipo: x.tipo } : {}) }); }
     V.setCtx({ holders: await load('holders') }); V.setTarifa(await load('tarifas'));
     const plazoF = V.PLAZOS.includes(Number(f.plazo)) ? Number(f.plazo) : 0, entradaF = Math.max(0, Math.round(Number(f.entrada) || 0));
-    const est = c && plazoF ? V.cuotaPara(c, Number(c.price) + V.cambioNombre(c) - entradaF, plazoF) : null;
-    const it = { ...base, ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}), fin: { dni, nacimiento, ...(nacionalidad ? { nacionalidad } : {}), ...(aval ? { aval } : {}), direccion, cp, poblacion, civil, antiguedad, salario, vivienda, gastoVivienda, cesion: base.created, docs, plazo: plazoF, entrada: entradaF, ...(est ? { cuota: est.c, tin: est.t, tae: Math.round(est.tae * 100) / 100, financiera: est.fin === 'lendrock' ? 'Lendrock' : 'Confía', importe: Number(c.price) + V.cambioNombre(c) - entradaF } : {}) } };
+    const est = c && Number(c.price) > 0 && plazoF ? V.cuotaPara(c, Number(c.price) + V.cambioNombre(c) - entradaF, plazoF) : null;
+    const it = { ...base, ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''}${c.year ? ` (${c.year})` : ''}`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}), fin: { dni, nacimiento, ...(nacionalidad ? { nacionalidad } : {}), ...(aval ? { aval } : {}), direccion, cp, poblacion, civil, antiguedad, salario, vivienda, gastoVivienda, cesion: base.created, docs, plazo: plazoF, entrada: entradaF, ...(est ? { cuota: est.c, tin: est.t, tae: Math.round(est.tae * 100) / 100, financiera: est.fin === 'lendrock' ? 'Lendrock' : 'Confía', importe: Number(c.price) + V.cambioNombre(c) - entradaF } : {}) } };
     // Conservación: como máximo 12 meses (política de privacidad); con la solicitud se borran sus nóminas
     const lim = new Date(Date.now() - 365 * 864e5).toISOString(); const all = await load('financiaciones');
     for (const x of all.filter((y) => (y.created || '') <= lim)) for (const d of x.fin?.docs || []) await media().delete('nomina/' + d.id).catch(() => {});
@@ -876,7 +889,7 @@ async function api(r, req, M, ip, url, context) {
     if (await rateLimited(ip, 'form', 8)) return json({ error: 'Has enviado demasiadas solicitudes. Escríbenos por WhatsApp.' }, 429);
     const base = { id: uid(), ...chk.data, created: new Date().toISOString(), status: 'pendiente', notas: '' }; const out = { ok: true };
     const cars = await load('cars');
-    const carRef = (slug) => { const c = cars.find((x) => x.slug === slug); return c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' ') } : {}; };
+    const carRef = (slug) => { const c = cars.find((x) => x.slug === slug); return c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''}${c.year ? ` (${c.year})` : ''}`.replace(/\s+/g, ' ') } : {}; };
     if (r === '/cita') {
       const fecha = clip(f.fecha, 10), hora = clip(f.hora, 5);
       const libres = await freeSlots(fecha); let propuesta = false;
@@ -1127,7 +1140,8 @@ async function adminApi(r, req, M, me, url) {
       const chg = []; if (old.price !== c.price) chg.push(`precio ${old.price} → ${c.price} €`); if (!old.sold && c.sold) chg.push('vendido'); if (old.sold && !c.sold) chg.push('vuelve a stock'); if (old.status !== c.status) chg.push(`estado: ${c.status}`); if (old.km !== c.km) chg.push(`km ${old.km} → ${c.km}`); if (!!old.hidden !== !!c.hidden) chg.push(c.hidden ? 'oculto' : 'visible'); if ((old.images || []).join() !== (c.images || []).join()) chg.push('fotos'); if (old.desc !== c.desc) chg.push('descripción');
       if (chg.length) c.log = [...(old.log || []), { d: new Date().toISOString(), by: me.name, t: chg.join(', ') }].slice(-60);
       c.updated = today(); cars[i] = c; await save('cars', cars);
-      if (!c.sold && !c.hidden && old.price && c.price < old.price) await avisarBajada(c, url.origin).catch((e) => console.error('bajada', e.message));
+      if (!c.sold && !c.hidden && old.price > 0 && c.price > 0 && c.price < old.price) await avisarBajada(c, url.origin).catch((e) => console.error('bajada', e.message));
+      if (!(old.price > 0) && c.price > 0) await precioInicialAlertas(c).catch((e) => console.error('alertas', e.message)); // pasa de «sin precio» a tener precio: no es una bajada, solo fija la referencia
       if (!c.sold && !c.hidden) await avisarCuota(c, url.origin).catch((e) => console.error('cuota', e.message));
       await dropMedia((old.images || []).filter((u) => !(c.images || []).includes(u)));
       if (old.video?.url && old.video.url !== c.video?.url) await dropVideo(old.video.url);
