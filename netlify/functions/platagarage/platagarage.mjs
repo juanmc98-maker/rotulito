@@ -229,7 +229,8 @@ async function buildClientes() {
   b.forEach((x) => add(x, 'cita', `${x.tipo === 'reserva' ? 'Reserva' : 'Cita'} ${x.fecha || ''} ${x.hora || ''} · ${x.cocheNombre || x.motivo || ''}`));
   t.forEach((x) => add(x, 'tasacion', `Tasación: ${x.marca || ''} ${x.modelo || ''} ${x.anio || ''}`));
   e.forEach((x) => add(x, 'envio', `Envío a ${x.cp || ''} · ${x.cocheNombre || ''}`));
-  fi.forEach((x) => add(x, 'financiacion', `Pide financiación${x.cocheNombre ? ' · ' + x.cocheNombre : ''}`));
+  fi.forEach((x) => add(x, 'financiacion', `${x.status === 'incompleta' ? 'Empezó a pedir financiación y no terminó' : 'Pide financiación'}${x.cocheNombre ? ' · ' + x.cocheNombre : ''}`));
+  al.forEach((x) => add(x, 'alerta', `Quiere avisos: ${x.busca || 'coches nuevos'}`));
   m.forEach((x) => add(x, 'mensaje', `Mensaje: ${(x.asunto || x.mensaje || '').slice(0, 80)}`));
   po.forEach((x) => { const t = msgPortal(x.mensaje); add(x, 'portal', `${x.fuente || 'Portal'}${x.tipoContacto && x.tipoContacto !== 'Mensaje' ? ' · ' + x.tipoContacto : ''}${t ? ': ' + t : ''}`); });
   bu.forEach((x) => add(x, 'busqueda', `Busca: ${[x.marca, x.modelo].filter(Boolean).join(' ') || 'cualquiera'} hasta ${x.presupuesto || '?'} €`));
@@ -240,7 +241,8 @@ async function buildClientes() {
     const bought = cars.filter((x) => x.buyer === c.key);
     const cit = c.leads.filter((l) => l.tipo === 'cita');
     let auto = 'nuevo';
-    if (c.leads.some((l) => l.status && l.status !== 'pendiente')) auto = 'contactado';
+    // 'incompleta' (financiación a medias) y 'activa' (avisos) son solicitudes sin atender: el cliente sigue siendo nuevo
+    if (c.leads.some((l) => l.status && !['pendiente', 'incompleta', 'activa'].includes(l.status))) auto = 'contactado';
     if (cit.some((l) => l.status !== 'cancelada' && l.fecha >= td)) auto = 'cita';
     if (cit.some((l) => l.status === 'completada')) auto = 'visitado';
     if (cit.some((l) => l.btipo === 'reserva' && l.status === 'confirmada')) auto = 'reserva';
@@ -762,6 +764,8 @@ async function api(r, req, M, ip, url, context) {
     const it = { ...(prev || { id: uid(), created: new Date().toISOString(), notas: '' }), ...chk.data, status: 'incompleta', ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}) };
     if (prev) Object.assign(prev, it); else list.unshift(it);
     await save('financiaciones', list); await bump('ev', 'fin-parcial').catch(() => {});
+    // Aviso al móvil en cuanto deja el contacto, aunque no termine el formulario (solo la primera vez)
+    if (!prev) await pushAll('garage', 'Empieza a pedir financiación · Plata Garage', [it.nombre, it.cocheNombre].filter(Boolean).join(' · ') + ' (aún no ha terminado)', 'finp-' + it.id).catch((e) => console.error('push', e.message));
     return json({ ok: true, id: it.id });
   }
 
