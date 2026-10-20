@@ -741,6 +741,8 @@ async function api(r, req, M, ip, url, context) {
     if (direccion.length < 5) return json({ error: 'Escribe tu dirección.' }, 400);
     if (!/^\d{5}$/.test(cp)) return json({ error: 'Escribe un código postal de 5 cifras.' }, 400);
     if (poblacion.length < 2) return json({ error: 'Escribe tu población.' }, 400);
+    const nacionalidad = /^[XYZ]/.test(dni) ? clip(f.nacionalidad, 40) : '';
+    if (/^[XYZ]/.test(dni) && nacionalidad.length < 3) return json({ error: 'Escribe tu nacionalidad.' }, 400);
     const one = (v, list) => (list.includes(v) ? v : '');
     const civil = one(f.civil, V.FIN.civil), antiguedad = one(f.antiguedad, V.FIN.antig), vivienda = one(f.vivienda, V.FIN.vivienda);
     const eurN = (v) => { const n = Number(String(v || '').replace(/[.\s€]/g, '').replace(',', '.')); return isFinite(n) ? Math.round(n) : 0; };
@@ -756,21 +758,50 @@ async function api(r, req, M, ip, url, context) {
     if (noms.length > 3) return json({ error: 'Puedes subir como máximo 3 archivos.' }, 400);
     const OKM = /^(application\/pdf|image\/(jpeg|png|webp|heic|heif))$/;
     for (const x of noms) { if (!OKM.test(x.file.type || '')) return json({ error: 'La nómina tiene que ser un PDF o una foto.' }, 400); if (x.file.size > 4.2e6) return json({ error: 'Cada archivo puede pesar como máximo 4 MB.' }, 400); }
+    // DNI o NIE por las dos caras (obligatorio), guardado cifrado igual que las nóminas
+    const dA = (f._files || []).filter((x) => x.campo === 'dniDelante'), dB = (f._files || []).filter((x) => x.campo === 'dniDetras');
+    if (dA.length !== 1) return json({ error: 'Falta la foto del DNI por delante.' }, 400);
+    if (dB.length !== 1) return json({ error: 'Falta la foto del DNI por detrás.' }, 400);
+    for (const x of [...dA, ...dB]) { if (!OKM.test(x.file.type || '')) return json({ error: 'El DNI tiene que ser una foto o un PDF.' }, 400); if (x.file.size > 4.2e6) return json({ error: 'Cada archivo puede pesar como máximo 4 MB.' }, 400); }
+    dA[0].tipo = 'dni-delante'; dB[0].tipo = 'dni-detras';
+    // Cotitular o avalista (opcional): mismos datos que pide la financiera y su DNI por las dos caras
+    const okId = (v) => { const m = v.match(/^([0-9]{8}|[XYZ][0-9]{7})([A-Z])$/); return !!m && 'TRWAGMYFPDXBNJZSQVHLCKE'[Number(m[1].replace('X', '0').replace('Y', '1').replace('Z', '2')) % 23] === m[2]; };
+    let aval = null; const aA = [], aB = [];
+    if (f.aval === 'si') {
+      const ad = clip(f.avalDni, 12).toUpperCase().replace(/[\s-]/g, ''), atel = clip(f.avalTelefono, 20), amail = clip(f.avalEmail, 200);
+      aval = { tipo: one(f.avalTipo, V.FIN.avalTipo), nombre: clip(f.avalNombre, 80), dni: ad, nacionalidad: /^[XYZ]/.test(ad) ? clip(f.avalNacionalidad, 40) : '', telefono: atel, email: amail, relacion: one(f.avalRelacion, V.FIN.avalRel), antiguedad: one(f.avalAntiguedad, V.FIN.antig), salario: eurN(f.avalSalario), mismaDireccion: f.avalMisma === 'si' };
+      if (!aval.mismaDireccion) Object.assign(aval, { direccion: clip(f.avalDireccion, 140), cp: clip(f.avalCp, 5), poblacion: clip(f.avalPoblacion, 80) });
+      if (!aval.tipo) return json({ error: 'Elige si va como cotitular o como avalista.' }, 400);
+      if (aval.nombre.split(/\s+/).length < 2) return json({ error: 'Escribe el nombre y apellidos del cotitular o avalista.' }, 400);
+      if (!okId(ad)) return json({ error: 'Revisa el DNI o NIE del cotitular o avalista.' }, 400);
+      if (ad === dni) return json({ error: 'El DNI del cotitular o avalista no puede ser el tuyo.' }, 400);
+      if (/^[XYZ]/.test(ad) && aval.nacionalidad.length < 3) return json({ error: 'Escribe la nacionalidad del cotitular o avalista.' }, 400);
+      if (atel.replace(/\D/g, '').length < 9) return json({ error: 'Escribe el móvil del cotitular o avalista.' }, 400);
+      if (amail && !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(amail)) return json({ error: 'Revisa el email del cotitular o avalista.' }, 400);
+      if (!aval.relacion || !aval.antiguedad) return json({ error: 'Completa los datos del cotitular o avalista.' }, 400);
+      if (aval.salario < 300 || aval.salario > 30000) return json({ error: 'Escribe el salario neto del cotitular o avalista.' }, 400);
+      if (!aval.mismaDireccion && (aval.direccion.length < 5 || !/^\d{5}$/.test(aval.cp) || aval.poblacion.length < 2)) return json({ error: 'Revisa la dirección del cotitular o avalista.' }, 400);
+      if (f.avalOk !== 'si') return json({ error: 'Marca la casilla confirmando que el cotitular o avalista está de acuerdo.' }, 400);
+      aA.push(...(f._files || []).filter((x) => x.campo === 'avalDniDelante')); aB.push(...(f._files || []).filter((x) => x.campo === 'avalDniDetras'));
+      if (aA.length !== 1 || aB.length !== 1) return json({ error: 'Falta la foto del DNI del cotitular o avalista por las dos caras.' }, 400);
+      for (const x of [...aA, ...aB]) { if (!OKM.test(x.file.type || '')) return json({ error: 'El DNI tiene que ser una foto o un PDF.' }, 400); if (x.file.size > 4.2e6) return json({ error: 'Cada archivo puede pesar como máximo 4 MB.' }, 400); }
+      aA[0].tipo = 'aval-dni-delante'; aB[0].tipo = 'aval-dni-detras'; aval.consentimiento = new Date().toISOString();
+    }
     const cars = await load('cars'); const c = cars.find((x) => x.slug === clip(f.coche, 120) && !x.sold);
     const base = { id: uid(), ...chk.data, created: new Date().toISOString(), status: 'pendiente', notas: '' };
     const docs = [];
-    for (const x of noms) { const buf = Buffer.from(await x.file.arrayBuffer()); const id = 'n' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'); const iv = crypto.randomBytes(12); const ci = crypto.createCipheriv('aes-256-gcm', docKey(), iv);
-      const enc = Buffer.concat([ci.update(buf), ci.final()]); await media().set('nomina/' + id, Buffer.concat([iv, ci.getAuthTag(), enc])); docs.push({ id, nombre: clip(x.file.name, 120) || 'nomina', mime: x.file.type, size: buf.length }); }
+    for (const x of [...dA, ...dB, ...aA, ...aB, ...noms]) { const buf = Buffer.from(await x.file.arrayBuffer()); const id = 'n' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'); const iv = crypto.randomBytes(12); const ci = crypto.createCipheriv('aes-256-gcm', docKey(), iv);
+      const enc = Buffer.concat([ci.update(buf), ci.final()]); await media().set('nomina/' + id, Buffer.concat([iv, ci.getAuthTag(), enc])); docs.push({ id, nombre: clip(x.file.name, 120) || x.tipo || 'nomina', mime: x.file.type, size: buf.length, ...(x.tipo ? { tipo: x.tipo } : {}) }); }
     V.setCtx({ holders: await load('holders') }); V.setTarifa(await load('tarifas'));
     const plazoF = V.PLAZOS.includes(Number(f.plazo)) ? Number(f.plazo) : 0, entradaF = Math.max(0, Math.round(Number(f.entrada) || 0));
     const est = c && plazoF ? V.cuotaPara(c, Number(c.price) + V.cambioNombre(c) - entradaF, plazoF) : null;
-    const it = { ...base, ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}), fin: { dni, direccion, cp, poblacion, civil, antiguedad, salario, vivienda, gastoVivienda, cesion: base.created, docs, plazo: plazoF, entrada: entradaF, ...(est ? { cuota: est.c, tin: est.t, tae: Math.round(est.tae * 100) / 100, financiera: est.fin === 'lendrock' ? 'Lendrock' : 'Confía', importe: Number(c.price) + V.cambioNombre(c) - entradaF } : {}) } };
+    const it = { ...base, ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}), fin: { dni, ...(nacionalidad ? { nacionalidad } : {}), ...(aval ? { aval } : {}), direccion, cp, poblacion, civil, antiguedad, salario, vivienda, gastoVivienda, cesion: base.created, docs, plazo: plazoF, entrada: entradaF, ...(est ? { cuota: est.c, tin: est.t, tae: Math.round(est.tae * 100) / 100, financiera: est.fin === 'lendrock' ? 'Lendrock' : 'Confía', importe: Number(c.price) + V.cambioNombre(c) - entradaF } : {}) } };
     // Conservación: como máximo 12 meses (política de privacidad); con la solicitud se borran sus nóminas
     const lim = new Date(Date.now() - 365 * 864e5).toISOString(); const all = await load('financiaciones');
     for (const x of all.filter((y) => (y.created || '') <= lim)) for (const d of x.fin?.docs || []) await media().delete('nomina/' + d.id).catch(() => {});
     const pidF = clip(f.pid, 40); const list = all.filter((x) => (x.created || '') > lim && !(pidF && x.id === pidF && x.status === 'incompleta')); list.unshift(it); await save('financiaciones', list);
     // En el aviso por correo solo lo justo: el DNI y los ingresos se ven en el panel
-    await notify('financiacion', { ...base, cocheNombre: it.cocheNombre, motivo: 'Solicitud de financiación' + (plazoF ? ` · a ${plazoF} meses${entradaF ? `, entrada ${entradaF} €` : ''}${est ? `, cuota aprox. ${est.c.toFixed(2).replace('.', ',')} €/mes (${est.fin === 'lendrock' ? 'Lendrock' : 'Confía'})` : ''}` : '') + (docs.length ? ` (adjunta ${docs.length} nómina${docs.length > 1 ? 's' : ''})` : '') }, url.origin).catch(() => {});
+    await notify('financiacion', { ...base, cocheNombre: it.cocheNombre, motivo: 'Solicitud de financiación' + (plazoF ? ` · a ${plazoF} meses${entradaF ? `, entrada ${entradaF} €` : ''}${est ? `, cuota aprox. ${est.c.toFixed(2).replace('.', ',')} €/mes (${est.fin === 'lendrock' ? 'Lendrock' : 'Confía'})` : ''}` : '') + (aval ? ` · con ${aval.tipo.toLowerCase()}` : '') + ' (adjunta el DNI por las dos caras' + ((nn) => nn ? ` y ${nn} nómina${nn > 1 ? 's' : ''})` : ')')(noms.length) }, url.origin).catch(() => {});
     await bump('ev', 'form-financiacion').catch(() => {}); await bump('lp', base.origen || '/').catch(() => {}); await bump('lsrc', base.canal || 'directo').catch(() => {});
     return json({ ok: true });
   }
