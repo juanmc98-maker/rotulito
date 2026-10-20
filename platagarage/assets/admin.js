@@ -674,7 +674,7 @@ V.envios = inbox({ key: 'envios', path: 'envios', title: 'Solicitudes de envío'
 // Financiación: los datos que pide la financiera, con un botón para copiarlos y pegarlos en su portal
 const finTxt = (x) => { const d = x.fin || {}; return [`Nombre: ${x.nombre}`, `DNI/NIE: ${d.dni}`, d.nacionalidad ? `Nacionalidad: ${d.nacionalidad}` : '', `Estado civil: ${d.civil}`, `Móvil: ${x.telefono}`, `Email: ${x.email}`, `Dirección: ${d.direccion}, ${d.cp} ${d.poblacion}`, `Antigüedad laboral: ${d.antiguedad}`, `Salario neto: ${d.salario} €/mes`, `Vivienda: ${d.vivienda}${d.vivienda !== 'Sin gasto' ? ` (${d.gastoVivienda} €/mes)` : ''}`, d.plazo ? `Plazo elegido: ${d.plazo} meses${d.entrada ? ` · entrada ${d.entrada} €` : ''}${d.cuota ? ` · cuota vista en la web ${d.cuota} €/mes con ${d.financiera} (TIN ${d.tin} %, importe ${d.importe} € con cambio de nombre)` : ''}` : '', x.cocheNombre ? `Coche: ${x.cocheNombre}${x.precio ? ' · ' + x.precio + ' €' : ''}` : '', ...(d.aval ? ((a) => [`— ${a.tipo.toUpperCase()} —`, `Nombre: ${a.nombre}`, `DNI/NIE: ${a.dni}`, a.nacionalidad ? `Nacionalidad: ${a.nacionalidad}` : '', `Móvil: ${a.telefono}`, a.email ? `Email: ${a.email}` : '', `Relación con el titular: ${a.relacion}`, `Dirección: ${a.mismaDireccion ? `${d.direccion}, ${d.cp} ${d.poblacion} (la del titular)` : `${a.direccion}, ${a.cp} ${a.poblacion}`}`, `Antigüedad laboral: ${a.antiguedad}`, `Salario neto: ${a.salario} €/mes`])(d.aval) : [])].filter(Boolean).join('\n'); };
 const finInbox = inbox({ key: 'financiaciones', path: 'financiaciones', title: 'Financiación', labels: { incompleta: 'A medias (no terminó)', pendiente: 'Nueva', enviada: 'Enviada a financiera', aprobada: 'Aprobada', denegada: 'Denegada', cerrada: 'Cerrada' },
-  sub: (l) => `${l.length} solicitud${l.length === 1 ? '' : 'es'} · ${l.filter((x) => x.status === 'pendiente').length} sin enviar a la financiera${(() => { const n = l.filter((x) => (x.status === 'pendiente' || x.status === 'incompleta') && Date.now() - Date.parse(x.created || '') > 2 * 3600e3).length; return n ? ` · <b style="color:var(--or)">${n} llevan más de 2 h sin contestar</b>` : ''; })()} · <a href="#tarifas" style="color:var(--or)">Tarifas de la calculadora</a>${tarViejas()}`, states: ['incompleta', 'pendiente', 'enviada', 'aprobada', 'denegada', 'cerrada'],
+  sub: (l) => `${l.length} solicitud${l.length === 1 ? '' : 'es'} · ${l.filter((x) => x.status === 'pendiente').length} sin enviar a la financiera${(() => { const n = l.filter((x) => (x.status === 'pendiente' || x.status === 'incompleta') && Date.now() - Date.parse(x.created || '') > 2 * 3600e3).length; return n ? ` · <b style="color:var(--or)">${n} llevan más de 2 h sin contestar</b>` : ''; })()} · <a href="#tarifas" style="color:var(--or)">Tarifas de la calculadora</a> · <a href="#copia" style="color:var(--or)">Copia de seguridad</a>${tarViejas()}`, states: ['incompleta', 'pendiente', 'enviada', 'aprobada', 'denegada', 'cerrada'],
   body: (x) => { const d = x.fin || {}; return bx('Coche', x.coche ? `<a href="${B}/vehiculos/${x.coche}" target="_blank">${esc(x.cocheNombre)}</a>${x.precio ? `<br>${eur(x.precio)}` : ''}${d.plazo ? `<br>${d.plazo} meses${d.entrada ? ` · entrada ${eur(d.entrada)}` : ''}` : ''}${d.cuota ? `<br>Vio <b>${eur(d.cuota)}/mes</b> con ${esc(d.financiera)} (TIN ${d.tin} %)` : ''}` : 'Aún no lo sabe') + bx('Datos personales', !x.fin ? 'No terminó el formulario: solo dejó su contacto. Llámale para ayudarle a acabarlo.' : `DNI/NIE <b>${esc(d.dni)}</b>${d.nacionalidad ? ` · ${esc(d.nacionalidad)}` : ''}<br>${esc(d.civil)}<br>${esc(d.direccion)}, ${esc(d.cp)} ${esc(d.poblacion)}`)
     + (!x.fin ? '' : bx('Trabajo y vivienda', `Antigüedad: <b>${esc(d.antiguedad)}</b><br>Neto: <b>${eur(d.salario)}/mes</b><br>${esc(d.vivienda)}${d.vivienda !== 'Sin gasto' ? `: <b>${eur(d.gastoVivienda)}/mes</b>` : ''}`))
     + (!x.fin ? '' : bx('DNI o NIE', (d.docs || []).some((f) => /^dni/.test(f.tipo || '')) ? (d.docs || []).filter((f) => /^dni/.test(f.tipo || '')).map((f) => `<a href="${API}/admin/financiaciones/${x.id}/doc/${f.id}" target="_blank" rel="noopener">${f.tipo === 'dni-delante' ? 'Por delante' : 'Por detrás'}</a>`).join('<br>') : '<span class="mu">No lo subió</span>'))
@@ -701,6 +701,49 @@ V.tarifas = async (m) => {
   $('#tsv').onclick = guard(async () => { const v = (k) => (m.querySelector(`[data-k="${k}"]`) || {}).value;
     const b = { confia: { fecha: v('cf.fecha'), apertura: v('cf.apertura'), alto: PC.map((p, i) => v('cf.alto.' + i)), bajo: PC.map((p, i) => v('cf.bajo.' + i)) }, lendrock: { fecha: v('ld.fecha'), apertura: v('ld.apertura'), hasta10: Object.fromEntries(PL1.map((p) => [p, v('ld.h10.' + p)])), hasta16: Object.fromEntries(PL2.map((p) => [p, v('ld.h16.' + p)])) } };
     await api('/admin/tarifas', { method: 'PUT', body: b }); toast('Tarifas guardadas: la web ya las usa'); route(); });
+};
+// Copia de seguridad cifrada en Google Drive: la clave privada se crea aquí y solo la tiene Juan (archivo + contraseña)
+const b64e = (b) => { const u = new Uint8Array(b); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); };
+const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const bajar = (blob, nombre) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); };
+const passKey = async (pass, salt) => crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 600000, hash: 'SHA-256' }, await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']), { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+V.copia = async (m) => {
+  const r = await api('/admin/copia'); m = shell('financiaciones');
+  m.innerHTML = top('Copia de seguridad', 'Cada día se guarda en tu Google Drive una copia de todos los datos de la web (solicitudes, citas, clientes, coches, documentos, DNI y nóminas). Sale siempre cifrada: sin tu archivo de clave y tu contraseña no la puede abrir nadie, ni Google.', '<a class="btn g" href="#financiaciones">Volver</a>')
+    + `<div class="card sec"><h3>1. Clave de la copia</h3>${r.clave ? `<p>Clave creada el <b>${new Date(r.clave).toLocaleDateString('es-ES')}</b>. Si creas otra, las copias nuevas solo se abrirán con la nueva.</p>` : '<p>Aún no hay clave. Créala una sola vez: se descarga un archivo que tienes que guardar (por ejemplo en un pendrive o en tu correo) y una contraseña que no se puede recuperar.</p>'}
+      <div class="row" style="gap:10px;flex-wrap:wrap"><input type="password" id="cp1" placeholder="Contraseña (mín. 10 caracteres)" autocomplete="new-password" style="min-width:220px"><input type="password" id="cp2" placeholder="Repite la contraseña" autocomplete="new-password" style="min-width:220px"><button class="btn" id="cpk">${r.clave ? 'Crear clave nueva' : 'Crear clave'}</button></div></div>
+    <div class="card sec"><h3>2. Abrir una copia</h3><p class="mu sm">Solo hace falta si se pierde algo. Elige tu archivo de clave, escribe la contraseña y elige los archivos .pgc de la copia (de la carpeta de Drive). Se descifran aquí, en tu navegador.</p>
+      <div style="display:grid;gap:10px;max-width:520px"><label>Archivo de clave<input type="file" id="cpf" accept=".json,application/json"></label><input type="password" id="cpp" placeholder="Contraseña" autocomplete="current-password"><label>Archivos de la copia (.pgc)<input type="file" id="cpc" multiple accept=".pgc"></label><button class="btn" id="cpo">Abrir</button></div></div>`;
+  $('#cpk').onclick = guard(async () => {
+    const p1 = $('#cp1').value, p2 = $('#cp2').value; if (p1.length < 10) throw new Error('La contraseña tiene que tener al menos 10 caracteres.'); if (p1 !== p2) throw new Error('Las dos contraseñas no coinciden.');
+    if (r.clave && !confirm('¿Seguro? Las copias nuevas solo se podrán abrir con la clave nueva.')) return;
+    toast('Creando la clave…');
+    const kp = await crypto.subtle.generateKey({ name: 'RSA-OAEP', modulusLength: 4096, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['encrypt', 'decrypt']);
+    const jwk = await crypto.subtle.exportKey('jwk', kp.publicKey), pk8 = await crypto.subtle.exportKey('pkcs8', kp.privateKey);
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+    const priv = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await passKey(p1, salt), pk8);
+    const fecha = new Date().toISOString().slice(0, 10);
+    bajar(new Blob([JSON.stringify({ tipo: 'clave-copia-plata-garage', v: 1, creada: fecha, salt: b64e(salt), iv: b64e(iv), priv: b64e(priv) })], { type: 'application/json' }), `clave-copia-plata-garage-${fecha}.json`);
+    await api('/admin/copia', { method: 'PUT', body: { jwk: { kty: 'RSA', n: jwk.n, e: jwk.e } } });
+    toast('Clave creada. Guarda bien el archivo y la contraseña.'); route();
+  });
+  $('#cpo').onclick = guard(async () => {
+    const kf = $('#cpf').files[0], fs = [...$('#cpc').files]; if (!kf || !fs.length) throw new Error('Elige el archivo de clave y al menos un archivo de la copia.');
+    const k = JSON.parse(await kf.text()); if (k.tipo !== 'clave-copia-plata-garage') throw new Error('Ese no es el archivo de clave.');
+    let pk8; try { pk8 = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(k.iv) }, await passKey($('#cpp').value, b64d(k.salt)), b64d(k.priv)); } catch (e) { throw new Error('La contraseña no es correcta.'); }
+    const priv = await crypto.subtle.importKey('pkcs8', pk8, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['decrypt']);
+    let ok = 0;
+    for (const f of fs) {
+      const u = new Uint8Array(await f.arrayBuffer()); if (new TextDecoder().decode(u.subarray(0, 4)) !== 'PGC1') { toast(f.name + ': no es un archivo de la copia', true); continue; }
+      const wl = (u[4] << 8) | u[5]; let raw;
+      try { const ak = await crypto.subtle.importKey('raw', await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, priv, u.subarray(6, 6 + wl)), 'AES-GCM', false, ['decrypt']); raw = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.subarray(6 + wl, 18 + wl) }, ak, u.subarray(18 + wl))); }
+      catch (e) { toast(f.name + ': no se abre con esta clave', true); continue; }
+      if (/^datos-/.test(f.name)) { const txt = await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('gzip'))).blob(); bajar(new Blob([txt], { type: 'application/json' }), f.name.replace(/\.pgc$/, '.json')); }
+      else { const nl = (raw[0] << 8) | raw[1]; bajar(new Blob([raw.subarray(2 + nl)]), new TextDecoder().decode(raw.subarray(2, 2 + nl))); }
+      ok++; await new Promise((z) => setTimeout(z, 400));
+    }
+    toast(ok ? `Abiertos ${ok} archivo${ok > 1 ? 's' : ''}` : 'No se ha abierto ninguno', !ok);
+  });
 };
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-cp]'); if (!b) return; navigator.clipboard.writeText(b.dataset.cp).then(() => toast('Datos copiados'), () => toast('No se han podido copiar')); });
 V.mensajes = inbox({ key: 'mensajes', path: 'mensajes', title: 'Mensajes', sub: (l) => `${l.length} mensajes recibidos.`, states: ['pendiente', 'respondido'],
