@@ -1266,6 +1266,7 @@ export default {
   "Por detrás": ["Per darrere", "Back"],
   "Añadir foto": ["Afegir foto", "Add photo"],
   "Nacionalidad *": ["Nacionalitat *", "Nationality *"],
+  "Fecha de nacimiento *": ["Data de naixement *", "Date of birth *"],
   "Por ejemplo, italiana": ["Per exemple, italiana", "For example, Italian"],
   "<b>Añadir un cotitular o avalista</b> (opcional). Ayuda a que aprueben la financiación si la financiera lo pide o si tus ingresos se quedan cortos.": ["<b>Afegir un cotitular o avalador</b> (opcional). Ajuda que aprovin el finançament si la financera ho demana o si els teus ingressos es queden curts.", "<b>Add a co-holder or guarantor</b> (optional). It helps get the financing approved if the lender asks for it or if your income falls short."],
   "Va como *": ["Hi va com a *", "Joins as *"],

@@ -797,6 +797,11 @@ async function api(r, req, M, ip, url, context) {
     if (direccion.length < 5) return json({ error: 'Escribe tu dirección.' }, 400);
     if (!/^\d{5}$/.test(cp)) return json({ error: 'Escribe un código postal de 5 cifras.' }, 400);
     if (poblacion.length < 2) return json({ error: 'Escribe tu población.' }, 400);
+    const edadDe = (v) => { const x = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); if (!x) return -1; const h = new Date(), d = new Date(Date.UTC(+x[1], x[2] - 1, +x[3])); if (d.getUTCMonth() !== x[2] - 1) return -1; let a = h.getUTCFullYear() - d.getUTCFullYear(); if (h.getUTCMonth() < d.getUTCMonth() || (h.getUTCMonth() === d.getUTCMonth() && h.getUTCDate() < d.getUTCDate())) a--; return a; };
+    const nacimiento = clip(f.nacimiento, 10), edadT = edadDe(nacimiento);
+    if (edadT < 0) return json({ error: 'Escribe tu fecha de nacimiento.' }, 400);
+    if (edadT < 18) return json({ error: 'Para pedir financiación tienes que ser mayor de edad.' }, 400);
+    if (edadT > 95) return json({ error: 'Revisa tu fecha de nacimiento.' }, 400);
     const nacionalidad = /^[XYZ]/.test(dni) ? clip(f.nacionalidad, 40) : '';
     if (/^[XYZ]/.test(dni) && nacionalidad.length < 3) return json({ error: 'Escribe tu nacionalidad.' }, 400);
     const one = (v, list) => (list.includes(v) ? v : '');
@@ -825,13 +830,14 @@ async function api(r, req, M, ip, url, context) {
     let aval = null; const aA = [], aB = [];
     if (f.aval === 'si') {
       const ad = clip(f.avalDni, 12).toUpperCase().replace(/[\s-]/g, ''), atel = clip(f.avalTelefono, 20), amail = clip(f.avalEmail, 200);
-      aval = { tipo: one(f.avalTipo, V.FIN.avalTipo), nombre: clip(f.avalNombre, 80), dni: ad, nacionalidad: /^[XYZ]/.test(ad) ? clip(f.avalNacionalidad, 40) : '', telefono: atel, email: amail, relacion: one(f.avalRelacion, V.FIN.avalRel), antiguedad: one(f.avalAntiguedad, V.FIN.antig), salario: eurN(f.avalSalario), mismaDireccion: f.avalMisma === 'si' };
+      aval = { tipo: one(f.avalTipo, V.FIN.avalTipo), nombre: clip(f.avalNombre, 80), dni: ad, nacimiento: clip(f.avalNacimiento, 10), nacionalidad: /^[XYZ]/.test(ad) ? clip(f.avalNacionalidad, 40) : '', telefono: atel, email: amail, relacion: one(f.avalRelacion, V.FIN.avalRel), antiguedad: one(f.avalAntiguedad, V.FIN.antig), salario: eurN(f.avalSalario), mismaDireccion: f.avalMisma === 'si' };
       if (!aval.mismaDireccion) Object.assign(aval, { direccion: clip(f.avalDireccion, 140), cp: clip(f.avalCp, 5), poblacion: clip(f.avalPoblacion, 80) });
       if (!aval.tipo) return json({ error: 'Elige si va como cotitular o como avalista.' }, 400);
       if (aval.nombre.split(/\s+/).length < 2) return json({ error: 'Escribe el nombre y apellidos del cotitular o avalista.' }, 400);
       if (!okId(ad)) return json({ error: 'Revisa el DNI o NIE del cotitular o avalista.' }, 400);
       if (ad === dni) return json({ error: 'El DNI del cotitular o avalista no puede ser el tuyo.' }, 400);
       if (/^[XYZ]/.test(ad) && aval.nacionalidad.length < 3) return json({ error: 'Escribe la nacionalidad del cotitular o avalista.' }, 400);
+      { const e = edadDe(aval.nacimiento); if (e < 18 || e > 95) return json({ error: 'Escribe la fecha de nacimiento del cotitular o avalista (tiene que ser mayor de edad).' }, 400); }
       if (atel.replace(/\D/g, '').length < 9) return json({ error: 'Escribe el móvil del cotitular o avalista.' }, 400);
       if (amail && !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(amail)) return json({ error: 'Revisa el email del cotitular o avalista.' }, 400);
       if (!aval.relacion || !aval.antiguedad) return json({ error: 'Completa los datos del cotitular o avalista.' }, 400);
@@ -851,7 +857,7 @@ async function api(r, req, M, ip, url, context) {
     V.setCtx({ holders: await load('holders') }); V.setTarifa(await load('tarifas'));
     const plazoF = V.PLAZOS.includes(Number(f.plazo)) ? Number(f.plazo) : 0, entradaF = Math.max(0, Math.round(Number(f.entrada) || 0));
     const est = c && plazoF ? V.cuotaPara(c, Number(c.price) + V.cambioNombre(c) - entradaF, plazoF) : null;
-    const it = { ...base, ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}), fin: { dni, ...(nacionalidad ? { nacionalidad } : {}), ...(aval ? { aval } : {}), direccion, cp, poblacion, civil, antiguedad, salario, vivienda, gastoVivienda, cesion: base.created, docs, plazo: plazoF, entrada: entradaF, ...(est ? { cuota: est.c, tin: est.t, tae: Math.round(est.tae * 100) / 100, financiera: est.fin === 'lendrock' ? 'Lendrock' : 'Confía', importe: Number(c.price) + V.cambioNombre(c) - entradaF } : {}) } };
+    const it = { ...base, ...(c ? { coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''} (${c.year})`.replace(/\s+/g, ' '), precio: c.price, holder: c.holder } : {}), fin: { dni, nacimiento, ...(nacionalidad ? { nacionalidad } : {}), ...(aval ? { aval } : {}), direccion, cp, poblacion, civil, antiguedad, salario, vivienda, gastoVivienda, cesion: base.created, docs, plazo: plazoF, entrada: entradaF, ...(est ? { cuota: est.c, tin: est.t, tae: Math.round(est.tae * 100) / 100, financiera: est.fin === 'lendrock' ? 'Lendrock' : 'Confía', importe: Number(c.price) + V.cambioNombre(c) - entradaF } : {}) } };
     // Conservación: como máximo 12 meses (política de privacidad); con la solicitud se borran sus nóminas
     const lim = new Date(Date.now() - 365 * 864e5).toISOString(); const all = await load('financiaciones');
     for (const x of all.filter((y) => (y.created || '') <= lim)) for (const d of x.fin?.docs || []) await media().delete('nomina/' + d.id).catch(() => {});
