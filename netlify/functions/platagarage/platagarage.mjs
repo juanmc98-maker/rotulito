@@ -612,6 +612,22 @@ async function api(r, req, M, ip, url, context) {
       const datos = {}; for (const k of BACKUP_KEYS) datos[k] = (await db().get(k, { type: 'json' })) ?? null;
       return bin(await seal(zlib.gzipSync(Buffer.from(JSON.stringify({ fecha: new Date().toISOString(), datos })))));
     }
+    if (kind === 'leads') { // hoja de leads de Google Sheets: contacto e intereses (nunca DNI, nóminas, sueldo ni dirección)
+      const cls = await buildClientes();
+      const [bu, ta, fi, al, po, me] = await Promise.all(['busquedas', 'tasaciones', 'financiaciones', 'alertas', 'portales', 'mensajes'].map(load));
+      const by = (L) => Object.fromEntries((L || []).map((x) => [x.id, x])); const B = by(bu), T = by(ta), F = by(fi), A = by(al), P = by(po), Me = by(me);
+      const fh = (d) => (d ? new Date(d).toLocaleString('es-ES', { timeZone: TZ, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+      const LT = { cita: 'Cita o reserva', tasacion: 'Tasación', envio: 'Envío', financiacion: 'Financiación', mensaje: 'Mensaje', portal: 'Portal', busqueda: 'Te lo buscamos', alerta: 'Avisos' };
+      const u = (a) => [...new Set(a.map((x) => String(x || '').trim()).filter(Boolean))].join(' | ');
+      return json(cls.map((c) => { const L = c.leads || [];
+        const busca = u([...L.filter((l) => l.tipo === 'busqueda').map((l) => { const x = B[l.id] || {}; return [x.marca, x.modelo, x.combustible, x.cambio, x.anioDesde ? 'desde ' + x.anioDesde : '', x.kmMax ? 'máx. ' + x.kmMax + ' km' : '', x.presupuesto ? 'hasta ' + x.presupuesto + ' €' : ''].filter(Boolean).join(' ') + (x.comentario ? ' (' + clip(x.comentario, 200) + ')' : ''); }),
+          ...L.filter((l) => l.tipo === 'alerta').map((l) => { const x = A[l.id] || {}; return (x.busca || '') + (x.max ? ' hasta ' + x.max + ' €' : '') + (x.cuota ? ' (cuota hasta ' + x.cuota + ' €/mes)' : ''); })]);
+        const entrega = u(L.filter((l) => l.tipo === 'tasacion').map((l) => { const x = T[l.id] || {}; return [x.marca, x.modelo, x.anio, x.km ? x.km + ' km' : '', x.combustible, x.cambio, x.estado].filter(Boolean).join(' '); }));
+        const fin = u(L.filter((l) => l.tipo === 'financiacion').map((l) => { const x = F[l.id] || {}, d = x.fin || {}; if (x.status === 'incompleta') return 'Empezó y no terminó'; return [x.status, d.plazo ? d.plazo + ' meses' : '', d.entrada ? 'entrada ' + d.entrada + ' €' : '', d.cuota ? 'cuota aprox. ' + d.cuota + ' €/mes' : '', d.aval ? 'con ' + String(d.aval.tipo || '').toLowerCase() : ''].filter(Boolean).join(', '); }));
+        const msgs = u(L.map((l) => clip(l.tipo === 'mensaje' ? (Me[l.id] || {}).mensaje : l.tipo === 'portal' ? msgPortal((P[l.id] || {}).mensaje) : '', 200)));
+        return { 'Nombre': c.nombre || '', 'Teléfono': c.telefono || '', 'Email': c.email || '', 'Etapa': String(c.etapa || '').replace(/^./, (m) => m.toUpperCase()), 'Origen': c.origen || '', 'Coche que le interesa': u(L.map((l) => l.cocheNombre)), 'Qué busca': busca, 'Coche que entrega': entrega, 'Financiación': fin, 'Avisos por email': c.alerta ? 'Sí' : '', 'Mensajes': msgs, 'Qué ha pedido': u(L.map((l) => LT[l.tipo] || l.tipo)), 'Nº de solicitudes': L.length, 'Primer contacto': fh(c.primero), 'Último contacto': fh(c.last), 'Notas internas': c.notas || '', 'Motivo si se perdió': c.motivo || '', 'Compró': u((c.compras || []).filter((x) => x.sold).map((x) => x.nombre)) };
+      }));
+    }
     if (kind === 'lista') { // solo identificadores, sin nombres ni datos
       const fin = (await db().get('financiaciones', { type: 'json' })) || [], docs = (await db().get('docs', { type: 'json' })) || {};
       return json([...fin.flatMap((x) => (x.fin?.docs || []).map((d) => ({ c: 'nomina', id: d.id }))), ...Object.values(docs).flatMap((v) => (v.files || []).map((d) => ({ c: 'doc', id: d.id })))]);
