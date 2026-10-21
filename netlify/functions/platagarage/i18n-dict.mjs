@@ -1,6 +1,13 @@
 // Plata Garage · diccionario de traducciones: castellano → [catalán, inglés]
 // Claves tal y como salen en la web (números como {0}, {1}…). Lo que no está aquí se queda en castellano.
 export default {
+  "<a>Ver coches</a><a>Pedir cita</a><a>Vender mi coche</a><a>Te lo buscamos</a><a>Contacto</a><a>Blog</a>": ["<a>Veure cotxes</a><a>Demanar cita</a><a>Vendre el meu cotxe</a><a>Te'l busquem</a><a>Contacte</a><a>Blog</a>","<a>See cars</a><a>Book a visit</a><a>Sell my car</a><a>We'll find it for you</a><a>Contact</a><a>Blog</a>"],
+  "<i></i>{0} coches disponibles · {1} próximamente": ["<i></i>{0} cotxes disponibles · {1} properament","<i></i>{0} cars available · {1} coming soon"],
+  "Coches que estamos preparando. Si te interesa alguno, <a>pídenos por WhatsApp que te avisemos</a>.": ["Cotxes que estem preparant. Si t'interessa algun, <a>demana'ns per WhatsApp que t'avisem</a>.","Cars we are getting ready. If you're interested in one, <a>ask us on WhatsApp to let you know</a>."],
+  "Solicitar cita para ver este coche": ["Sol·licitar cita per veure aquest cotxe","Request a visit to see this car"],
+  "Solicitar cita": ["Sol·licitar cita","Request a visit"],
+  "Te confirmamos la hora por WhatsApp.": ["Et confirmem l'hora per WhatsApp.","We'll confirm the time on WhatsApp."],
+  "Menú": ["Menú","Menu"],
   "Pide cita para ver un coche de ocasión en Plata Garage, en Sabadell. Elige día y hora y te lo tenemos preparado, sin compromiso.": ["Demana cita per veure un cotxe d'ocasió a Plata Garage, a Sabadell. Tria dia i hora i te'l tenim preparat, sense compromís.","Book a visit to see a used car at Plata Garage in Sabadell. Choose a day and time and we'll have it ready, with no obligation."],
   "Contacta con Plata Garage, compraventa de coches de ocasión en Sabadell, o pide la tasación gratuita de tu coche. Te respondemos lo antes posible.": ["Contacta amb Plata Garage, compravenda de cotxes d'ocasió a Sabadell, o demana la taxació gratuïta del teu cotxe. Et responem al més aviat possible.","Contact Plata Garage, used car dealer in Sabadell, or ask for a free valuation of your car. We'll reply as soon as possible."],
   "Política de privacidad de Plata Garage: qué datos recogemos, para qué los usamos, cuánto tiempo los guardamos y cómo ejercer tus derechos.": ["Política de privadesa de Plata Garage: quines dades recollim, per a què les fem servir, quant de temps les guardem i com exercir els teus drets.","Plata Garage privacy policy: what data we collect, what we use it for, how long we keep it and how to exercise your rights."],
@@ -16,6 +23,9 @@ export default {
   "+{0} {1} {2} {3} {4}</a><a>Reservar cita</a>": ["+{0} {1} {2} {3} {4}</a><a>Reservar cita</a>","+{0} {1} {2} {3} {4}</a><a>Book a visit</a>"],
   "Exposición de coches de Plata Garage en Sabadell": ["Exposició de cotxes de Plata Garage a Sabadell","Plata Garage car showroom in Sabadell"],
   "<i></i>Coches seleccionados": ["<i></i>Cotxes seleccionats","<i></i>Hand-picked cars"],
+  "Coches de ocasión<br>en Sabadell,": ["Cotxes d'ocasió<br>a Sabadell,","Used cars<br>in Sabadell,"],
+  "revisados y<br>con trato directo.": ["revisats i<br>amb tracte directe.","checked and<br>dealt with personally."],
+  "Cada coche se prepara antes de la entrega, con cambio de aceite y {0} meses de garantía. Ven a verlo con cita y resuelve tus dudas sin prisas.": ["Cada cotxe es prepara abans del lliurament, amb canvi d'oli i {0} mesos de garantia. Vine a veure'l amb cita i resol els teus dubtes sense presses.","Every car is prepared before handover, with an oil change and a {0}-month warranty. Book a visit to see it and ask anything you need, with no rush."],
   "Vehículos de ocasión<br>en Sabadell,": ["Vehicles d'ocasió<br>a Sabadell,","Used cars<br>in Sabadell,"],
   "con trato<br>directo.": ["amb tracte<br>directe.","dealt with<br>personally."],
   "Garantía de {0} meses y atención con cita previa.": ["Garantia de {0} mesos i atenció amb cita prèvia.","{0}-month warranty and appointment-only service."],
