@@ -1153,3 +1153,37 @@ ${carBox}
   const subject = bk.propuesta ? `Hemos recibido tu propuesta de cita · ${dia} a las ${bk.hora}` : `Tu cita en Plata Garage · ${dia} a las ${bk.hora}`;
   return { subject, html, text, ics: ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Plata Garage//Cita//ES', 'BEGIN:VEVENT', `UID:${bk.id}@platagarage`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`, `DTSTART;TZID=Europe/Madrid:${d0}`, `DTEND;TZID=Europe/Madrid:${d1}`, `SUMMARY:${tit}`, `DESCRIPTION:${det}`, 'LOCATION:Sabadell', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n') };
 }
+
+// Acuse al cliente (contacto, tasación, te lo buscamos, envío, financiación): mismo estilo que la confirmación de cita
+export function emailAcuse({ tipo, d, origin }) {
+  const h = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const nom = String(d.nombre || '').trim().split(' ')[0]; const Nom = nom ? nom[0].toUpperCase() + nom.slice(1).toLowerCase() : '';
+  const suCoche = [d.marca, d.modelo, d.anio].filter(Boolean).join(' ');
+  const T = {
+    mensaje: { tag: 'Mensaje recibido', h1: 'Hemos recibido tu mensaje.', p: 'Lo leemos y te respondemos lo antes posible por email, WhatsApp o teléfono.', sub: 'Hemos recibido tu mensaje · Plata Garage', rows: [['Asunto', d.asunto], ['Coche', d.cocheNombre]] },
+    tasacion: { tag: 'Tasación pedida', h1: 'Hemos recibido los datos de tu coche.', p: 'Los revisamos y te pasamos una valoración lo antes posible. Si necesitamos alguna foto o algún dato más, te lo pedimos.', sub: `Hemos recibido tu solicitud de tasación${suCoche ? ' · ' + suCoche : ''}`, rows: [['Tu coche', suCoche], ['Kilómetros', d.km ? Number(String(d.km).replace(/\D/g, '')).toLocaleString('es-ES') + ' km' : ''], ['Lo entregarías por', d.cocheNombre]] },
+    busqueda: { tag: 'Búsqueda en marcha', h1: 'Nos ponemos a buscar tu coche.', p: 'Revisamos el mercado y te avisamos en cuanto encontremos algo que encaje con lo que buscas.', sub: 'Hemos recibido tu petición «Te lo buscamos» · Plata Garage', rows: [['Buscas', [d.marca, d.modelo].filter(Boolean).join(' ') || 'Lo que nos has contado'], ['Presupuesto', d.presupuesto ? Number(String(d.presupuesto).replace(/\D/g, '')).toLocaleString('es-ES') + ' €' : '']] },
+    envio: { tag: 'Envío pedido', h1: 'Hemos recibido tu solicitud de envío.', p: 'Calculamos lo que costaría llevarte el coche y te lo decimos lo antes posible.', sub: `Hemos recibido tu solicitud de envío${d.cocheNombre ? ' · ' + d.cocheNombre : ''}`, rows: [['Coche', d.cocheNombre], ['Código postal', d.cp]] },
+    financiacion: { tag: 'Financiación pedida', h1: 'Hemos recibido tu solicitud de financiación.', p: 'La estudiamos con la financiera y te decimos algo en cuanto tengamos respuesta. Si falta algún documento, te lo pedimos.', sub: `Hemos recibido tu solicitud de financiación${d.cocheNombre ? ' · ' + d.cocheNombre : ''}`, rows: [['Coche', d.cocheNombre]] },
+  }[tipo];
+  if (!T) return null;
+  const rows = T.rows.filter(([, v]) => v);
+  const F = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  const lab = 'color:#8a8a8a;font-size:13px;padding:0 0 2px', val = 'color:#f5f5f5;font-size:17px;font-weight:700;padding:0 0 16px';
+  const waUrl = wa(`Hola, soy ${d.nombre || ''}. Os acabo de escribir desde la web.`);
+  const box = rows.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #262626;border-radius:16px;background:#111"><tr><td style="padding:20px 22px 4px">${rows.map(([k, v]) => `<div style="${lab}">${k}</div><div style="${val}">${h(v)}</div>`).join('')}</td></tr></table>` : '';
+  const html = `<div style="margin:0;padding:0;background:#050505;${F}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#050505;padding:24px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#0b0b0b;border:1px solid #262626;border-radius:18px;overflow:hidden">
+<tr><td style="padding:24px 28px;border-bottom:1px solid #1f1f1f"><img src="${origin}${ST}/assets/logo.png" alt="Plata Garage" height="38" style="height:38px;width:auto;display:block"></td></tr>
+<tr><td style="padding:30px 28px 8px">
+<span style="display:inline-block;border:1px solid #333;border-radius:9999px;padding:6px 14px;font-size:13px;color:#f5f5f5"><span style="color:#f76806">&#10003;</span>&nbsp; ${T.tag}</span>
+<h1 style="margin:18px 0 12px;font-size:28px;line-height:1.15;color:#f5f5f5;font-weight:800">¡Gracias${Nom ? ', ' + h(Nom) : ''}! <span style="color:#f76806">${T.h1}</span></h1>
+<p style="margin:0 0 22px;color:#a8a8a8;font-size:16px;line-height:1.55">${T.p}</p>
+${box}
+<div style="margin:22px 0 14px"><a href="${h(waUrl)}" style="display:inline-block;margin:0 8px 10px 0;padding:13px 22px;border-radius:9999px;font-size:15px;font-weight:700;text-decoration:none;background:#f76806;color:#000">Escribirnos por WhatsApp</a><a href="${origin}${B}/vehiculos" style="display:inline-block;margin:0 8px 10px 0;padding:13px 22px;border-radius:9999px;font-size:15px;font-weight:700;text-decoration:none;background:#0d0d0d;color:#f5f5f5;border:1px solid #333">Ver coches en stock</a></div>
+</td></tr>
+<tr><td style="padding:18px 28px;border-top:1px solid #1f1f1f;background:#050505;color:#7a7a7a;font-size:12px;line-height:1.6;text-align:center">Plata Garage · Sabadell · <a href="tel:+34660493228" style="color:#a1a1a1;text-decoration:none">${TEL}</a> · <a href="${origin}" style="color:#a1a1a1;text-decoration:none">www.platagarage.com</a><br>Recibes este correo porque nos has escrito desde nuestra web.</td></tr>
+</table></td></tr></table></div>`;
+  const text = `¡Gracias${Nom ? ', ' + Nom : ''}! ${T.h1}\n\n${T.p}\n\n${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}${rows.length ? '\n\n' : ''}WhatsApp: ${waUrl}\nCoches en stock: ${origin}${B}/vehiculos\n\nPlata Garage · Sabadell · ${TEL}`;
+  return { subject: T.sub, html, text };
+}

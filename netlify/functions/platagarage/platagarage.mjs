@@ -877,6 +877,7 @@ async function api(r, req, M, ip, url, context) {
     const pidF = clip(f.pid, 40); const list = all.filter((x) => (x.created || '') > lim && !(pidF && x.id === pidF && x.status === 'incompleta')); list.unshift(it); await save('financiaciones', list);
     // En el aviso por correo solo lo justo: el DNI y los ingresos se ven en el panel
     await notify('financiacion', { ...base, cocheNombre: it.cocheNombre, motivo: 'Solicitud de financiación' + (plazoF ? ` · a ${plazoF} meses${entradaF ? `, entrada ${entradaF} €` : ''}${est ? `, cuota aprox. ${est.c.toFixed(2).replace('.', ',')} €/mes (${est.fin === 'lendrock' ? 'Lendrock' : 'Confía'})` : ''}` : '') + (aval ? ` · con ${aval.tipo.toLowerCase()}` : '') + ' (adjunta el DNI por las dos caras' + ((nn) => nn ? ` y ${nn} nómina${nn > 1 ? 's' : ''})` : ')')(noms.length) }, url.origin).catch(() => {});
+    if (base.email) { const em = V.emailAcuse({ tipo: 'financiacion', d: { ...base, cocheNombre: it.cocheNombre }, origin: (env('PG_SITE_URL') || url.origin).replace(/\/+$/, '') }); if (em) await sendMail({ to: base.email, subject: em.subject, html: em.html, text: em.text }).catch((e) => console.error('smtp acuse', e.message)); }
     await bump('ev', 'form-financiacion').catch(() => {}); await bump('lp', base.origen || '/').catch(() => {}); await bump('lsrc', base.canal || 'directo').catch(() => {});
     return json({ ok: true });
   }
@@ -930,6 +931,7 @@ async function api(r, req, M, ip, url, context) {
       await save('mensajes', list);
     }
     await notify(r.slice(1), { ...base, ...f, ...carRef(f.coche || ''), ...(r === '/tasacion' && f.coche ? { motivo: 'Lo entregaría como parte de pago' } : {}), web: undefined, t: undefined, privacidad: undefined }, url.origin).catch(() => {});
+    if (r !== '/cita' && base.email) { const em = V.emailAcuse({ tipo: r.slice(1), d: { ...base, ...f, ...carRef(f.coche || '') }, origin: (env('PG_SITE_URL') || url.origin).replace(/\/+$/, '') }); if (em) await sendMail({ to: base.email, subject: em.subject, html: em.html, text: em.text }).catch((e) => console.error('smtp acuse', e.message)); }
     await bump('ev', 'form-' + r.slice(1)).catch(() => {});
     await bump('lp', base.origen || '/').catch(() => {}); await bump('lsrc', base.canal || 'directo').catch(() => {});
     return json(out);
