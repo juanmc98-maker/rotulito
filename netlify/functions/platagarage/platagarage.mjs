@@ -446,6 +446,9 @@ const inner = async (req, context) => {
       const qr = await QRCode.toString(fichaUrl + '?utm_source=cartel&utm_medium=qr', { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }).catch(() => '');
       return html(V.cartel({ car, qr, fichaUrl }), 200, { 'x-robots-tag': 'noindex, nofollow' });
     }
+    if (/^\/[&%?=]+$/.test(sub)) return redirect('/'); // enlaces rotos tipo /& (Search Console 22 oct)
+    // coches vendidos en la web antigua (Evicron) que Google aún recuerda: 301 al stock
+    if (['ford-focus-1-6-2009', 'seat-ibiza-1-9-tdi-105cv-sport-2009', 'toyota-rav4-2-2-d4-d-2010', 'ford-mustang-coupe-302-1968-1968-2'].includes(sub.slice(11))) return redirect(`${BASE}/vehiculos/`);
     if (sub.startsWith('/vehiculos/')) {
       const slug = sub.slice(11).replace(/\.html$/, '');
       if (sub.endsWith('.html')) return redirect(`${BASE}/vehiculos/${slug}`);
