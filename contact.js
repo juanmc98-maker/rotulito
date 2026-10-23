@@ -3,16 +3,19 @@
    - Tras la confirmación: evento "lead" (track.js, una sola vez) y paso a la página de gracias de su idioma.
    - Antispam: nombre y teléfono obligatorios y comprobados (nombre real: letras, sin números ni enlaces;
      teléfono español de 9 cifras), campo trampa invisible, espera mínima y marca "revisar=1" si algo parece aleatorio.
-   - Plan: desplegable "¿Qué te interesa?" que se rellena solo al pulsar un enlace con data-plan. */
+   - Plan: desplegable "¿Qué te interesa?" que se rellena solo al pulsar un enlace con data-plan.
+   - "¿Cuándo necesitas la web?" obligatorio y casilla opcional y desmarcada de novedades (consentimiento aparte).
+   - gclid: se guarda solo durante la visita y se envía con la consulta únicamente si se aceptó la publicidad. */
 (function () {
 'use strict';
 var LANG = location.pathname.indexOf('/ca/') === 0 ? 'ca' : (location.pathname.indexOf('/en/') === 0 ? 'en' : 'es');
 var T = {
-  es: {sending: 'Enviando…', err: 'No hemos podido confirmar la recepción. Tus datos siguen en el formulario. Escríbenos por WhatsApp al 613 272 053 o a hola@rotulito.com antes de repetir el envío.', thanks: '/gracias.html', name: 'Tu nombre', nameErr: 'Escribe tu nombre (solo letras).', sum: 'Añadir un mensaje (opcional)', plan: '¿Qué te interesa?', plans: [['', 'Aún no lo sé'], ['una', 'Web de una página'], ['cuota', 'Plan cuota (web en alquiler)'], ['varias', 'Web de varias páginas'], ['medida', 'Desarrollo a medida'], ['seo', 'SEO y anuncios']]},
-  ca: {sending: 'Enviant…', err: "No hem pogut confirmar la recepció. Les teves dades continuen al formulari. Escriu-nos per WhatsApp al 613 272 053 o a hola@rotulito.com abans de tornar a enviar-lo.", thanks: '/ca/gracias.html', name: 'El teu nom', nameErr: 'Escriu el teu nom (només lletres).', sum: 'Afegir un missatge (opcional)', plan: 'Què t\'interessa?', plans: [['', 'Encara no ho sé'], ['una', "Web d'una pàgina"], ['cuota', 'Pla quota (web de lloguer)'], ['varias', 'Web de diverses pàgines'], ['medida', 'Desenvolupament a mida'], ['seo', 'SEO i anuncis']]},
-  en: {sending: 'Sending…', err: "We couldn't confirm that your message arrived. Your details are still in the form. Please message us on WhatsApp at +34 613 272 053 or email hola@rotulito.com before sending it again.", thanks: '/en/gracias.html', name: 'Your name', nameErr: 'Please enter your name (letters only).', sum: 'Add a message (optional)', plan: 'What are you interested in?', plans: [['', 'Not sure yet'], ['una', 'One-page website'], ['cuota', 'Monthly plan (website rental)'], ['varias', 'Multi-page website'], ['medida', 'Custom development'], ['seo', 'SEO and ads']]}
+  es: {sending: 'Enviando…', err: 'No hemos podido confirmar la recepción. Tus datos siguen en el formulario. Escríbenos por WhatsApp al 613 272 053 o a hola@rotulito.com antes de repetir el envío.', thanks: '/gracias.html', name: 'Tu nombre', nameErr: 'Escribe tu nombre (solo letras).', sum: 'Añadir un mensaje (opcional)', plan: '¿Qué te interesa?', when: '¿Cuándo necesitas la web?', whens: [['', 'Elige una opción'], ['ahora', 'Lo antes posible'], ['1-3m', 'En 1-3 meses'], ['mas-adelante', 'Más adelante, solo estoy mirando']], whenErr: 'Dinos cuándo la necesitas.', nov: 'Quiero recibir de vez en cuando ideas y novedades de Rotulito por email o WhatsApp. Me puedo dar de baja cuando quiera.', noAds: 'No te suscribes a publicidad.', yesAds: 'Solo te enviaremos novedades si marcas esa casilla, y puedes darte de baja cuando quieras.', plans: [['', 'Aún no lo sé'], ['una', 'Web de una página'], ['cuota', 'Plan cuota (web en alquiler)'], ['varias', 'Web de varias páginas'], ['medida', 'Desarrollo a medida'], ['seo', 'SEO y anuncios']]},
+  ca: {sending: 'Enviant…', err: "No hem pogut confirmar la recepció. Les teves dades continuen al formulari. Escriu-nos per WhatsApp al 613 272 053 o a hola@rotulito.com abans de tornar a enviar-lo.", thanks: '/ca/gracias.html', name: 'El teu nom', nameErr: 'Escriu el teu nom (només lletres).', sum: 'Afegir un missatge (opcional)', plan: 'Què t\'interessa?', when: 'Quan necessites la web?', whens: [['', 'Tria una opció'], ['ahora', 'Com més aviat millor'], ['1-3m', "D'aquí a 1-3 mesos"], ['mas-adelante', 'Més endavant, només estic mirant']], whenErr: 'Digues-nos quan la necessites.', nov: 'Vull rebre de tant en tant idees i novetats de Rotulito per email o WhatsApp. Em puc donar de baixa quan vulgui.', noAds: 'No et subscrius a publicitat.', yesAds: 'Només t\'enviarem novetats si marques aquesta casella, i et pots donar de baixa quan vulguis.', plans: [['', 'Encara no ho sé'], ['una', "Web d'una pàgina"], ['cuota', 'Pla quota (web de lloguer)'], ['varias', 'Web de diverses pàgines'], ['medida', 'Desenvolupament a mida'], ['seo', 'SEO i anuncis']]},
+  en: {sending: 'Sending…', err: "We couldn't confirm that your message arrived. Your details are still in the form. Please message us on WhatsApp at +34 613 272 053 or email hola@rotulito.com before sending it again.", thanks: '/en/gracias.html', name: 'Your name', nameErr: 'Please enter your name (letters only).', sum: 'Add a message (optional)', plan: 'What are you interested in?', when: 'When do you need the website?', whens: [['', 'Choose an option'], ['ahora', 'As soon as possible'], ['1-3m', 'In 1-3 months'], ['mas-adelante', 'Later on, just looking']], whenErr: 'Tell us when you need it.', nov: 'I would like to receive occasional ideas and news from Rotulito by email or WhatsApp. I can unsubscribe at any time.', noAds: /You are not subscribing to (any advertising|marketing)\./, yesAds: 'We will only send you news if you tick that box, and you can unsubscribe at any time.', plans: [['', 'Not sure yet'], ['una', 'One-page website'], ['cuota', 'Monthly plan (website rental)'], ['varias', 'Multi-page website'], ['medida', 'Custom development'], ['seo', 'SEO and ads']]}
 }[LANG];
 var t0 = Date.now();
+try { var gq = new URLSearchParams(location.search).get('gclid'); if (gq && gq.length <= 150) sessionStorage.setItem('rt_gclid', gq); } catch (_) {}
 
 /* Botón flotante: se oculta mientras se ven el CTA principal o el formulario, para no tapar campos ni botones */
 var fl = document.getElementById('wafloat');
@@ -30,7 +33,7 @@ if (!f) return;
 var tel = f.elements.telefono, telErr = document.getElementById('telerr'), ferr = document.getElementById('ferr');
 
 /* Nombre obligatorio: se saca del bloque opcional y se coloca tras los datos del negocio */
-var nom = f.elements.nombre, nomErr = null, plan = null;
+var nom = f.elements.nombre, nomErr = null, plan = null, when = null, nov = null;
 (function () {
   var st = document.createElement('style');
   st.textContent = '#f select{font:inherit;font-size:16px;padding:12px 14px;border:1.5px solid #cfd6df;border-radius:10px;background:#fff;color:var(--ink);width:100%;min-height:48px}#f select:focus{border-color:var(--ink);outline:none}';
@@ -57,6 +60,23 @@ var nom = f.elements.nombre, nomErr = null, plan = null;
   T.plans.forEach(function (o) { var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; plan.appendChild(op); });
   pl.appendChild(plan);
   if (pref) pref.parentNode.insertBefore(pl, pref);
+  /* ¿Cuándo necesitas la web? (obligatorio: separa a quien la necesita ya de quien solo mira) */
+  var wl = document.createElement('label'); wl.appendChild(document.createTextNode(T.when));
+  when = document.createElement('select'); when.name = 'cuando'; when.id = 'cuando'; when.required = true;
+  T.whens.forEach(function (o) { var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; when.appendChild(op); });
+  wl.appendChild(when);
+  if (pref) pref.parentNode.insertBefore(wl, pref);
+  /* Casilla aparte, desmarcada y opcional para recibir novedades (consentimiento comercial) */
+  var pv = document.getElementById('priv'), pvl = pv && pv.closest('label');
+  if (pvl) {
+    var nl = document.createElement('label'); nl.className = 'check';
+    nov = document.createElement('input'); nov.type = 'checkbox'; nov.id = 'novedades'; nov.name = 'novedades'; nov.value = 'si';
+    var ns = document.createElement('span'); ns.textContent = T.nov;
+    nl.appendChild(nov); nl.appendChild(document.createTextNode(' ')); nl.appendChild(ns);
+    pvl.parentNode.insertBefore(nl, pvl.nextSibling);
+  }
+  var lg = f.querySelector('p.legal');
+  if (lg) lg.innerHTML = lg.innerHTML.replace(T.noAds, T.yesAds);
   if (/\/web-490\//.test(location.pathname)) setPlan('una');
   else if (/\/(seo-y-anuncios|seo-i-anuncis|seo-and-ads)\//.test(location.pathname)) setPlan('seo');
   try { var qp = new URLSearchParams(location.search).get('plan'); if (qp) setPlan(qp); } catch (_) {}
@@ -88,11 +108,11 @@ tel.addEventListener('input', function () { if (!telErr.hidden && normTel(tel.va
 /* Preferencia de respuesta: WhatsApp o email. */
 var em = f.elements.email, telWrap = document.getElementById('telwrap'), emWrap = document.getElementById('emailwrap');
 function via() { var r = f.querySelector('input[name=via]:checked'); return r ? r.value : 'whatsapp'; }
-/* El teléfono es obligatorio siempre (antispam); si prefiere email, se pide además el email. */
+/* Nombre, teléfono y email obligatorios siempre; la preferencia solo indica por dónde responder. */
 function syncVia() {
   var byMail = via() === 'email';
   if (telWrap) telWrap.hidden = false; tel.required = true;
-  if (emWrap) emWrap.hidden = !byMail; if (em) em.required = byMail;
+  if (emWrap) emWrap.hidden = false; if (em) { em.required = true; em.maxLength = 160; }
 }
 f.querySelectorAll('input[name=via]').forEach(function (r) { r.addEventListener('change', syncVia); });
 syncVia();
@@ -126,12 +146,21 @@ f.addEventListener('submit', async function (ev) {
     body.set('telefono', n || '');
     if (nom) body.set('nombre', nom.value.trim().replace(/\s+/g, ' '));
     body.set('via', byMail ? 'email' : 'whatsapp');
-    body.set('privacy_v', '2026-09-27');
+    body.set('privacy_v', '2026-10-23');
+    if (em) body.set('email', em.value.trim());
+    body.set('cuando', when ? when.value : '');
+    body.set('novedades', nov && nov.checked ? 'si' : 'no');
+    var gc = '';
+    try { if (window.siteConsent && window.siteConsent.adsAllowed()) gc = sessionStorage.getItem('rt_gclid') || ''; } catch (_) {}
+    if (gc) body.set('gclid', gc);
     var origen = location.pathname;
     try { var q = new URLSearchParams(location.search), u = []; ['utm_source', 'utm_medium', 'utm_campaign'].forEach(function (k) { var v = q.get(k); if (v) u.push(k.slice(4) + '=' + v.slice(0, 40)); }); if (u.length) origen += ' | ' + u.join(' '); } catch (_) {}
     try { var ent = sessionStorage.getItem('rt_entry'); if (ent && ent !== 'entrada=' + location.pathname.replace(/\.html$/, '')) origen += ' | ' + ent; } catch (_) {}
+    if (when && when.value) origen = 'cuando=' + when.value + ' | nov=' + (nov && nov.checked ? 'si' : 'no') + ' | ' + origen;
     if (plan && plan.value) origen = 'plan=' + plan.value + ' | ' + origen;
-    body.set('origen', origen.slice(0, 200));
+    origen = origen.slice(0, 200);
+    if (gc) origen += ' | gclid=' + gc;
+    body.set('origen', origen);
     if (sospecha) body.set('revisar', '1');
     body.set('_t', String(Math.round((Date.now() - t0) / 1000)));
     await window.submitConfirmed(f.action, body);
