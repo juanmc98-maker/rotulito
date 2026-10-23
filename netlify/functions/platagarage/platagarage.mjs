@@ -701,11 +701,11 @@ async function api(r, req, M, ip, url, context) {
     if (chk.error) return json({ error: chk.error }, 400);
     const dni = clip(f.dni, 12).toUpperCase().replace(/[\s-]/g, '');
     const okDni = (() => { const m = dni.match(/^([0-9]{8}|[XYZ][0-9]{7})([A-Z])$/); if (!m) return false; const n = Number(m[1].replace('X', '0').replace('Y', '1').replace('Z', '2')); return 'TRWAGMYFPDXBNJZSQVHLCKE'[n % 23] === m[2]; })();
-    if (!okDni) return json({ error: 'Revisa el DNI o NIE: la letra no cuadra.' }, 400);
+    if (dni && !okDni) return json({ error: 'Revisa el DNI o NIE: la letra no cuadra.' }, 400);
     const direccion = clip(f.direccion, 140), cp = clip(f.cp, 5), poblacion = clip(f.poblacion, 80);
-    if (direccion.length < 5) return json({ error: 'Escribe tu dirección.' }, 400);
-    if (!/^\d{5}$/.test(cp)) return json({ error: 'Escribe un código postal de 5 cifras.' }, 400);
-    if (poblacion.length < 2) return json({ error: 'Escribe tu población.' }, 400);
+    if (direccion && direccion.length < 5) return json({ error: 'Escribe tu dirección.' }, 400);
+    if (cp && !/^\d{5}$/.test(cp)) return json({ error: 'Escribe un código postal de 5 cifras.' }, 400);
+    if (poblacion && poblacion.length < 2) return json({ error: 'Escribe tu población.' }, 400);
     if (f.condiciones !== 'si') return json({ error: 'Marca que has leído las condiciones de la reserva.' }, 400);
     if (await rateLimited(ip, 'form', 8)) return json({ error: 'Has enviado demasiadas solicitudes. Escríbenos por WhatsApp.' }, 429);
     const cars = await load('cars'); const c = cars.find((x) => x.slug === clip(f.coche, 120) && !x.sold && !x.hidden); if (c) c.reserve = V.senalDe(c);
@@ -716,11 +716,27 @@ async function api(r, req, M, ip, url, context) {
     const list = await load('bookings'); list.unshift(it); await save('bookings', list);
     const kRef = sign('ref|' + it.id).slice(0, 16); const pagoUrl = `${url.origin}${BASE}/reserva/pago?r=${it.id}&k=${kRef}`;
     const hld = (await load('holders')).find((h) => h.id === c.holder); const concepto = V.conceptoReserva(it, c);
-    await notify('cita', { ...it, mensaje: [`Señal: ${c.reserve} €`, `Dirección: ${direccion}, ${cp} ${poblacion}`, it.mensaje].filter(Boolean).join(' · ') }, url.origin).catch(() => {});
+    await notify('cita', { ...it, mensaje: [`Señal: ${c.reserve} €`, (direccion ? `Dirección: ${direccion}, ${cp} ${poblacion}` : 'DNI y dirección: pendientes'), it.mensaje].filter(Boolean).join(' · ') }, url.origin).catch(() => {});
     await pushAll('garage', `Nueva reserva: ${clip(c.brand + ' ' + c.model, 40)}`, `${clip(it.nombre, 40)} · pendiente de pagar la señal`, 'reserva-' + it.id).catch(() => {});
     await sendMail({ to: it.email, subject: `Tu reserva del ${c.brand} ${c.model}: datos para pagar la señal`, text: `Hola ${it.nombre.split(' ')[0]},\n\nHemos recibido tu solicitud para reservar el ${it.cocheNombre}.\n\nPara reservarlo, paga la señal de ${c.reserve} €:\n- Por Bizum al 660 49 32 28${(hld?.accounts || []).length ? `\n- O por transferencia a ${hld.accounts.map((a) => a.iban + (a.bank ? ' (' + a.bank + ')' : '')).join(' / ')}, titular ${hld.name}` : ''}\nConcepto: ${concepto}\n\nCuando lo hayas pagado, avísanos aquí: ${pagoUrl}\n\nEn cuanto veamos el pago te confirmamos la reserva y te enviamos el documento de reserva. Si el coche se hubiera vendido justo antes en nuestras instalaciones, te lo decimos y te devolvemos la señal íntegra.\n\nUn saludo,\nPlata Garage · 660 49 32 28` }).catch(() => {});
     await bump('ev', 'form-reserva').catch(() => {}); await bump('lp', base.origen || '/').catch(() => {}); await bump('lsrc', base.canal || 'directo').catch(() => {});
     return json({ ok: true, ref: it.id, k: kRef });
+  }
+  if (r === '/reserva/datos' && M === 'POST') { // el cliente deja DNI y dirección para el documento de reserva
+    const f = await req.json().catch(() => ({})); const id = clip(f.r, 40), k = clip(f.k, 16);
+    if (!id || k.length !== 16 || !eqHash(k, sign('ref|' + id).slice(0, 16))) return json({ error: 'Enlace no válido' }, 403);
+    const dni = clip(f.dni, 12).toUpperCase().replace(/[\s-]/g, '');
+    const m = dni.match(/^([0-9]{8}|[XYZ][0-9]{7})([A-Z])$/);
+    if (!m || 'TRWAGMYFPDXBNJZSQVHLCKE'[Number(m[1].replace('X', '0').replace('Y', '1').replace('Z', '2')) % 23] !== m[2]) return json({ error: 'Revisa el DNI o NIE: la letra no cuadra.' }, 400);
+    const direccion = clip(f.direccion, 140), cp = clip(f.cp, 5), poblacion = clip(f.poblacion, 80);
+    if (direccion.length < 5) return json({ error: 'Escribe tu dirección.' }, 400);
+    if (!/^\d{5}$/.test(cp)) return json({ error: 'Escribe un código postal de 5 cifras.' }, 400);
+    if (poblacion.length < 2) return json({ error: 'Escribe tu población.' }, 400);
+    if (await rateLimited(ip, 'form', 8)) return json({ error: 'Has enviado demasiadas solicitudes. Escríbenos por WhatsApp.' }, 429);
+    const list = await load('bookings'); const b = list.find((x) => x.id === id && x.tipo === 'reserva'); if (!b) return json({ error: 'No existe' }, 404);
+    b.res = { ...(b.res || {}), dni, direccion, cp, poblacion };
+    b.historial = [{ d: new Date().toISOString(), t: 'El cliente deja su DNI y dirección para el documento de reserva' }, ...(b.historial || [])].slice(0, 50); await save('bookings', list);
+    return json({ ok: true });
   }
   if (r === '/reserva/pagado' && M === 'POST') { // el cliente avisa de que ha pagado la señal
     const f = await req.json().catch(() => ({})); const id = clip(f.r, 40), k = clip(f.k, 16);
