@@ -1169,6 +1169,63 @@ ${carBox}
   return { subject, html, text, ics: ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Plata Garage//Cita//ES', 'BEGIN:VEVENT', `UID:${bk.id}@platagarage`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`, `DTSTART;TZID=Europe/Madrid:${d0}`, `DTEND;TZID=Europe/Madrid:${d1}`, `SUMMARY:${tit}`, `DESCRIPTION:${det}`, 'LOCATION:Sabadell', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n') };
 }
 
+// Email al cliente de una reserva (pendiente de pagar la señal o ya pagada con Stripe): mismo estilo que la confirmación de cita
+export function emailReserva({ b, car, origin, pagoUrl, pagado = false, stripe = false, holder = null }) {
+  const h = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const abs = (u) => (u && u.startsWith('/') ? origin + u : u);
+  const nom = String(b.nombre || '').trim().split(' ')[0]; const Nom = nom && nom !== 'Cliente' ? nom[0].toUpperCase() + nom.slice(1).toLowerCase() : '';
+  const nm = car ? `${carName(car)}${yp(car)}` : (b.cocheNombre || '');
+  const senal = eur(b.senal || car?.reserve || 0); const concepto = conceptoReserva(b, car || {});
+  const ctas = !stripe && holder?.accounts?.length ? holder.accounts : [];
+  const F = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  const lab = 'color:#8a8a8a;font-size:13px;padding:0 0 2px', val = 'color:#f5f5f5;font-size:17px;font-weight:700;padding:0 0 16px';
+  const btn = (href, t, main) => `<a href="${h(href)}" style="display:inline-block;margin:0 8px 10px 0;padding:13px 22px;border-radius:9999px;font-size:15px;font-weight:700;text-decoration:none;${main ? 'background:#f76806;color:#000' : 'background:#0d0d0d;color:#f5f5f5;border:1px solid #333'}">${t}</a>`;
+  const waUrl = wa(`Hola, soy ${b.nombre}. Tengo una duda sobre la reserva del ${nm}.`);
+  const pill = pagado ? 'Señal recibida' : 'Reserva solicitada';
+  const titulo = pagado ? 'Hemos recibido tu señal.' : 'Solo falta pagar la señal.';
+  const lead = pagado
+    ? 'Comprobamos que el coche sigue disponible y te confirmamos la reserva. Para preparar el documento de reserva a tu nombre necesitamos tu DNI y tu dirección: puedes dejarlos con el botón de abajo.'
+    : `Para reservarlo, paga la señal de ${senal}. Se descuenta del precio y el coche queda reservado a tu nombre 7 días. En cuanto veamos el pago te confirmamos la reserva y te enviamos el documento.`;
+  const filas = pagado
+    ? `<tr><td width="55%" valign="top"><div style="${lab}">Señal pagada</div><div style="${val}">${senal}</div></td><td valign="top"><div style="${lab}">Reserva</div><div style="${val}">7 días</div></td></tr>`
+    : `<tr><td width="55%" valign="top"><div style="${lab}">Señal</div><div style="${val}">${senal}</div></td><td valign="top"><div style="${lab}">Reserva</div><div style="${val}">7 días</div></td></tr>
+<tr><td valign="top"><div style="${lab}">Por Bizum</div><div style="${val}">${h(TEL)}</div></td><td valign="top"><div style="${lab}">Concepto</div><div style="${val};font-size:15px">${h(concepto)}</div></td></tr>
+${ctas.length ? `<tr><td colspan="2" valign="top"><div style="${lab}">Por transferencia · titular ${h(holder.name)}</div><div style="${val};font-size:15px">${ctas.map((a) => h(a.iban) + (a.bank ? ' <span style="color:#8a8a8a;font-weight:400">' + h(a.bank) + '</span>' : '')).join('<br>')}</div></td></tr>` : ''}`;
+  const botones = pagado
+    ? (b.res && b.res.dni ? '' : btn(pagoUrl, 'Dejar mis datos', true)) + btn(waUrl, 'Escribirnos por WhatsApp')
+    : (stripe ? btn(pagoUrl, 'Pagar con Apple Pay o tarjeta', true) + btn(pagoUrl, 'Ya he pagado por Bizum') : btn(pagoUrl, 'Ya he pagado la señal', true)) + btn(waUrl, 'Escribirnos por WhatsApp');
+  const foto = car ? abs(cover(car)) : '';
+  const carBox = car ? `<tr><td style="padding:0 28px 28px"><a href="${origin}${B}/vehiculos/${car.slug}" style="text-decoration:none;color:inherit;display:block;border:1px solid #262626;border-radius:16px;overflow:hidden;background:#111">
+<img src="${h(foto)}" alt="${h(nm)}" width="544" style="display:block;width:100%;max-width:544px;height:auto;border:0">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:18px 20px">
+<div style="color:#f76806;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;margin-bottom:6px">El coche que reservas</div>
+<div style="font-size:20px;font-weight:700;color:#f5f5f5">${h(car.brand)} ${h(car.model)} <span style="color:#8a8a8a;font-weight:400">${h(car.version || '')}</span></div>
+<div style="font-size:20px;font-weight:700;color:#f76806;margin:6px 0 10px">${precio(car)}</div>
+<div style="color:#bdbdbd;font-size:14px">${[Y(car), hayKm(car) ? kms(car.km) : '', car.fuel, car.trans].filter(Boolean).map(h).join(' &nbsp;·&nbsp; ')}</div>
+</td></tr></table></a></td></tr>` : '';
+  const html = `<div style="margin:0;padding:0;background:#050505;${F}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#050505;padding:24px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#0b0b0b;border:1px solid #262626;border-radius:18px;overflow:hidden">
+<tr><td style="padding:24px 28px;border-bottom:1px solid #1f1f1f"><img src="${origin}${ST}/assets/logo.png" alt="Plata Garage" height="38" style="height:38px;width:auto;display:block"></td></tr>
+<tr><td style="padding:30px 28px 8px">
+<span style="display:inline-block;border:1px solid #333;border-radius:9999px;padding:6px 14px;font-size:13px;color:#f5f5f5"><span style="color:#f76806">&#10003;</span>&nbsp; ${pill}</span>
+<h1 style="margin:18px 0 12px;font-size:30px;line-height:1.15;color:#f5f5f5;font-weight:800">¡Gracias${Nom ? ', ' + h(Nom) : ''}! <span style="color:#f76806">${titulo}</span></h1>
+<p style="margin:0 0 22px;color:#a8a8a8;font-size:16px;line-height:1.55">${lead}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #262626;border-radius:16px;background:#111"><tr><td style="padding:20px 22px 4px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${filas}</table>
+</td></tr></table>
+<div style="margin:22px 0 14px">${botones}</div>
+<p style="margin:0 0 22px;color:#7a7a7a;font-size:13px;line-height:1.55">Si el coche se hubiera vendido justo antes en nuestras instalaciones, te lo decimos y te devolvemos la señal íntegra. <a href="${origin}${B}/condiciones-de-contratacion" style="color:#a1a1a1">Condiciones de la reserva</a>.</p>
+</td></tr>
+${carBox}
+<tr><td style="padding:18px 28px;border-top:1px solid #1f1f1f;background:#050505;color:#7a7a7a;font-size:12px;line-height:1.6;text-align:center">Plata Garage · Sabadell · <a href="tel:+34660493228" style="color:#a1a1a1;text-decoration:none">${TEL}</a> · <a href="${origin}" style="color:#a1a1a1;text-decoration:none">www.platagarage.com</a><br>Recibes este correo porque has reservado un coche en nuestra web.</td></tr>
+</table></td></tr></table></div>`;
+  const text = pagado
+    ? `¡Gracias${Nom ? ', ' + Nom : ''}! Hemos recibido tu señal de ${senal} para reservar el ${nm}.\n\n${lead}\n\nTus datos para el documento: ${pagoUrl}\nWhatsApp: ${waUrl}\n\nPlata Garage · Sabadell · ${TEL}`
+    : `¡Gracias${Nom ? ', ' + Nom : ''}! Hemos recibido tu solicitud para reservar el ${nm}.\n\n${lead}\n\n${stripe ? `Con Apple Pay, Google Pay o tarjeta: ${pagoUrl}\n` : ''}Por Bizum al ${TEL}\n${ctas.length ? `Por transferencia a ${ctas.map((a) => a.iban + (a.bank ? ' (' + a.bank + ')' : '')).join(' / ')}, titular ${holder.name}\n` : ''}Concepto: ${concepto}\n\nCuando lo hayas pagado, avísanos aquí: ${pagoUrl}\n\nPlata Garage · Sabadell · ${TEL}`;
+  const subject = pagado ? `Hemos recibido tu señal · ${nm}` : `Tu reserva del ${nm}: paga la señal`;
+  return { subject, html, text };
+}
+
 // Acuse al cliente (contacto, tasación, te lo buscamos, envío, financiación): mismo estilo que la confirmación de cita
 export function emailAcuse({ tipo, d, origin }) {
   const h = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
