@@ -154,3 +154,6 @@ document.addEventListener('visibilitychange', function () {
   if (document.visibilityState === 'hidden' && fStarted && !leadSent && !fAband) { fAband = true; window.rtTrack('form_abandon', {form_id: 'contacto'}); }
 });
 })();
+
+/* visor de fotos común */
+(function(){if(document.querySelector('script[src^="/lightbox.js"]'))return;var s=document.createElement("script");s.src="/lightbox.js?v=20261024";s.defer=true;document.head.appendChild(s);})();
