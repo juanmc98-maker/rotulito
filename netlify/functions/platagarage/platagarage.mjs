@@ -143,6 +143,7 @@ function cleanCar(b, old = {}) {
   ['featured', 'sold', 'hidden'].forEach((k) => { if (k in b) c[k] = !!b[k]; });
   if ('video' in b) c.video = b.video && typeof b.video.url === 'string' && b.video.url.startsWith(BASE + '/media/v-') ? { url: clip(b.video.url, 200), type: clip(b.video.type, 40) || 'video/mp4', size: num(b.video.size) || 0 } : undefined;
   if ('gestion' in b) c.gestion = !!b.gestion;
+  if ('sinFinanciacion' in b) c.sinFinanciacion = !!b.sinFinanciacion;
   if ('comision' in b) c.comision = num(b.comision);
   if ('llegada' in b) c.llegada = /^\d{4}-\d{2}-\d{2}$/.test(b.llegada || '') ? b.llegada : undefined;
   if (!['disponible', 'preparacion', 'reservado'].includes(c.status)) c.status = 'disponible';
