@@ -421,7 +421,7 @@ async function crearReservaStripe(ses, origin) { // reserva rápida: el cliente 
   const k = sign('ref|' + it.id).slice(0, 16); const pagoUrl = `${origin}${BASE}/reserva/pago?r=${it.id}&k=${k}`;
   await notify('cita', { ...it, mensaje: `Señal de ${imp} € YA PAGADA con Stripe · DNI y dirección: pendientes` }, origin).catch(() => {});
   await pushAll('garage', `Señal cobrada: ${clip(it.cocheNombre, 40)}`, `${clip(it.nombre, 40)} ha pagado ${imp} € con tarjeta (Stripe). Confirma la reserva`, 'pago-' + it.id).catch(() => {});
-  if (it.email) await sendMail({ to: it.email, subject: `Hemos recibido tu señal del ${c.brand} ${c.model}`, text: `Hola ${it.nombre.split(' ')[0]},\n\nHemos recibido tu señal de ${imp} € para reservar el ${it.cocheNombre}.\n\nComprobamos que el coche sigue disponible y te confirmamos la reserva. Para preparar el documento de reserva a tu nombre necesitamos tu DNI y tu dirección; puedes dejarlos aquí: ${pagoUrl}\n\nSi el coche se hubiera vendido justo antes en nuestras instalaciones, te lo decimos y te devolvemos la señal íntegra.\n\nUn saludo,\nPlata Garage · 660 49 32 28` }).catch(() => {});
+  if (it.email) { const em = V.emailReserva({ b: it, car: c, origin, pagoUrl, pagado: true }); await sendMail({ to: it.email, subject: em.subject, html: em.html, text: em.text }).catch(() => {}); }
   await bump('ev', 'form-reserva').catch(() => {});
   return it;
 }
@@ -781,7 +781,7 @@ async function api(r, req, M, ip, url, context) {
     const hld = (await load('holders')).find((h) => h.id === c.holder); const concepto = V.conceptoReserva(it, c);
     await notify('cita', { ...it, mensaje: [`Señal: ${c.reserve} €`, (direccion ? `Dirección: ${direccion}, ${cp} ${poblacion}` : 'DNI y dirección: pendientes'), it.mensaje].filter(Boolean).join(' · ') }, url.origin).catch(() => {});
     await pushAll('garage', `Nueva reserva: ${clip(c.brand + ' ' + c.model, 40)}`, `${clip(it.nombre, 40)} · pendiente de pagar la señal`, 'reserva-' + it.id).catch(() => {});
-    await sendMail({ to: it.email, subject: `Tu reserva del ${c.brand} ${c.model}: datos para pagar la señal`, text: `Hola ${it.nombre.split(' ')[0]},\n\nHemos recibido tu solicitud para reservar el ${it.cocheNombre}.\n\nPara reservarlo, paga la señal de ${c.reserve} €:${stripeKey(hld) ? `\n- Con tarjeta, Apple Pay o Google Pay: ${pagoUrl}` : ''}\n- Por Bizum al 660 49 32 28${!stripeKey(hld) && (hld?.accounts || []).length ? `\n- O por transferencia a ${hld.accounts.map((a) => a.iban + (a.bank ? ' (' + a.bank + ')' : '')).join(' / ')}, titular ${hld.name}` : ''}\nConcepto: ${concepto}\n\nCuando lo hayas pagado, avísanos aquí: ${pagoUrl}\n\nEn cuanto veamos el pago te confirmamos la reserva y te enviamos el documento de reserva. Si el coche se hubiera vendido justo antes en nuestras instalaciones, te lo decimos y te devolvemos la señal íntegra.\n\nUn saludo,\nPlata Garage · 660 49 32 28` }).catch(() => {});
+    { const em = V.emailReserva({ b: it, car: c, origin: env('PG_SITE_URL') || url.origin, pagoUrl, stripe: !!stripeKey(hld), holder: hld }); await sendMail({ to: it.email, subject: em.subject, html: em.html, text: em.text }).catch(() => {}); }
     await bump('ev', 'form-reserva').catch(() => {}); await bump('lp', base.origen || '/').catch(() => {}); await bump('lsrc', base.canal || 'directo').catch(() => {});
     return json({ ok: true, ref: it.id, k: kRef });
   }
