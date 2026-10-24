@@ -1651,12 +1651,14 @@ async function adminApi(r, req, M, me, url) {
       if (car && body.marcarReservado !== false) { car.status = 'reservado'; car.log = [...(car.log || []), { d, by: b.confirmadoPor, t: `Reservado para ${b.nombre} (web)` }]; await save('cars', cars); }
       await save('bookings', list);
       const link = `${url.origin}${BASE}/reserva/documento?r=${b.id}&k=${sign('doc|' + b.id).slice(0, 24)}`;
-      const ok = await sendMail({ to: b.email, subject: `Reserva confirmada: ${b.cocheNombre}`, text: `Hola ${nombre},\n\nHemos recibido tu señal de ${b.senal || ''} € y tu reserva del ${b.cocheNombre} está confirmada. El coche queda reservado a tu nombre durante 7 días.\n\nAquí tienes tu documento de reserva (puedes imprimirlo o guardarlo en PDF):\n${link}\n\nTe escribimos para quedar el día de la firma y la entrega.\n\nUn saludo,\nPlata Garage · 660 49 32 28` }).catch(() => false);
+      const em = V.emailReserva({ b, car: car || snap, origin: (env('PG_SITE_URL') || url.origin).replace(/\/+$/, ''), confirmada: true, docUrl: link });
+      const ok = await sendMail({ to: b.email, subject: em.subject, html: em.html, text: em.text }).catch(() => false);
       return json({ ok: true, link, enviado: !!ok });
     }
     if (seg[2] === 'nodisponible') {
       b.status = 'cancelada'; b.historial = [{ d, t: 'No disponible: avisado el cliente' }, ...(b.historial || [])].slice(0, 50); await save('bookings', list);
-      const ok = await sendMail({ to: b.email, subject: `Sobre tu reserva del ${b.cocheNombre}`, text: `Hola ${nombre},\n\nLo sentimos mucho: el ${b.cocheNombre} se ha vendido justo antes en nuestras instalaciones y no podemos reservártelo.\n\n${b.pagoAvisado ? 'Te devolvemos la señal íntegra por el mismo medio por el que la pagaste. ' : 'No tienes que pagar nada. '}Si quieres, te buscamos uno parecido: ${url.origin}${BASE}/te-lo-buscamos\n\nUn saludo,\nPlata Garage · 660 49 32 28` }).catch(() => false);
+      const em = V.emailReserva({ b, car: car || snap, origin: (env('PG_SITE_URL') || url.origin).replace(/\/+$/, ''), nodisponible: true });
+      const ok = await sendMail({ to: b.email, subject: em.subject, html: em.html, text: em.text }).catch(() => false);
       return json({ ok: true, enviado: !!ok });
     }
   }
