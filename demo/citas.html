@@ -36,7 +36,7 @@ footer{padding:28px 0;color:var(--mut);font-size:13px}
 <div class="rt-demo" role="note"><div class="in">
 <a class="back" href="/web-con-citas/">← Volver a Rotulito</a>
 <span><b>DEMO</b> · Negocio ficticio. Los datos se guardan solo en tu navegador y no se envían a nadie.</span>
-<a class="go" href="/demo/citas-panel.html">Ver el panel del dueño →</a>
+<a class="go" href="/demo/citas-panel">Ver el panel del dueño →</a>
 </div></div>
 <header class="top"><div class="w"><div class="logo"><i>R</i>Taller Rodamar</div><a href="/demo/taller">Volver a la web</a></div></header>
 <main class="w">
@@ -54,7 +54,7 @@ footer{padding:28px 0;color:var(--mut);font-size:13px}
 <button class="btn" id="ok" disabled>Confirmar cita</button>
 </div>
 <div id="res" hidden></div>
-<div class="tip"><b>Esto es lo que ve tu cliente.</b> En el <a href="/demo/citas-panel.html">panel del dueño</a> verás esta cita al momento, podrás marcarla como hecha, anularla o bloquear horas.</div>
+<div class="tip"><b>Esto es lo que ve tu cliente.</b> En el <a href="/demo/citas-panel">panel del dueño</a> verás esta cita al momento, podrás marcarla como hecha, anularla o bloquear horas.</div>
 </main>
 <footer><div class="w">Taller Rodamar es un negocio inventado. Demo de <a href="/web-con-citas/">Rotulito</a>.</div></footer>
 <script src="/demo/citas.js"></script>
@@ -72,7 +72,7 @@ $('ok').onclick=function(){var n=$('nombre').value.trim(),t=$('tel').value.repla
 if(n.length<2){e.textContent='Escribe un nombre.';e.hidden=false;return}
 if(!/^[6789]\d{8}$/.test(t)){e.textContent='Escribe un teléfono español de 9 cifras.';e.hidden=false;return}
 e.hidden=true;s=C.load();var c={id:'c'+Date.now(),dia:sel.dia,hora:sel.hora,serv:sel.serv,nombre:n,tel:t.replace(/(\d{3})(\d{3})(\d{3})/,'$1 $2 $3'),estado:'pendiente',nueva:true};s.citas.push(c);C.save(s);
-$('datos').hidden=true;var r=$('res');r.hidden=false;r.className='done';r.innerHTML='<h2 style="margin:0 0 6px">Cita pedida ✓</h2><p style="margin:0 0 10px">'+C.serv(c.serv).n+' · '+C.fechaLarga(c.dia)+' a las '+c.hora+'.</p><p class="fine" style="margin:0 0 12px">En una web real te llegaría la confirmación por WhatsApp.</p><a class="btn" style="display:inline-block;text-decoration:none" href="/demo/citas-panel.html">Ver cómo le llega al dueño →</a>';
+$('datos').hidden=true;var r=$('res');r.hidden=false;r.className='done';r.innerHTML='<h2 style="margin:0 0 6px">Cita pedida ✓</h2><p style="margin:0 0 10px">'+C.serv(c.serv).n+' · '+C.fechaLarga(c.dia)+' a las '+c.hora+'.</p><p class="fine" style="margin:0 0 12px">En una web real te llegaría la confirmación por WhatsApp.</p><a class="btn" style="display:inline-block;text-decoration:none" href="/demo/citas-panel">Ver cómo le llega al dueño →</a>';
 render()};
 render()})();
 </script>
