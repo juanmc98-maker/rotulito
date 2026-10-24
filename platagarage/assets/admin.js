@@ -1098,10 +1098,15 @@ function cocheDe(c, cars) {
 const saludo = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('es-ES', { hour: 'numeric', minute: 'numeric', hourCycle: 'h23', timeZone: 'Europe/Madrid' }).formatToParts(new Date()).map((x) => [x.type, Number(x.value)])); return p.hour * 60 + p.minute < 12 * 60 + 30 ? 'Buenos días' : 'Buenas tardes'; }; // corte a las 12:30
 const nom1 = (n) => { const w = String(n || '').trim().split(/\s+/)[0] || ''; return /^(sin|cliente|\*+)$/i.test(w) || /[\d@*]/.test(w) || w.length < 2 ? '' : w[0].toUpperCase() + w.slice(1).toLowerCase(); };
 // Plata Marine: mensaje de WhatsApp ya escrito según sea comprador o vendedor (lo envía Juan)
+// Ficha de la web del barco de la cartera que coincide con el lead (para mandarle el enlace directo)
+let CART_PM = null;
+const cartPM = async () => { if (NEG !== 'marine') return []; CART_PM = await api('/admin/cartera').catch(() => CART_PM || []); return CART_PM; };
+const normPM = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const fichaPM = (c) => { const tk = new Set(normPM(c.interes).split(' ')); let best = '', n = 0; for (const b of CART_PM || []) { if (!b || !b.web) continue; const slug = String(b.web).replace(/[?#].*$/, '').replace(/\/+$/, '').split('/').pop(); const t = normPM(slug).split(' ').filter(Boolean); if (t.length && t.every((x) => tk.has(x)) && t.length > n) { n = t.length; best = 'www.platamarine.com/barcos/' + slug; } } return best; };
 const barcoDe = (c) => { const m = String(c.interes || '').match(/^\s*(vende|busca|modelo)\s*:\s*([^·|(\n]+)/i); return m ? m[2].split(/,\s/)[0].replace(/\b(19|20)\d{2}\b/g, '').replace(/\s{2,}/g, ' ').trim().replace(/\s+(año|del|de)$/i, '').replace(/[.,;:]+$/, '') : ''; };
 const esVendedorPM = (d, c) => (d && tabDe(d, c) === 'vendedores') || /^\s*vende\s*:/i.test(c.interes || '') || /vender/i.test(c.origen || '');
 const msgPM = (d, c) => { if (NEG !== 'marine') return ''; const n = nom1(c.nombre); const b = barcoDe(c); const it = String(c.interes || ''); const h = `Hola${n ? ' ' + n : ''}, soy Juan, de Plata Marine.`;
-  if (!esVendedorPM(d, c)) return `${h} Me ha llegado tu solicitud${b ? ' por el ' + b : ''}. Cuéntame qué te gustaría saber y te lo resuelvo; si te encaja, organizamos la visita. Lo tienes también en www.platamarine.com`;
+  if (!esVendedorPM(d, c)) { const fw = fichaPM(c); return fw ? `${h} Me ha llegado tu solicitud${b ? ' por el ' + b : ''}. Aquí tienes la ficha completa: ${fw}\n\nCuéntame qué te gustaría saber y te lo resuelvo; si te encaja, organizamos la visita.` : `${h} Me ha llegado tu solicitud${b ? ' por el ' + b : ''}. Cuéntame qué te gustaría saber y te lo resuelvo; si te encaja, organizamos la visita. Lo tienes también en www.platamarine.com`; }
   const anyo = /\b(19|20)\d{2}\b/.test(it); const motor = /\d\s?(cv|hp)\b|motor|mercruiser|mercury|volvo|yamaha|suzuki|honda|evinrude|yanmar|kad|tohatsu/i.test(it); const horas = /\d\s?(h|horas)\b/i.test(it); const donde = /puerto\s*:|amarrad|atracad|\((?!\s*\d)[^)]+\)/i.test(it);
   const f = [!anyo && 'de qué año es', !motor ? 'qué motor y horas tiene' : !horas && 'cuántas horas tiene el motor', !donde && 'dónde está'].filter(Boolean);
   const q = f.length ? `Para orientarte bien, ¿me cuentas ${f.length > 1 ? f.slice(0, -1).join(', ') + ' y ' + f[f.length - 1] : f[0]}?` : 'Con lo que me cuentas ya puedo empezar a mirarlo.';
@@ -1213,7 +1218,7 @@ V.nresumen = async (m) => {
     <div class="card sec"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Últimos contactos</h3><a href="#clientes" class="sm" style="color:var(--or)">Ver todos</a></div>${[...L].sort((a, b) => (b.updated || '').localeCompare(a.updated || '')).slice(0, 8).map((x) => `<a class="li" href="#ncliente/${x.id}" style="text-decoration:none"><div><b>${esc(x.nombre)}</b><span>${esc(x.historial?.[0]?.t || x.interes || '')}</span></div><div class="r">${fdate(x.updated)}<br><span class="mu">${esc(x.etapa)}</span></div></a>`).join('') || '<p class="mu">Todavía no ha entrado ningún contacto. Mira "Entrada de leads".</p>'}</div>`;
 };
 V.nclientes = async (m, arg) => {
-  const d = await nApi(); m = shell('clientes'); let q = '';
+  const [d] = await Promise.all([nApi(), cartPM()]); m = shell('clientes'); let q = '';
   // Desde el Resumen: lista con el detalle de los clientes de una etapa (e:...) o de un filtro (f:sem, f:hoy)
   if (arg && /^[efrp]:/.test(arg)) {
     const td = new Date().toISOString().slice(0, 10); const [t, v] = [arg.slice(0, 2), decodeURIComponent(arg.slice(2))];
@@ -1280,7 +1285,7 @@ V.nanalisis = async (m) => {
 };
 // Leads de Plata Marine y Rotulito: los nuevos arriba, con teléfono, WhatsApp, mover de etapa y eliminar
 V.nleads = async (m) => {
-  const d = await nApi(); m = shell('leads');
+  const [d] = await Promise.all([nApi(), cartPM()]); m = shell('leads');
   const primeras = d.tableros.map((t) => t.e[0]); const finales = d.tableros.map((t) => t.e[t.e.length - 1]);
   const ord = (a, b) => (b.updated || b.created || '').localeCompare(a.updated || a.created || '');
   const nuevos = d.leads.filter((c) => primeras.includes(c.etapa)).sort(ord);
@@ -1299,7 +1304,7 @@ V.nleads = async (m) => {
   m.querySelectorAll('[data-del]').forEach((b) => (b.onclick = guard(async () => { const c = d.leads.find((x) => x.id === b.dataset.del); if (!c || !confirm(`¿Eliminar a ${c.nombre}? Se borra del embudo.`)) return; await nApi('/' + c.id, { method: 'DELETE' }); toast(`${c.nombre}: eliminado`); route(); })));
 };
 V.ncliente = async (m, id) => {
-  const d = await nApi(); const c = d.leads.find((x) => x.id === id); m = shell('clientes');
+  const [d] = await Promise.all([nApi(), cartPM()]); const c = d.leads.find((x) => x.id === id); m = shell('clientes');
   if (!c) { m.innerHTML = top('Cliente') + '<div class="card mu">No encontrado.</div>'; return; }
   const av = avN(c); const f = c.fechas || {};
   m.innerHTML = top(esc(c.nombre), `${esc(c.telefono || '')}${c.email ? ' · ' + esc(c.email) : ''}${c.origen ? ' · ' + esc(c.origen) : ''}`, `<a class="btn g" href="#clientes/${tabDe(d, c)}">Volver</a>`) +
