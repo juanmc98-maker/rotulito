@@ -1386,6 +1386,8 @@ export default {
   "¿A cuántos meses lo quieres?": ["A quants mesos el vols?", "Over how many months?"],
   "Entrada de {0} € · {1} meses": ["Entrada de {0} € · {1} mesos", "{0} € down payment · {1} months"],
   "+ {0} € de cambio de nombre": ["+ {0} € de canvi de nom", "+ {0} € registration transfer"],
+  "+ {0} € de cambio de nombre · <b>Total: {1} €</b>": ["+ {0} € de canvi de nom · <b>Total: {1} €</b>", "+ {0} € registration transfer · <b>Total: {1} €</b>"],
+  "Precio {0} € + {1} € de cambio de nombre = <b>{2} €</b>": ["Preu {0} € + {1} € de canvi de nom = <b>{2} €</b>", "Price {0} € + {1} € registration transfer = <b>{2} €</b>"],
   "<a>o desde <b>{0} €/mes</b><small>{1} meses sin entrada · TIN {2} % · TAE {3} % · ver ejemplo</small></a>": ["<a>o des de <b>{0} €/mes</b><small>{1} mesos sense entrada · TIN {2} % · TAE {3} % · veure exemple</small></a>", "<a>or from <b>{0} €/month</b><small>{1} months, no down payment · TIN {2} % · APR {3} % · see example</small></a>"],
   "Cambio de nombre": ["Canvi de nom", "Registration transfer"],
   "El importe a financiar incluye el cambio de nombre ({0} €).": ["L'import a finançar inclou el canvi de nom ({0} €).", "The amount financed includes the registration transfer ({0} €)."],
