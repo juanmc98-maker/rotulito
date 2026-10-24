@@ -1269,6 +1269,31 @@ V.nanalisis = async (m) => {
   };
   draw();
 };
+// Mensaje de WhatsApp ya escrito para los leads de Plata Marine (vendedores y compradores), con el nombre y el barco de cada uno
+const msgN = (c) => {
+  if (NEG !== 'marine') return '';
+  const n0 = String(c.nombre || '').trim().split(/\s+/)[0] || '';
+  const nom = /^sin$/i.test(n0) || !n0 ? '' : n0.charAt(0).toUpperCase() + n0.slice(1).toLowerCase();
+  const hola = nom ? `Hola ${nom}, soy Juan, de Plata Marine.` : 'Hola, soy Juan, de Plata Marine.';
+  const it = String(c.interes || '').trim();
+  const campo = (re) => { const m = it.match(re); return m ? m[1].trim() : ''; };
+  const vende = /^vend/i.test(String(c.tipo || '')) || /^vende:/i.test(it) || (c.etapa && ['Primer contacto', 'Hoja y guía enviadas', 'Hoja firmada', 'Fotos recibidas', 'Publicado', 'Con interesados', 'Vendido'].includes(c.etapa));
+  if (vende) {
+    let barco = campo(/^vende:\s*([^|]+)/i) || campo(/modelo:\s*([^|]+)/i) || campo(/barco:\s*([^|]+)/i);
+    if (!barco && it && !/[|:]/.test(it) && it.length <= 60) barco = it;
+    let anyo = campo(/a[ñn]o:\s*(\d{4})/i);
+    const ma = barco.match(/\((\d{4})\)/); if (ma) { anyo = anyo || ma[1]; barco = barco.replace(/\s*\(\d{4}\)\s*/, ' ').trim(); }
+    if (!anyo && /\b(19|20)\d{2}\b/.test(barco)) anyo = barco.match(/\b(19|20)\d{2}\b/)[0];
+    const puerto = campo(/puerto:\s*([^|]+)/i);
+    const preg = !puerto && !anyo ? '¿Dónde tienes el barco y de qué año es? Así te puedo dar una valoración ajustada.'
+      : !puerto ? '¿Dónde tienes el barco? Así te puedo dar una valoración ajustada.'
+      : !anyo ? '¿De qué año es? Así te puedo dar una valoración ajustada.'
+      : 'Con lo que nos has contado ya puedo empezar a prepararte una valoración ajustada.';
+    return `${hola} Gracias por escribirnos por ${barco ? 'tu ' + barco : 'tu barco'}. Nos encargamos de todo el proceso de venta: valoración, fotos y anuncio, visitas con los interesados y papeleo. ${preg} Puedes ver cómo trabajamos en www.platamarine.com`;
+  }
+  const busca = it && !/[|]/.test(it) && !/^UT\s?\d/i.test(it) && !/newsletter/i.test(it) && it.length <= 80 ? it : '';
+  return `${hola} Gracias por escribirnos.${busca ? ' He visto lo que buscas (' + busca + ').' : ''} Cualquier duda que tengas me dices, y si quieres ver algún barco te organizo la visita. Puedes ver lo que tenemos en www.platamarine.com`;
+};
 // Leads de Plata Marine y Rotulito: los nuevos arriba, con teléfono, WhatsApp, mover de etapa y eliminar
 V.nleads = async (m) => {
   const d = await nApi(); m = shell('leads');
@@ -1279,7 +1304,7 @@ V.nleads = async (m) => {
   const marcha = d.leads.filter((c) => !primeras.includes(c.etapa) && !hoy.includes(c) && c.etapa !== 'Perdido' && !finales.includes(c.etapa)).sort(ord).slice(0, 30);
   const card = (c) => `<div class="card sec ld"><div class="hd"><div><b>${esc(c.nombre)}</b>${c.telefono ? ` <a href="tel:${esc(c.telefono)}" style="color:var(--mu);font-weight:500;margin-left:6px;text-decoration:none">${esc(c.telefono)}</a>` : ''}<span>${fdt(c.updated || c.created)}${c.origen ? ' · ' + esc(c.origen) : ''}</span></div>${badge(String(c.etapa).toLowerCase())}</div>
     ${avN(c).length ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Hoy te toca:</b> ${esc(avN(c).join(' · '))}</p>` : ''}${c.interes ? `<p>${esc(c.interes)}</p>` : ''}${c.email ? `<p class="mu sm">${esc(c.email)}</p>` : ''}
-    <div class="row">${c.telefono ? `<a class="btn s" target="_blank" rel="noopener" data-wa="${c.id}" href="${waLink(c.telefono)}">${IC.wa}WhatsApp</a>` : ''}<a class="btn s g" href="#ncliente/${c.id}">Ver ficha</a><select data-mv="${c.id}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsN(d, '')}</select><button class="btn r s" data-del="${c.id}">Eliminar</button></div></div>`;
+    <div class="row">${c.telefono ? `<a class="btn s" target="_blank" rel="noopener" data-wa="${c.id}" href="${waLink(c.telefono, msgN(c))}">${IC.wa}WhatsApp</a>` : ''}<a class="btn s g" href="#ncliente/${c.id}">Ver ficha</a><select data-mv="${c.id}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsN(d, '')}</select><button class="btn r s" data-del="${c.id}">Eliminar</button></div></div>`;
   const sec = (t, l, vacio) => `<h3 class="lh">${t} <span>${l.length}</span></h3>${l.length ? l.map(card).join('') : `<p class="mu">${vacio}</p>`}`;
   m.innerHTML = top(`Leads · ${NEGS[NEG].n}`, 'Los nuevos arriba. Al pulsar WhatsApp, un comprador nuevo pasa a contactado.', `<button class="btn" id="nl">+ Nuevo lead</button><a class="btn g" href="#clientes">Embudo completo</a>`) +
     sec('Nuevos sin contestar', nuevos, 'No hay leads nuevos.') + sec('Hoy te toca seguimiento', hoy, 'Nada pendiente de seguimiento hoy.') + sec('En marcha', marcha, 'Nada en marcha.');
@@ -1300,7 +1325,7 @@ V.ncliente = async (m, id) => {
     <div class="fg" style="grid-template-columns:1fr 1fr;margin-top:10px"><label>${IMPORTE[NEG]} (€)<input id="im" inputmode="decimal" value="${c.importe || ''}" placeholder="0"></label><label>Origen<input id="og" value="${esc(c.origen || '')}" placeholder="Meta Ads, web, WhatsApp…"></label>
     ${NEG === 'marine' ? `<label style="grid-column:1/-1">Nº de certificado de Correos (documentación)<input id="ce" value="${esc(c.certificado || '')}"></label>` : ''}</div>
     <label style="margin-top:10px">Interés<input id="in" value="${esc(c.interes || '')}"></label><label style="margin-top:10px">Notas internas<textarea id="nt" rows="5">${esc(c.notas || '')}</textarea></label>
-    <div class="row" style="margin-top:12px"><button class="btn" id="sv">Guardar</button>${c.telefono ? `<a class="btn g" target="_blank" rel="noopener" href="${waLink(c.telefono)}">${IC.wa}WhatsApp</a><a class="btn g" href="tel:${esc(c.telefono)}">Llamar</a>` : ''}${c.email ? `<a class="btn g" href="mailto:${esc(c.email)}">Email</a>` : ''}<span style="flex:1"></span><button class="btn r s" id="del">Borrar</button></div>
+    <div class="row" style="margin-top:12px"><button class="btn" id="sv">Guardar</button>${c.telefono ? `<a class="btn g" target="_blank" rel="noopener" href="${waLink(c.telefono, msgN(c))}">${IC.wa}WhatsApp</a><a class="btn g" href="tel:${esc(c.telefono)}">Llamar</a>` : ''}${c.email ? `<a class="btn g" href="mailto:${esc(c.email)}">Email</a>` : ''}<span style="flex:1"></span><button class="btn r s" id="del">Borrar</button></div>
     ${Object.keys(f).length ? `<h3 style="margin:18px 0 8px">Fechas de cada paso</h3>${d.etapas.filter((e) => f[e]).map((e) => `<div class="li"><div><b>${esc(e)}</b></div><div class="r">${fdt(f[e])}</div></div>`).join('')}` : ''}</div>
     <div class="card"><h3 style="margin-bottom:12px">Historial</h3>${(c.historial || []).map((h) => `<div class="li"><div><span style="color:var(--tx)">${esc(h.t)}</span></div><div class="r">${fdt(h.d)}</div></div>`).join('') || '<p class="mu">Sin movimientos.</p>'}</div></div>`;
   const datos = () => ({ notas: $('#nt').value, interes: $('#in').value, importe: $('#im').value, origen: $('#og').value, ...($('#ce') ? { certificado: $('#ce').value } : {}) });
