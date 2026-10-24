@@ -1098,12 +1098,14 @@ function cocheDe(c, cars) {
 const saludo = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('es-ES', { hour: 'numeric', minute: 'numeric', hourCycle: 'h23', timeZone: 'Europe/Madrid' }).formatToParts(new Date()).map((x) => [x.type, Number(x.value)])); return p.hour * 60 + p.minute < 12 * 60 + 30 ? 'Buenos días' : 'Buenas tardes'; }; // corte a las 12:30
 const nom1 = (n) => { const w = String(n || '').trim().split(/\s+/)[0] || ''; return /^(sin|cliente|\*+)$/i.test(w) || /[\d@*]/.test(w) || w.length < 2 ? '' : w[0].toUpperCase() + w.slice(1).toLowerCase(); };
 // Plata Marine: mensaje de WhatsApp ya escrito según sea comprador o vendedor (lo envía Juan)
-const barcoDe = (c) => { const m = String(c.interes || '').match(/^\s*(vende|busca|modelo)\s*:\s*([^·|(\n]+)/i); return m ? m[2].trim().replace(/[.,;]+$/, '') : ''; };
+const barcoDe = (c) => { const m = String(c.interes || '').match(/^\s*(vende|busca|modelo)\s*:\s*([^·|(\n]+)/i); return m ? m[2].split(/,\s/)[0].replace(/\b(19|20)\d{2}\b/g, '').replace(/\s{2,}/g, ' ').trim().replace(/\s+(año|del|de)$/i, '').replace(/[.,;:]+$/, '') : ''; };
 const esVendedorPM = (d, c) => (d && tabDe(d, c) === 'vendedores') || /^\s*vende\s*:/i.test(c.interes || '') || /vender/i.test(c.origen || '');
-const msgPM = (d, c) => { if (NEG !== 'marine') return ''; const n = nom1(c.nombre); const b = barcoDe(c); const h = `Hola${n ? ' ' + n : ''}, soy Juan, de Plata Marine.`;
-  return esVendedorPM(d, c)
-    ? `${h} Me ha llegado tu solicitud para vender ${b ? 'tu ' + b : 'tu barco'}. Para orientarte bien, ¿me cuentas de qué año es, qué motor y horas tiene y dónde está? Puedes ver cómo trabajo en www.platamarine.com`
-    : `${h} Me ha llegado tu solicitud${b ? ' por el ' + b : ''}. Cuéntame qué te gustaría saber y te lo resuelvo; si te encaja, organizamos la visita. Lo tienes también en www.platamarine.com`; };
+const msgPM = (d, c) => { if (NEG !== 'marine') return ''; const n = nom1(c.nombre); const b = barcoDe(c); const it = String(c.interes || ''); const h = `Hola${n ? ' ' + n : ''}, soy Juan, de Plata Marine.`;
+  if (!esVendedorPM(d, c)) return `${h} Me ha llegado tu solicitud${b ? ' por el ' + b : ''}. Cuéntame qué te gustaría saber y te lo resuelvo; si te encaja, organizamos la visita. Lo tienes también en www.platamarine.com`;
+  const anyo = /\b(19|20)\d{2}\b/.test(it); const motor = /\d\s?(cv|hp)\b|motor|mercruiser|mercury|volvo|yamaha|suzuki|honda|evinrude|yanmar|kad|tohatsu/i.test(it); const horas = /\d\s?(h|horas)\b/i.test(it); const donde = /puerto\s*:|amarrad|atracad|\((?!\s*\d)[^)]+\)/i.test(it);
+  const f = [!anyo && 'de qué año es', !motor ? 'qué motor y horas tiene' : !horas && 'cuántas horas tiene el motor', !donde && 'dónde está'].filter(Boolean);
+  const q = f.length ? `Para orientarte bien, ¿me cuentas ${f.length > 1 ? f.slice(0, -1).join(', ') + ' y ' + f[f.length - 1] : f[0]}?` : 'Con lo que me cuentas ya puedo empezar a mirarlo.';
+  return `${h} Me ha llegado tu solicitud para vender ${b ? 'tu ' + b : 'tu barco'}. ${q} Puedes ver cómo trabajo en www.platamarine.com`; };
 const msgWa = (quien, car, nombre) => `${saludo()}${nom1(nombre) ? ' ' + nom1(nombre) : ''}, soy ${quien} de Plata Garage. He recibido un mensaje interesado en este vehículo${car ? `\n${WEB}/vehiculos/${car.slug}` : ''}`;
 // En Leads sale todo lo que entra por la web y los portales; desde cada tarjeta se abre la solicitud completa
 const VERL = { cita: 'reservas', tasacion: 'valoraciones', envio: 'envios', financiacion: 'financiaciones', mensaje: 'mensajes', busqueda: 'busquedas', alerta: 'alertas' };
