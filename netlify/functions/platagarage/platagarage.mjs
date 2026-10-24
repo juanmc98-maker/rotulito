@@ -394,14 +394,47 @@ async function stripeApi(key, path, form) {
   const r = await fetch('https://api.stripe.com/v1' + path, { method: form ? 'POST' : 'GET', headers: { Authorization: 'Bearer ' + key, ...(form ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}) }, body: form ? new URLSearchParams(form).toString() : undefined, signal: AbortSignal.timeout(15000) });
   const d = await r.json().catch(() => ({})); return { ok: r.ok, d };
 }
+// Bloqueo del coche mientras alguien paga la señal (Stripe deja el pago abierto 30 min como mínimo) y reserva automática al cobrar.
+// Sin escrituras condicionales en Blobs: se escribe, se espera y se relee; solo sigue quien queda escrito.
+const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
+const HOLD_MIN = 32;
+async function tomarHold(slug, ref) {
+  const k = 'hold-' + slug; const h = await db().get(k, { type: 'json' }).catch(() => null);
+  if (h && h.hasta > Date.now() && h.ref !== ref) return false;
+  await db().setJSON(k, { ref, hasta: Date.now() + HOLD_MIN * 60000 }); await pausa(400);
+  const v = await db().get(k, { type: 'json' }).catch(() => null); return !!v && v.ref === ref;
+}
+const soltarHold = (slug, ref) => db().get('hold-' + slug, { type: 'json' }).then((h) => (h && (!ref || h.ref === ref) ? db().delete('hold-' + slug) : null)).catch(() => {});
+async function reclamar(key, id) { // true solo para la primera ejecución que procesa este cobro (webhook y vuelta de Stripe pueden llegar a la vez)
+  const ya = await db().get(key, { type: 'json' }).catch(() => null); if (ya) return ya.id === id;
+  await db().setJSON(key, { id, d: Date.now() }); await pausa(400);
+  const v = await db().get(key, { type: 'json' }); return !!v && v.id === id;
+}
+async function reservarAlCobrar(slug, b) { // al cobrar la señal el coche pasa a Reservado; si ya no estaba libre, aviso para devolverla
+  const cars = await load('cars'); const car = cars.find((c) => c.slug === slug);
+  const libre = car && !car.sold && !car.hidden && (car.status !== 'reservado' || car.reservadoPara === b.id);
+  const d = new Date().toISOString();
+  if (libre) {
+    if (car.status !== 'reservado' || car.reservadoPara !== b.id) { car.status = 'reservado'; car.reservadoPara = b.id; car.log = [...(car.log || []), { d, by: 'web', t: `Reservado automáticamente: ${b.nombre} ha pagado la señal con Stripe` }]; await save('cars', cars); }
+  } else {
+    const list = await load('bookings'); const x = list.find((y) => y.id === b.id);
+    if (x) { x.conflicto = true; x.historial = [{ d, t: 'OJO: el coche ya no estaba libre cuando se cobró la señal. Hay que devolverla desde Stripe.' }, ...(x.historial || [])].slice(0, 50); await save('bookings', list); }
+    await pushAll('garage', `OJO, señal a devolver: ${clip(b.cocheNombre, 40)}`, `${clip(b.nombre, 40)} ha pagado pero el coche ya estaba reservado o vendido`, 'conf-' + b.id).catch(() => {});
+    await sendMail({ subject: `OJO: señal cobrada de un coche que ya no estaba libre — ${b.nombre} (${b.cocheNombre})`, text: `${b.nombre} ha pagado con Stripe la señal del ${b.cocheNombre}, pero el coche ya estaba reservado para otra persona, vendido u oculto.\n\nHay que avisarle y devolverle la señal íntegra desde Stripe (Pagos → el pago → Reembolsar), como dicen las condiciones de la reserva.` }).catch(() => {});
+  }
+  await soltarHold(slug);
+  return libre;
+}
 async function marcarPagoStripe(id, ses, origin) { // apunta la señal cobrada por Stripe (una sola vez)
   if (!ses || ses.payment_status !== 'paid' || ses.client_reference_id !== id) return false;
   const list = await load('bookings'); const b = list.find((x) => x.id === id && x.tipo === 'reserva'); if (!b) return false;
   if (b.pagoStripe) return true;
+  if (!(await reclamar('stripe-' + ses.id, uid('m')))) return true; // otra ejecución ya lo está apuntando
   const d = new Date().toISOString(); const imp = Math.round(ses.amount_total || 0) / 100;
   b.pagoStripe = { session: ses.id, pi: typeof ses.payment_intent === 'string' ? ses.payment_intent : ses.payment_intent?.id || '', importe: imp, d };
   b.pagoAvisado = b.pagoAvisado || d;
   b.historial = [{ d, t: `Señal de ${imp} € pagada con tarjeta en la web (Stripe)` }, ...(b.historial || [])].slice(0, 50); await save('bookings', list);
+  await reservarAlCobrar(b.coche, b);
   await pushAll('garage', `Señal cobrada: ${clip(b.cocheNombre, 40)}`, `${clip(b.nombre, 40)} ha pagado ${imp} € con tarjeta (Stripe). Confirma la reserva`, 'pago-' + b.id).catch(() => {});
   await sendMail({ subject: `Señal cobrada con Stripe — ${b.nombre} (${b.cocheNombre})`, text: `${b.nombre} ha pagado con tarjeta la señal de ${imp} € del ${b.cocheNombre}. El cobro ya está en Stripe.\n\nComprueba que el coche sigue disponible y confirma la reserva en el panel: ${origin}${BASE}/admin#reservas/todas\n\nSi no se pudiera reservar, la devolución se hace desde Stripe (Pagos → el pago → Reembolsar).` }).catch(() => {});
   return true;
@@ -410,14 +443,20 @@ async function crearReservaStripe(ses, origin) { // reserva rápida: el cliente 
   if (!ses || ses.payment_status !== 'paid' || !ses.metadata?.coche) return null;
   const list = await load('bookings'); const ya = list.find((x) => x.stripeSession === ses.id); if (ya) return ya;
   const c = (await load('cars')).find((x) => x.slug === clip(ses.metadata.coche, 120)); if (!c) return null;
+  const nid = uid();
+  if (!(await reclamar('stripe-' + ses.id, nid))) { // otra ejecución está creando esta reserva: se espera a que la guarde
+    for (let i = 0; i < 8; i++) { await pausa(500); const y = (await load('bookings')).find((x) => x.stripeSession === ses.id); if (y) return y; }
+    throw new Error('reserva Stripe en curso ' + ses.id);
+  }
   const cd = ses.customer_details || {}; const d = new Date().toISOString(); const imp = Math.round(ses.amount_total || 0) / 100;
-  const it = { id: uid(), nombre: clip(cd.name, 80) || 'Cliente web', telefono: normPhone(cd.phone) || clip(cd.phone, 20), email: clip(cd.email, 200).toLowerCase(), origen: clip(ses.metadata.origen, 160), canal: clip(ses.metadata.canal, 60), created: d, status: 'pendiente', notas: '',
+  const it = { id: nid, nombre: clip(cd.name, 80) || 'Cliente web', telefono: normPhone(cd.phone) || clip(cd.phone, 20), email: clip(cd.email, 200).toLowerCase(), origen: clip(ses.metadata.origen, 160), canal: clip(ses.metadata.canal, 60), created: d, status: 'pendiente', notas: '',
     tipo: 'reserva', motivo: 'Reservar este coche', mensaje: '', coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''}${c.year ? ` (${c.year})` : ''}`.replace(/\s+/g, ' '),
     res: { dni: '', direccion: '', cp: '', poblacion: '', condiciones: d }, senal: imp,
     carSnap: { slug: c.slug, brand: c.brand, model: c.model, version: c.version, year: c.year, km: c.km, price: c.price, reserve: imp, matricula: c.matricula, bastidor: c.bastidor, holder: c.holder },
     stripeSession: ses.id, pagoStripe: { session: ses.id, pi: typeof ses.payment_intent === 'string' ? ses.payment_intent : ses.payment_intent?.id || '', importe: imp, d }, pagoAvisado: d,
     historial: [{ d, t: `Reserva pagada al momento con tarjeta / Apple Pay (Stripe): ${imp} €` }] };
   list.unshift(it); await save('bookings', list);
+  await reservarAlCobrar(c.slug, it);
   const k = sign('ref|' + it.id).slice(0, 16); const pagoUrl = `${origin}${BASE}/reserva/pago?r=${it.id}&k=${k}`;
   await notify('cita', { ...it, mensaje: `Señal de ${imp} € YA PAGADA con Stripe · DNI y dirección: pendientes` }, origin).catch(() => {});
   await pushAll('garage', `Señal cobrada: ${clip(it.cocheNombre, 40)}`, `${clip(it.nombre, 40)} ha pagado ${imp} € con tarjeta (Stripe). Confirma la reserva`, 'pago-' + it.id).catch(() => {});
@@ -809,19 +848,20 @@ async function api(r, req, M, ip, url, context) {
     const pagoUrl = `${url.origin}${BASE}/reserva/pago?r=${b.id}&k=${k}`;
     if (b.pagoStripe) return json({ url: pagoUrl });
     const car = (await load('cars')).find((c) => c.slug === b.coche);
-    if (!car || car.sold || car.hidden) return json({ error: 'Este coche ya no se puede reservar. Escríbenos por WhatsApp.' }, 409);
+    if (!car || car.sold || car.hidden || (car.status === 'reservado' && car.reservadoPara !== b.id)) return json({ error: 'Este coche ya no se puede reservar. Escríbenos por WhatsApp.' }, 409);
     const holder = (await load('holders')).find((h) => h.id === (car.holder || b.carSnap?.holder)); const sk = stripeKey(holder);
     const senal = Number(b.senal || car.reserve) || 0;
     if (!sk || !(senal > 0)) return json({ error: 'El pago con tarjeta no está disponible para este coche. Págala por Bizum.' }, 400);
+    if (!(await tomarHold(car.slug, b.id))) return json({ error: 'Ahora mismo otra persona está pagando la reserva de este coche. Vuelve a intentarlo en media hora o escríbenos por WhatsApp.' }, 409);
     const rs = await stripeApi(sk, '/checkout/sessions', {
-      mode: 'payment', locale: 'es', client_reference_id: b.id, customer_email: b.email || '',
+      mode: 'payment', locale: 'es', client_reference_id: b.id, expires_at: String(Math.floor(Date.now() / 1000) + 31 * 60), customer_email: b.email || '',
       'line_items[0][quantity]': '1', 'line_items[0][price_data][currency]': 'eur', 'line_items[0][price_data][unit_amount]': String(Math.round(senal * 100)),
       'line_items[0][price_data][product_data][name]': clip(`Señal de reserva · ${b.cocheNombre}`, 240),
       'line_items[0][price_data][product_data][description]': 'Se descuenta del precio del coche. Reserva de 7 días.',
       'metadata[reserva]': b.id, 'payment_intent_data[metadata][reserva]': b.id, 'payment_intent_data[description]': clip(V.conceptoReserva(b, b.carSnap || car), 240),
       success_url: pagoUrl + '&stripe={CHECKOUT_SESSION_ID}', cancel_url: pagoUrl,
     }).catch(() => null);
-    if (!rs?.ok || !rs.d?.url) { console.error('stripe', rs?.d?.error?.message || 'sin respuesta'); return json({ error: 'No hemos podido abrir el pago con tarjeta. Prueba por Bizum o escríbenos por WhatsApp.' }, 502); }
+    if (!rs?.ok || !rs.d?.url) { await soltarHold(car.slug, b.id); console.error('stripe', rs?.d?.error?.message || 'sin respuesta'); return json({ error: 'No hemos podido abrir el pago con tarjeta. Prueba por Bizum o escríbenos por WhatsApp.' }, 502); }
     b.stripeSession = rs.d.id; b.historial = [{ d: new Date().toISOString(), t: 'El cliente abre el pago con tarjeta (Stripe)' }, ...(b.historial || [])].slice(0, 50); await save('bookings', list);
     return json({ url: rs.d.url });
   }
@@ -832,9 +872,11 @@ async function api(r, req, M, ip, url, context) {
     if (!c || !(c.reserve > 0) || c.status !== 'disponible') return json({ error: 'Este coche ya no se puede reservar desde la web. Escríbenos por WhatsApp.' }, 409);
     const sk = stripeKey((await load('holders')).find((h) => h.id === c.holder));
     if (!sk) return json({ error: 'El pago con tarjeta no está disponible para este coche. Usa Bizum más abajo.' }, 400);
+    const hold = uid('h');
+    if (!(await tomarHold(c.slug, hold))) return json({ error: 'Ahora mismo otra persona está pagando la reserva de este coche. Vuelve a intentarlo en media hora o escríbenos por WhatsApp.' }, 409);
     const site = env('PG_SITE_URL') || url.origin; const nm = `${c.brand} ${c.model} ${c.version || ''}${c.year ? ` (${c.year})` : ''}`.replace(/\s+/g, ' ');
     const rs = await stripeApi(sk, '/checkout/sessions', {
-      mode: 'payment', locale: 'es', 'phone_number_collection[enabled]': 'true',
+      mode: 'payment', locale: 'es', 'phone_number_collection[enabled]': 'true', expires_at: String(Math.floor(Date.now() / 1000) + 31 * 60), 'metadata[hold]': hold,
       'line_items[0][quantity]': '1', 'line_items[0][price_data][currency]': 'eur', 'line_items[0][price_data][unit_amount]': String(Math.round(c.reserve * 100)),
       'line_items[0][price_data][product_data][name]': clip(`Señal de reserva · ${nm}`, 240),
       'line_items[0][price_data][product_data][description]': 'Se descuenta del precio del coche. Reserva de 7 días.',
@@ -842,7 +884,7 @@ async function api(r, req, M, ip, url, context) {
       'custom_text[submit][message]': `Al pagar aceptas las condiciones de la reserva: ${site}${BASE}/condiciones-de-contratacion`,
       success_url: `${site}${BASE}/reserva/hecha?c=${encodeURIComponent(c.slug)}&s={CHECKOUT_SESSION_ID}`, cancel_url: `${site}${BASE}/reservar?coche=${encodeURIComponent(c.slug)}`,
     }).catch(() => null);
-    if (!rs?.ok || !rs.d?.url) { console.error('stripe', rs?.d?.error?.message || 'sin respuesta'); return json({ error: 'No hemos podido abrir el pago. Prueba con Bizum más abajo o escríbenos por WhatsApp.' }, 502); }
+    if (!rs?.ok || !rs.d?.url) { await soltarHold(c.slug, hold); console.error('stripe', rs?.d?.error?.message || 'sin respuesta'); return json({ error: 'No hemos podido abrir el pago. Prueba con Bizum más abajo o escríbenos por WhatsApp.' }, 502); }
     await bump('ev', 'reserva-stripe-abre').catch(() => {});
     return json({ url: rs.d.url });
   }
@@ -850,7 +892,11 @@ async function api(r, req, M, ip, url, context) {
     const raw = await req.text(); const sig = req.headers.get('stripe-signature') || '';
     if (!['STRIPE_WH_JUAN', 'STRIPE_WH_CRISTINA'].some((n) => stripeFirmaOk(raw, sig, env(n)))) return json({ error: 'firma' }, 400);
     let ev; try { ev = JSON.parse(raw); } catch { return json({ error: 'json' }, 400); }
-    if (ev.type === 'checkout.session.completed' || ev.type === 'checkout.session.async_payment_succeeded') { const o = ev.data?.object || {}; const org = env('PG_SITE_URL') || url.origin; if (o.client_reference_id) await marcarPagoStripe(clip(o.client_reference_id, 40), o, org).catch(() => {}); else if (o.metadata?.coche) await crearReservaStripe(o, org).catch(() => {}); }
+    const o = ev.data?.object || {}; const org = env('PG_SITE_URL') || url.origin;
+    try { // si algo falla se responde 500 y Stripe vuelve a enviar el aviso
+      if (ev.type === 'checkout.session.completed' || ev.type === 'checkout.session.async_payment_succeeded') { if (o.client_reference_id) await marcarPagoStripe(clip(o.client_reference_id, 40), o, org); else if (o.metadata?.coche) await crearReservaStripe(o, org); }
+      if (ev.type === 'checkout.session.expired') { const sl = clip(o.metadata?.coche, 120); if (sl) await soltarHold(sl, clip(o.metadata?.hold, 40)); else if (o.client_reference_id) { const bk = (await load('bookings')).find((x) => x.id === clip(o.client_reference_id, 40)); if (bk) await soltarHold(bk.coche, bk.id); } }
+    } catch (e) { console.error('stripe webhook', ev.type, e.message); return json({ error: 'reintentar' }, 500); }
     return json({ received: true });
   }
   if (r === '/reserva/pagado' && M === 'POST') { // el cliente avisa de que ha pagado la señal
@@ -1648,7 +1694,7 @@ async function adminApi(r, req, M, me, url) {
       if (!snap.matricula) return json({ error: 'Pon la matrícula del coche en su ficha del panel antes de confirmar: va en el documento de reserva.' }, 400);
       b.status = 'confirmada'; b.confirmedAt = d; b.pagoMetodo = clip(body.metodo, 30); b.carSnap = snap; b.confirmadoPor = me.name || me.id;
       b.historial = [{ d, t: `Señal recibida y reserva confirmada${b.pagoMetodo ? ' (' + b.pagoMetodo + ')' : ''}` }, ...(b.historial || [])].slice(0, 50);
-      if (car && body.marcarReservado !== false) { car.status = 'reservado'; car.log = [...(car.log || []), { d, by: b.confirmadoPor, t: `Reservado para ${b.nombre} (web)` }]; await save('cars', cars); }
+      if (car && body.marcarReservado !== false) { car.status = 'reservado'; car.reservadoPara = b.id; car.log = [...(car.log || []), { d, by: b.confirmadoPor, t: `Reservado para ${b.nombre} (web)` }]; await save('cars', cars); }
       await save('bookings', list);
       const link = `${url.origin}${BASE}/reserva/documento?r=${b.id}&k=${sign('doc|' + b.id).slice(0, 24)}`;
       const em = V.emailReserva({ b, car: car || snap, origin: (env('PG_SITE_URL') || url.origin).replace(/\/+$/, ''), confirmada: true, docUrl: link });
