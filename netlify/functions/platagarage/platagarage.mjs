@@ -503,6 +503,12 @@ const inner = async (req, context) => {
     if (sub === '/admin-sw.js') return new Response(SW_JS, { headers: { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' } });
 
     // ---- web pública ----
+    // Barra final: una sola dirección por página (301). El stock y el blog van con barra; el resto, sin ella
+    if ((M === 'GET' || M === 'HEAD') && !/^\/(api|admin|media)(\/|$)/.test(sub)) {
+      const conBarra = sub === '/vehiculos' || sub === '/blog';
+      if (conBarra && !url.pathname.endsWith('/')) return redirect(`${sub}/${url.search}`);
+      if (!conBarra && sub !== '/' && url.pathname.endsWith('/')) return redirect(`${sub}${url.search}`);
+    }
     const site = (env('PG_SITE_URL') || url.origin).replace(/\/+$/, '');
     V.setCtx({ site, index: INDEX(), gtag: clip(env('PG_GTAG_ID'), 20), pixel: clip(env('PG_META_PIXEL'), 20), clarity: clip(env('PG_CLARITY') || 'yx42pl2vd4', 20), gsv: clip(env('PG_GSV'), 80) });
     const [cars, holdersPub, tarifasPub] = await Promise.all([load('cars'), load('holders'), load('tarifas')]);
@@ -517,11 +523,13 @@ const inner = async (req, context) => {
     if (sub === '/preguntas-frecuentes') return html(V.faqPage({ cars: pubCars(cars) }));
     if (sub === '/como-comprar') return html(V.comoComprar({ cars: pubCars(cars) }));
     if (sub.startsWith('/coches-segunda-mano-')) {
-      const z = SEO.ZONAS.find((x) => x.slug === sub.slice(21));
-      if (!z) return redirect(`${BASE}/vehiculos/`);
+      const zs = sub.slice(21);
+      const z = SEO.ZONAS_IDX.includes(zs) && SEO.ZONAS.find((x) => x.slug === zs);
+      if (!z) return redirect(SEO.ZONA_REDIR[zs] ? `${BASE}/coches-segunda-mano-${SEO.ZONA_REDIR[zs]}` : `${BASE}/vehiculos/`); // zonas retiradas: 301 a la más cercana o al stock
       return html(V.zona({ z, cars: pubCars(cars) }));
     }
     if (sub.startsWith('/coches/')) {
+      if (SEO.BRAND_ALIAS[sub.slice(8)]) return redirect(`${BASE}/coches/${SEO.BRAND_ALIAS[sub.slice(8)]}`); // /coches/mercedes → /coches/mercedes-benz
       const l = SEO.landing(sub.slice(8), pubCars(cars));
       if (!l) return redirect(`${BASE}/vehiculos/`);
       return html(V.landingPage({ l, cars: pubCars(cars) }), 200, l.cars.length ? {} : { 'x-robots-tag': 'noindex, follow' });
@@ -608,7 +616,7 @@ const inner = async (req, context) => {
     if (sub.startsWith('/blog/')) {
       const post = (await load('posts')).find((x) => x.slug === sub.slice(6) && x.published);
       if (!post) return redirect(`${BASE}/blog/`);
-      return html(V.blogPost({ post, cars: pubCars(cars) }));
+      return html(V.blogPost({ post, cars: pubCars(cars), all: cars }));
     }
     return html(V.notFound(), 404);
   } catch (e) {

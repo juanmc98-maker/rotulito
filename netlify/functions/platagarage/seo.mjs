@@ -6,25 +6,37 @@ export const cuotaDe = (c) => { const q = CUOTA(c); return q ? q.c : null; };
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 // Distancias en línea recta desde el centro de Sabadell, redondeadas (orientativas)
-// Solo estas zonas se indexan (las demás quedan con noindex,follow y fuera del sitemap: evitan páginas casi iguales)
-export const ZONAS_IDX = ['sabadell', 'terrassa', 'sant-cugat', 'barbera-del-valles', 'cerdanyola', 'rubi', 'mollet-del-valles', 'barcelona', 'badalona', 'granollers', 'martorell', 'mataro', 'manresa', 'vilafranca-del-penedes', 'igualada'];
-// Texto propio de cada zona indexable
+// Solo estas zonas tienen página propia «coches de segunda mano cerca de…» (las demás redirigen: evitan páginas casi iguales)
+export const ZONAS_IDX = ['sabadell', 'terrassa', 'sant-cugat', 'barbera-del-valles', 'cerdanyola'];
+// Páginas de zona retiradas → página más cercana que se mantiene (o el stock). Redirección 301 en los 3 idiomas
+export const ZONA_REDIR = {
+  ripollet: 'cerdanyola', 'montcada-i-reixac': 'cerdanyola',
+  'badia-del-valles': 'barbera-del-valles', 'santa-perpetua-de-mogoda': 'barbera-del-valles', 'mollet-del-valles': 'barbera-del-valles',
+  'sant-quirze-del-valles': 'sabadell', 'castellar-del-valles': 'sabadell', polinya: 'sabadell',
+  rubi: 'terrassa',
+};
+// Texto propio de cada zona con página (2 párrafos distintos por población, solo con datos del negocio)
 export const ZONA_MAS = {
-  sabadell: 'Somos una compraventa pequeña de Sabadell: cada coche lo elegimos nosotros, lo revisamos en taller y le cambiamos el aceite antes de entregarlo. Atendemos con cita para enseñarte el coche con calma, sin prisas y sin colas, y si te encaja lo puedes reservar con una señal que se descuenta del precio.',
-  terrassa: 'Entre Terrassa y Sabadell hay unos 9 km por la C-58, así que puedes venir a ver el coche en la misma tarde. Si lo prefieres, te mandamos antes por WhatsApp las fotos y los datos que nos pidas para que no hagas el viaje en balde.',
-  'sant-cugat': 'Desde Sant Cugat se llega a Sabadell en pocos minutos. En el stock puedes filtrar por automáticos, SUV o precio para ver solo lo que te encaja y pedir cita para ese coche.',
-  'barbera-del-valles': 'Barberà del Vallès y Sabadell están pegadas, así que es la visita más cómoda: pide cita a la hora que te vaya bien y te tenemos el coche preparado.',
-  cerdanyola: 'Cerdanyola del Vallès está a unos 7 km, así que es fácil venir a ver el coche al salir del trabajo. Pide cita y te lo tenemos preparado, con la ficha y los papeles a mano y la garantía de 12 meses explicada.',
-  rubi: 'Desde Rubí se llega a Sabadell en pocos minutos. Si buscas algo concreto que ahora no tenemos, dínoslo en «Te lo buscamos» y te avisamos cuando entre un coche que encaje.',
-  'mollet-del-valles': 'Mollet del Vallès está a un paso de Sabadell. Pide cita a la hora que te vaya bien y te tenemos el coche preparado; si quieres asegurarlo antes de venir, lo puedes reservar con una señal que se descuenta del precio.',
-  barcelona: 'Mucha gente de Barcelona viene a Sabadell a buscar coche: te enseñamos el coche con calma, con cita y sin colas. Si no te va bien subir, pídenos presupuesto para llevártelo a casa; y si lo vas a financiar, la solicitud la haces desde la ficha del coche sin moverte.',
-  badalona: 'Desde Badalona estás a unos 16 km de Sabadell en línea recta. Mira el stock, calcula la cuota de cada coche en su ficha y pide cita para venir a verlo; si no puedes venir, te pasamos presupuesto de envío.',
-  granollers: 'Entre Granollers y Sabadell hay unos 16 km. Si estás en el Vallès Oriental, pide cita el día que te vaya bien y te enseñamos el coche sin prisas; y si tienes coche, te lo valoramos como parte de pago.',
-  martorell: 'Desde Martorell tienes Sabadell a unos 17 km. Te enseñamos el coche con cita, sin colas, y si lo necesitas tramitamos nosotros la financiación con la entidad.',
-  mataro: 'Desde Mataró y el Maresme, Sabadell queda a unos 28 km en línea recta. Mira el stock con calma en la web, filtra por cuota al mes si vas a financiar y, cuando tengas uno claro, pide cita para venir a verlo.',
-  manresa: 'Desde Manresa y el Bages, Sabadell queda a unos 30 km en línea recta. Para que no hagas el viaje en balde, antes de venir te resolvemos por WhatsApp las dudas del coche que te interese y te lo tenemos preparado a la hora de la cita.',
-  'vilafranca-del-penedes': 'Si eres de Vilafranca del Penedès, puedes hacer casi todo a distancia: calcular la cuota, pedir la financiación y reservar el coche con la señal. Cuando esté todo listo, vienes a recogerlo o te pasamos presupuesto para llevártelo.',
-  igualada: 'Si vienes desde Igualada o el Anoia, te recomendamos reservar antes el coche que te interese para no encontrarte con que se ha vendido: la señal se descuenta del precio y, si lo compras con financiación y no te la aprueban, te la devolvemos.',
+  sabadell: [
+    'Somos una compraventa pequeña de Sabadell: cada coche lo elegimos nosotros, lo revisamos en taller y le cambiamos el aceite antes de entregarlo. Atendemos con cita para enseñarte el coche con calma, sin prisas y sin colas, y si te encaja lo puedes reservar con una señal que se descuenta del precio.',
+    'Si eres de Sabadell, lo más cómodo es mirar el stock en la web, guardar en favoritos los que te gusten y pedir cita para verlos el mismo día. Si tienes coche, te lo valoramos como parte de pago y te decimos cuánto te quedaría por pagar.',
+  ],
+  terrassa: [
+    'Terrassa y Sabadell están unidas por la C-58, así que puedes venir a ver el coche a la salida del trabajo o un sábado por la mañana. Antes de venir te mandamos por WhatsApp las fotos o los datos que nos pidas, para que no hagas el viaje en balde.',
+    'Si buscas un coche para moverte a diario por el Vallès, en el stock puedes filtrar por cambio, combustible o cuota al mes. Cuando tengas uno claro, pide cita y te lo tenemos preparado con la ficha y los papeles a mano.',
+  ],
+  'sant-cugat': [
+    'Desde Sant Cugat se llega a Sabadell en pocos minutos. Si haces muchos trayectos con tráfico, échale un vistazo a los automáticos y a los coches con etiqueta ECO o CERO del stock: puedes filtrarlos en la web antes de pedir cita.',
+    'Te enseñamos el coche con cita, sin colas, y si lo vas a financiar puedes hacer la solicitud desde la ficha del coche sin moverte de casa. La respuesta te la damos nosotros antes de que decidas nada.',
+  ],
+  'barbera-del-valles': [
+    'Si vives en Barberà, puedes pasar a ver el coche entre semana, de 9:30 a 19:30, o el sábado por la mañana. Pide cita a la hora que te vaya bien y te lo tenemos preparado, sin esperas.',
+    'Si quieres asegurarte el coche antes de venir, lo puedes reservar con una señal que se descuenta del precio; y si lo compras con financiación y no te la aprueban, te la devolvemos íntegra.',
+  ],
+  cerdanyola: [
+    'Desde Cerdanyola del Vallès se viene a Sabadell por la C-58, así que es fácil pasar a ver el coche al salir del trabajo. Pide cita y te lo tenemos preparado, con la ficha y los papeles a mano y la garantía de 12 meses explicada.',
+    'Si no encuentras en el stock lo que buscas, dinos en «Te lo buscamos» qué coche quieres y tu presupuesto, y te escribimos cuando entre uno que encaje.',
+  ],
 };
 export const ZONAS = [
   { slug: 'sabadell', name: 'Sabadell', km: 0, txt: 'Estamos en Sabadell. Si eres de aquí, pide cita y ven a ver el coche con calma, el día y la hora que mejor te vayan.' },
@@ -114,20 +126,40 @@ for (const t of TIPOS.filter((x) => x.cuota)) EXTRA[t.slug] = {
   faq: [['¿La cuota es definitiva?', 'Es orientativa. La financiera estudia cada caso y la aprobación depende de ella. Te confirmamos la cuota final antes de firmar nada.'], ['¿Hace falta dar entrada?', 'No. Las cuotas de esta página son sin entrada. Si das entrada, la cuota baja.'], ['¿Cómo pido la financiación?', 'Desde la ficha del coche: rellenas tus datos en 2 minutos, nosotros lo tramitamos con la financiera y te decimos la respuesta.']],
 };
 
-export const slugBrand = (b) => norm(b).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+// Marcas que se escriben de varias formas: todas van a una sola página (/coches/mercedes → /coches/mercedes-benz)
+export const BRAND_ALIAS = { mercedes: 'mercedes-benz' };
+const BRAND_NAME = { 'mercedes-benz': 'Mercedes-Benz' };
+export const slugBrand = (b) => { const s = norm(b).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); return BRAND_ALIAS[s] || s; };
+// Vehículos que no son coches (barcos, autocaravanas…): siguen en el stock y en su ficha, pero fuera del marcado «Car»,
+// de las páginas de marca y de tipo, de las zonas y de los destacados de la portada.
+// Se detectan por la carrocería del panel o, si no, por esta lista (marca o dirección de la ficha).
+export const NO_COCHE = { marcas: ['pilote'], slugs: ['pilote-p746-exclusive-edition-2023'] };
+const NO_COCHE_BODY = /barco|embarcacion|lancha|velero|semirrigida|neumatica|moto de agua|moto nautica|yate|autocaravana|caravana/;
+export const esCoche = (c) => !!c && !NO_COCHE_BODY.test(norm(c.body)) && !NO_COCHE.marcas.includes(slugBrand(c.brand)) && !NO_COCHE.slugs.includes(c.slug);
+export const soloCoches = (cars) => (cars || []).filter(esCoche);
 export function marcas(cars) {
-  const m = new Map(); cars.forEach((c) => { const s = slugBrand(c.brand); if (!m.has(s)) m.set(s, { slug: s, name: c.brand, n: 0 }); m.get(s).n++; });
+  const m = new Map(); soloCoches(cars).forEach((c) => { const s = slugBrand(c.brand); if (!m.has(s)) m.set(s, { slug: s, name: BRAND_NAME[s] || c.brand, n: 0 }); m.get(s).n++; });
   return [...m.values()].sort((a, b) => a.name.localeCompare(b.name, 'es'));
 }
 // Resuelve /coches/<slug> → {kind, h1, cars, txt}
 export function landing(slug, cars) {
+  cars = soloCoches(cars);
   const t = TIPOS.find((x) => x.slug === slug);
   if (t) return { kind: 'tipo', slug, h: t.h, txt: t.txt, cuota: t.cuota || 0, cars: cars.filter(t.f) };
   const mk = marcas(cars).find((x) => x.slug === slug);
   if (mk) return { kind: 'marca', slug, h: `${mk.name}`, txt: `${mk.name} de segunda mano en stock en Sabadell, revisados y con garantía de 12 meses.`, cars: cars.filter((c) => slugBrand(c.brand) === slug), brand: mk.name };
   return null;
 }
-export const tiposConStock = (cars) => TIPOS.map((t) => ({ ...t, n: cars.filter(t.f).length })).filter((t) => t.n > 0);
+export const tiposConStock = (cars) => { const cs = soloCoches(cars); return TIPOS.map((t) => ({ ...t, n: cs.filter(t.f).length })).filter((t) => t.n > 0); };
+
+// <title> de un artículo del blog (máx. 60 caracteres): si no cabe con la marca, se queda la parte antes de «:» y, si aún no cabe, se corta en una palabra
+export function tituloBlog(t) {
+  t = String(t || '').replace(/\s+/g, ' ').trim(); const M = ' | Plata Garage';
+  if (t.length + M.length > 60 && t.includes(':')) t = t.split(':')[0].trim();
+  if (t.length + M.length <= 60) return t + M;
+  if (t.length <= 60) return t;
+  const c = t.slice(0, 60); const i = c.lastIndexOf(' '); return (i > 30 ? c.slice(0, i) : c).replace(/[\s,;:.·-]+$/, '');
+}
 
 // Preguntas frecuentes (solo datos confirmados del negocio)
 export const FAQ = [

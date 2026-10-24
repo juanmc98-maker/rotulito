@@ -2,6 +2,7 @@
 // La web se genera en castellano y aquí se traduce con el diccionario (i18n-dict.mjs).
 // Lo que no está en el diccionario se queda en castellano.
 import DICT from './i18n-dict.mjs';
+import { tituloBlog } from './seo.mjs';
 
 export const LANGS = ['ca', 'en'];
 const IDX = { ca: 0, en: 1 };
@@ -38,6 +39,7 @@ const RULES = [
   [/^Coches de segunda mano cerca de (.+) \| Plata Garage$/, (m) => [`Cotxes de segona mà a prop de ${m[1]} | Plata Garage`, `Used cars near ${m[1]} | Plata Garage`]],
   [/^Coches de ocasión cerca de (.+) \| Plata Garage$/, (m) => [`Cotxes d'ocasió a prop de ${m[1]} | Plata Garage`, `Used cars near ${m[1]} | Plata Garage`]],
   [/^Coches de segunda mano para (.+): (\{\d+\}) en stock en Sabadell con garantía de (\{\d+\}) meses\. Pide cita o pide el envío a casa\.$/, (m) => [`Cotxes de segona mà per a ${m[1]}: ${m[2]} en estoc a Sabadell amb garantia de ${m[3]} mesos. Demana cita o demana l'enviament a casa.`, `Used cars for ${m[1]}: ${m[2]} in stock in Sabadell with a ${m[3]}-month warranty. Book a visit or ask for home delivery.`]],
+  [/^Coches cerca de (.+) \| Plata Garage$/, (m) => [`Cotxes a prop de ${m[1]} | Plata Garage`, `Cars near ${m[1]} | Plata Garage`]],
   [/^cerca de (.+)$/, (m) => [`a prop de ${m[1]}`, `near ${m[1]}`]],
   [/^Estamos en Sabadell, a unos (\{\d+\}) km de (.+) en línea recta\. Atendemos con cita previa: al pedirla te indicamos cómo llegar\.$/, (m) => [`Som a Sabadell, a uns ${m[1]} km de ${m[2]} en línia recta. Atenem amb cita prèvia: quan la demanis t'indiquem com arribar-hi.`, `We're in Sabadell, about ${m[1]} km from ${m[2]} as the crow flies. Visits by appointment: when you book, we'll tell you how to get here.`]],
   [/^¿Me podéis llevar el coche a (.+)\?$/, (m) => [`Em podeu portar el cotxe a ${m[1]}?`, `Can you deliver the car to ${m[1]}?`]],
@@ -219,11 +221,25 @@ export function decorate(html, lang, path, site) {
       .replace(/(<link rel="canonical" href=")([^"]*)(")/, (m, a, v, b) => a + urlOf(L) + b)
       .replace(/(<meta property="og:url" content=")([^"]*)(")/, (m, a, v, b) => a + urlOf(L) + b);
   }
+  if (lang && /^\/blog\/./.test(path)) out = tituloTraducido(html, out);
   out = out.replace('</head>', `${alt}${css}</head>`).replace('<div class="hr">', `<div class="hr">${flags}`);
   if (!lang) return out;
   const L = lang;
   if (/^\/(aviso-legal|privacidad|cookies|condiciones-de-contratacion)$/.test(path)) out = out.replace('<main>', `<main><div class="w" style="padding-top:18px"><p style="font-size:13px;opacity:.75">${LEGAL[L]}</p></div>`);
   return out;
+}
+
+// Artículos del blog: si el título (que viene del panel) se ha quedado en castellano pero el H1 sí se ha traducido,
+// el <title> y el og:title se rehacen a partir del H1 traducido
+const H1 = /<h1 class="s">([\s\S]*?)<\/h1>/, TITLE = /<title>([\s\S]*?)<\/title>/;
+const sinTags = (x) => x.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+const desEsc = (x) => x.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+const reEsc = (x) => x.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function tituloTraducido(orig, out) {
+  const h0 = (orig.match(H1) || [])[1], h1 = (out.match(H1) || [])[1], t0 = (orig.match(TITLE) || [])[1], t1 = (out.match(TITLE) || [])[1];
+  if (!h0 || !h1 || t0 == null || t1 !== t0 || sinTags(h0) === sinTags(h1)) return out;
+  const nt = reEsc(tituloBlog(desEsc(sinTags(h1))));
+  return out.replace(TITLE, () => `<title>${nt}</title>`).replace(/(<meta property="og:title" content=")([^"]*)(")/, (m, a, v, b) => a + nt + b);
 }
 
 // Sitemap: cada dirección también en catalán e inglés
