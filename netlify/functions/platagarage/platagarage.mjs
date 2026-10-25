@@ -35,6 +35,18 @@ const save = (key, v) => db().setJSON(key, v);
 // Clave de cifrado de los documentos: PG_DOCS_KEY si existe; si no, sale del secreto de sesión (no cambiar ese secreto sin fijar antes PG_DOCS_KEY)
 const docKey = () => crypto.createHash('sha256').update('docs|' + (env('PG_DOCS_KEY') || secret())).digest();
 const uid = (p = '') => p + Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
+// Firma del documento de reserva (la hace el cliente en la web antes de pagar): PNG cifrado en media 'firma/<id>'
+const FIRMA_DESDE = '2026-10-26'; // las reservas creadas desde esta fecha no se pueden pagar con tarjeta sin firma
+async function guardarFirma(id, dataUrl) {
+  const m = String(dataUrl || '').match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/); if (!m) return false;
+  const buf = Buffer.from(m[1], 'base64'); if (buf.length < 300 || buf.length > 400000 || buf.readUInt32BE(0) !== 0x89504e47) return false;
+  const iv = crypto.randomBytes(12); const ci = crypto.createCipheriv('aes-256-gcm', docKey(), iv);
+  const enc = Buffer.concat([ci.update(buf), ci.final()]); await media().set('firma/' + id, Buffer.concat([iv, ci.getAuthTag(), enc])); return true;
+}
+async function firmaDe(b) {
+  if (!b?.firma) return '';
+  try { const r = await media().get('firma/' + b.id, { type: 'arrayBuffer' }); if (!r) return ''; const buf = Buffer.from(r); const dec = crypto.createDecipheriv('aes-256-gcm', docKey(), buf.subarray(0, 12)); dec.setAuthTag(buf.subarray(12, 28)); return 'data:image/png;base64,' + Buffer.concat([dec.update(buf.subarray(28)), dec.final()]).toString('base64'); } catch { return ''; }
+}
 
 // ---------- utilidades ----------
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex', ...headers } });
@@ -426,6 +438,11 @@ async function reservarAlCobrar(slug, b) { // al cobrar la señal el coche pasa 
   await soltarHold(slug);
   return libre;
 }
+// ¿El titular de la tarjeta y quien firma son la misma persona? (comparten nombre o algún apellido)
+function mismoNombre(a, b) {
+  const t = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 2 && !['del', 'las', 'los'].includes(w));
+  const A = t(a), B = new Set(t(b)); return !A.length || !B.size || A.some((w) => B.has(w));
+}
 async function marcarPagoStripe(id, ses, origin) { // apunta la señal cobrada por Stripe (una sola vez)
   if (!ses || ses.payment_status !== 'paid' || ses.client_reference_id !== id) return false;
   const list = await load('bookings'); const b = list.find((x) => x.id === id && x.tipo === 'reserva'); if (!b) return false;
@@ -434,10 +451,12 @@ async function marcarPagoStripe(id, ses, origin) { // apunta la señal cobrada p
   const d = new Date().toISOString(); const imp = Math.round(ses.amount_total || 0) / 100;
   b.pagoStripe = { session: ses.id, pi: typeof ses.payment_intent === 'string' ? ses.payment_intent : ses.payment_intent?.id || '', importe: imp, d };
   b.pagoAvisado = b.pagoAvisado || d;
-  b.historial = [{ d, t: `Señal de ${imp} € pagada con tarjeta en la web (Stripe)` }, ...(b.historial || [])].slice(0, 50); await save('bookings', list);
+  const titular = clip(ses.customer_details?.name, 80); const aviso = titular && !mismoNombre(titular, b.nombre) ? `OJO: el titular del pago (${titular}) no coincide con quien firmó la reserva (${b.nombre}). Compruébalo con su DNI antes de confirmar.` : '';
+  b.pagoStripe.titular = titular; if (aviso) b.avisoTitular = aviso;
+  b.historial = [...(aviso ? [{ d, t: aviso }] : []), { d, t: `Señal de ${imp} € pagada con tarjeta en la web (Stripe)${titular ? ' · titular: ' + titular : ''}` }, ...(b.historial || [])].slice(0, 50); await save('bookings', list);
   await reservarAlCobrar(b.coche, b);
-  await pushAll('garage', `Señal cobrada: ${clip(b.cocheNombre, 40)}`, `${clip(b.nombre, 40)} ha pagado ${imp} € con tarjeta (Stripe). Confirma la reserva`, 'pago-' + b.id).catch(() => {});
-  await sendMail({ subject: `Señal cobrada con Stripe — ${b.nombre} (${b.cocheNombre})`, text: `${b.nombre} ha pagado con tarjeta la señal de ${imp} € del ${b.cocheNombre}. El cobro ya está en Stripe.\n\nComprueba que el coche sigue disponible y confirma la reserva en el panel: ${origin}${BASE}/admin#reservas/todas\n\nSi no se pudiera reservar, la devolución se hace desde Stripe (Pagos → el pago → Reembolsar).` }).catch(() => {});
+  await pushAll('garage', `${aviso ? 'OJO titular · ' : ''}Señal cobrada: ${clip(b.cocheNombre, 40)}`, aviso ? clip(aviso, 160) : `${clip(b.nombre, 40)} ha pagado ${imp} € con tarjeta (Stripe). Confirma la reserva`, 'pago-' + b.id).catch(() => {});
+  await sendMail({ subject: `${aviso ? 'OJO titular · ' : ''}Señal cobrada con Stripe — ${b.nombre} (${b.cocheNombre})`, text: `${aviso ? aviso + '\n\n' : ''}${b.nombre} ha pagado con tarjeta la señal de ${imp} € del ${b.cocheNombre}. El cobro ya está en Stripe.\n\nComprueba que el coche sigue disponible y confirma la reserva en el panel: ${origin}${BASE}/admin#reservas/todas\n\nSi no se pudiera reservar, la devolución se hace desde Stripe (Pagos → el pago → Reembolsar).` }).catch(() => {});
   return true;
 }
 async function crearReservaStripe(ses, origin) { // reserva rápida: el cliente paga primero y sus datos llegan de Stripe
@@ -594,7 +613,7 @@ const inner = async (req, context) => {
       const b = id && k.length === 24 && eqHash(k, sign('doc|' + id).slice(0, 24)) ? (await load('bookings')).find((x) => x.id === id && x.tipo === 'reserva' && x.confirmedAt) : null;
       if (!b) return html(V.notFound('Este enlace no es válido. Escríbenos y te lo enviamos de nuevo.'), 404, { 'x-robots-tag': 'noindex' });
       const car = cars.find((c) => c.slug === b.coche) || b.carSnap || {};
-      return html(V.docReserva({ b, car: b.carSnap || car, holder: (await load('holders')).find((h) => h.id === (b.carSnap || car).holder) }), 200, { 'x-robots-tag': 'noindex, nofollow', 'cache-control': 'private, no-store' });
+      return html(V.docReserva({ b, car: b.carSnap || car, holder: (await load('holders')).find((h) => h.id === (b.carSnap || car).holder), firma: await firmaDe(b) }), 200, { 'x-robots-tag': 'noindex, nofollow', 'cache-control': 'private, no-store' });
     }
     if (sub === '/cita') return html(V.cita({ cars: pubCars(cars), coche: url.searchParams.get('coche') || '', motivo: url.searchParams.get('motivo') || '' }));
     if (sub === '/contacto') return html(V.contacto({ cars: pubCars(cars) }));
@@ -817,13 +836,17 @@ async function api(r, req, M, ip, url, context) {
     if (direccion && direccion.length < 5) return json({ error: 'Escribe tu dirección.' }, 400);
     if (cp && !/^\d{5}$/.test(cp)) return json({ error: 'Escribe un código postal de 5 cifras.' }, 400);
     if (poblacion && poblacion.length < 2) return json({ error: 'Escribe tu población.' }, 400);
-    if (f.condiciones !== 'si') return json({ error: 'Marca que has leído las condiciones de la reserva.' }, 400);
+    if (f.condiciones !== 'si') return json({ error: 'Marca que aceptas el documento de reserva.' }, 400);
+    if (!/^data:image\/png;base64,/.test(String(f.firma || ''))) return json({ error: 'Firma el documento de reserva en el recuadro blanco.' }, 400);
     if (await rateLimited(ip, 'form', 8)) return json({ error: 'Has enviado demasiadas solicitudes. Escríbenos por WhatsApp.' }, 429);
     const cars = await load('cars'); const c = cars.find((x) => x.slug === clip(f.coche, 120) && !x.sold && !x.hidden); if (c) c.reserve = V.senalDe(c);
     if (!c || !(c.reserve > 0)) return json({ error: 'Este coche ya no se puede reservar desde la web. Escríbenos por WhatsApp.' }, 409);
     const base = { id: uid(), ...chk.data, created: new Date().toISOString(), status: 'pendiente', notas: '' };
     const it = { ...base, tipo: 'reserva', motivo: 'Reservar este coche', mensaje: clip(f.mensaje, 1000), coche: c.slug, cocheNombre: `${c.brand} ${c.model} ${c.version || ''}${c.year ? ` (${c.year})` : ''}`.replace(/\s+/g, ' '), res: { dni, direccion, cp, poblacion, condiciones: base.created } };
     it.senal = c.reserve; it.carSnap = { slug: c.slug, brand: c.brand, model: c.model, version: c.version, year: c.year, km: c.km, price: c.price, reserve: c.reserve, matricula: c.matricula, bastidor: c.bastidor, holder: c.holder };
+    if (!(await guardarFirma(it.id, f.firma))) return json({ error: 'No hemos podido guardar la firma. Bórrala y vuelve a firmar.' }, 400);
+    it.firma = { d: new Date().toISOString(), ip: clip(ip, 60), ua: clip(req.headers.get('user-agent'), 200), ver: V.RESERVA_VER, hash: crypto.createHash('sha256').update(V.textoReserva(it.carSnap) + '|' + it.nombre + '|' + it.email + '|' + it.telefono).digest('hex') };
+    it.historial = [{ d: it.firma.d, t: 'El cliente firma el documento de reserva en la web' }];
     const list = await load('bookings'); list.unshift(it); await save('bookings', list);
     const kRef = sign('ref|' + it.id).slice(0, 16); const pagoUrl = `${url.origin}${BASE}/reserva/pago?r=${it.id}&k=${kRef}`;
     const hld = (await load('holders')).find((h) => h.id === c.holder); const concepto = V.conceptoReserva(it, c);
@@ -856,6 +879,7 @@ async function api(r, req, M, ip, url, context) {
     const list = await load('bookings'); const b = list.find((x) => x.id === id && x.tipo === 'reserva'); if (!b) return json({ error: 'No existe' }, 404);
     const pagoUrl = `${url.origin}${BASE}/reserva/pago?r=${b.id}&k=${k}`;
     if (b.pagoStripe) return json({ url: pagoUrl });
+    if (!b.firma && String(b.created) >= FIRMA_DESDE) return json({ error: 'Antes de pagar hay que firmar el documento de reserva.' }, 400);
     const car = (await load('cars')).find((c) => c.slug === b.coche);
     if (!car || car.sold || car.hidden || (car.status === 'reservado' && car.reservadoPara !== b.id)) return json({ error: 'Este coche ya no se puede reservar. Escríbenos por WhatsApp.' }, 409);
     const holder = (await load('holders')).find((h) => h.id === (car.holder || b.carSnap?.holder)); const sk = stripeKey(holder);
@@ -874,7 +898,8 @@ async function api(r, req, M, ip, url, context) {
     b.stripeSession = rs.d.id; b.historial = [{ d: new Date().toISOString(), t: 'El cliente abre el pago con tarjeta (Stripe)' }, ...(b.historial || [])].slice(0, 50); await save('bookings', list);
     return json({ url: rs.d.url });
   }
-  if (r === '/reserva/rapida' && M === 'POST') { // reservar pagando al momento: Stripe pide nombre, email y teléfono (Apple Pay los rellena solo)
+  if (r === '/reserva/rapida' && M === 'POST') return json({ error: 'Para reservar, rellena tus datos y firma el documento de reserva en esta misma página.' }, 410); // desde oct 2026 se firma antes de pagar
+  if (false && r === '/reserva/rapida-antigua') { // (sin uso) reservar pagando al momento sin firma
     const f = await req.json().catch(() => ({}));
     if (await rateLimited(ip, 'stripe', 10)) return json({ error: 'Demasiados intentos. Escríbenos por WhatsApp.' }, 429);
     const c = (await load('cars')).find((x) => x.slug === clip(f.coche, 120) && !x.sold && !x.hidden); if (c) c.reserve = V.senalDe(c);
@@ -1699,7 +1724,7 @@ async function adminApi(r, req, M, me, url) {
     const list = await load('bookings'); const b = list.find((x) => x.id === seg[1] && x.tipo === 'reserva'); if (!b) return json({ error: 'No existe' }, 404);
     const cars = await load('cars'); const car = cars.find((c) => c.slug === b.coche); const snap = { ...(b.carSnap || {}), ...(car ? { matricula: car.matricula, bastidor: car.bastidor, holder: car.holder, km: car.km } : {}) };
     const holder = (await load('holders')).find((h) => h.id === snap.holder);
-    if (seg[2] === 'documento' && M === 'GET') return html(V.docReserva({ b: { ...b, confirmedAt: b.confirmedAt || new Date().toISOString() }, car: snap, holder }), 200, { 'x-robots-tag': 'noindex', 'cache-control': 'private, no-store' });
+    if (seg[2] === 'documento' && M === 'GET') return html(V.docReserva({ b: { ...b, confirmedAt: b.confirmedAt || new Date().toISOString() }, car: snap, holder, firma: await firmaDe(b) }), 200, { 'x-robots-tag': 'noindex', 'cache-control': 'private, no-store' });
     if (M !== 'PUT') return json({ error: 'Método' }, 405);
     const d = new Date().toISOString(); const nombre = String(b.nombre).split(' ')[0];
     if (seg[2] === 'confirmar') {
