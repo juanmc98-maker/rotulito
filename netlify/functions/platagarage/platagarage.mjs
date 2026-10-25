@@ -326,7 +326,8 @@ async function addNegLead(neg, x) {
   const d = x.fecha && !isNaN(Date.parse(x.fecha)) ? new Date(x.fecha).toISOString() : new Date().toISOString();
   const nota = [clip(x.origen, 40), clip(x.interes, 160), clip(x.mensaje, 1500)].filter(Boolean).join(' · ');
   let it = list.find((y) => (k && y.key === k) || (!k && email && y.email === email));
-  if (it) { it.historial = [{ d, t: nota || 'Nuevo contacto' }, ...(it.historial || [])].slice(0, 100); it.updated = d; if (ref) it.refs = [...(it.refs || []), ref].slice(-50); if (!it.email && email) it.email = email; }
+  // Si ya lo teníamos y vuelve a escribir (otro formulario de Meta/Google Ads, web…), se marca para que salga arriba en Leads
+  if (it) { it.historial = [{ d, t: nota || 'Nuevo contacto' }, ...(it.historial || [])].slice(0, 100); it.updated = d; it.otraVez = d; if (ref) it.refs = [...(it.refs || []), ref].slice(-50); if (!it.email && email) it.email = email; }
   else { it = { id: uid('l'), key: k, nombre: clip(x.nombre, 80) || 'Sin nombre', telefono: tel, email, origen: clip(x.origen, 40), tipo: clip(x.tipo, 30), interes: clip(x.interes, 160), etapa: etapaInicial(neg, x), desde: d, notas: '', created: d, updated: d, historial: [{ d, t: nota || 'Primer contacto' }], refs: ref ? [ref] : [] }; list.unshift(it); }
   await save(key, list.slice(0, 5000));
   if (neg === 'marine' && /alerta|que-barco|busco/i.test(`${x.origen || ''} ${x.tipo || ''}`)) await addDemanda(x, it.id).catch((e) => console.error('demanda', e.message));
@@ -1586,6 +1587,7 @@ async function adminApi(r, req, M, me, url) {
     if (M === 'DELETE') { list.splice(i, 1); await save(key, list); return json({ ok: true }); }
     if (M === 'PUT') {
       const it = list[i]; const prev = it.etapa;
+      if (body.visto) delete it.otraVez;
       if ('motivo' in body) { it.motivo = NEGS[neg].motivos.includes(body.motivo) ? body.motivo : ''; it.motivoTxt = clip(body.motivoTxt, 200); }
       if ('etapa' in body && NEGS[neg].etapas.includes(body.etapa)) { if (body.etapa === 'Perdido' && !it.motivo) return json({ error: 'Indica el motivo por el que se ha perdido.' }, 400); it.etapa = body.etapa; }
       if ('importe' in body) { const n = Number(String(body.importe).replace(',', '.')); it.importe = isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0; }
@@ -1593,7 +1595,7 @@ async function adminApi(r, req, M, me, url) {
       ['notas', 'accion'].forEach((k) => { if (k in body) it[k] = clip(body[k], 4000); });
       ['nombre', 'email', 'origen', 'tipo', 'interes'].forEach((k) => { if (k in body) it[k] = clip(body[k], 200); });
       if ('telefono' in body) { it.telefono = normPhone(body.telefono) || clip(body.telefono, 20); it.key = pkey(it.telefono); }
-      if (prev !== it.etapa) { const d = new Date().toISOString(); it.desde = d; if (it.etapa === 'Perdido') it.antes = prev; it.fechas = { ...(it.fechas || {}), [it.etapa]: d }; if (it.etapa !== 'Perdido') { it.motivo = ''; it.motivoTxt = ''; } it.historial = [{ d, t: `Etapa: ${prev} → ${it.etapa}${it.etapa === 'Perdido' ? ' (' + [it.motivo, it.motivoTxt].filter(Boolean).join(': ') + ')' : ''} (${me.name})` }, ...(it.historial || [])].slice(0, 100); }
+      if (prev !== it.etapa) { const d = new Date().toISOString(); it.desde = d; delete it.otraVez; if (it.etapa === 'Perdido') it.antes = prev; it.fechas = { ...(it.fechas || {}), [it.etapa]: d }; if (it.etapa !== 'Perdido') { it.motivo = ''; it.motivoTxt = ''; } it.historial = [{ d, t: `Etapa: ${prev} → ${it.etapa}${it.etapa === 'Perdido' ? ' (' + [it.motivo, it.motivoTxt].filter(Boolean).join(': ') + ')' : ''} (${me.name})` }, ...(it.historial || [])].slice(0, 100); }
       it.updated = new Date().toISOString(); await save(key, list); return json(it);
     }
   }
