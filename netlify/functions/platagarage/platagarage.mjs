@@ -267,7 +267,7 @@ async function buildClientes() {
     const fechas = st.fechas || {};
     const venta = bought.find((x) => x.sold);
     const desde = fechas[etapa] || (etapa === st.etapa ? st.at : '') || (etapa === 'vendido' && venta?.soldAt) || c.last || '';
-    return { ...c, etapa, auto, manual: st.etapa || '', notas: st.notas || '', motivo, motivoTxt: st.motivoTxt || '', llego, desde, fechas, origen: ORIGEN_PG(c.leads), primero: c.leads[c.leads.length - 1]?.created || '',
+    return { ...c, etapa, auto, manual: st.etapa || '', manualAt: st.at || '', notas: st.notas || '', motivo, motivoTxt: st.motivoTxt || '', llego, desde, fechas, origen: ORIGEN_PG(c.leads), primero: c.leads[c.leads.length - 1]?.created || '',
       banco: st.banco || '', finEstado: st.finEstado || '', certificado: st.certificado || '', vendidoEl: venta?.soldAt || fechas.vendido || '', importe: venta?.price || 0,
       compras: bought.map((x) => ({ id: x.id, slug: x.slug, nombre: `${x.brand} ${x.model}${x.year ? ` (${x.year})` : ''}`, sold: x.sold, soldAt: x.soldAt })), alerta: al.some((a) => a.email && a.email === c.email && a.status === 'activa') };
   });
@@ -1297,6 +1297,8 @@ async function adminApi(r, req, M, me, url) {
       manana: b.filter((x) => x.fecha === addDays(td, 1) && x.status !== 'cancelada').sort((a, z) => a.hora.localeCompare(z.hora)),
       tasacionesNuevas: t.filter((x) => x.status === 'pendiente').length, ultimasTasaciones: t.slice(0, 5),
       enviosPendientes: e.filter((x) => x.status === 'pendiente').length, mensajesSinLeer: m.filter((x) => !x.leido).length, alertasActivas: al.filter((x) => x.status === 'activa').length, busquedasPendientes: bu.filter((x) => x.status === 'pendiente').length, financiacionesPendientes: fi.filter((x) => x.status === 'pendiente' || x.status === 'incompleta').length, financiacionesSinContestar: fi.filter((x) => (x.status === 'pendiente' || x.status === 'incompleta') && Date.now() - Date.parse(x.created || '') > 2 * 3600e3).map((x) => ({ nombre: x.nombre, telefono: x.telefono, cocheNombre: x.cocheNombre || 'Sin coche decidido', created: x.created })),
+      // Importe que están pidiendo financiar: solicitudes abiertas (a medias, nuevas y enviadas a la financiera)
+      finImporte: ((imp) => ({ abiertas: fi.filter((x) => ['incompleta', 'pendiente', 'enviada'].includes(x.status)).length, importe: fi.filter((x) => ['incompleta', 'pendiente', 'enviada'].includes(x.status)).reduce((s, x) => s + imp(x), 0), aprobadas: fi.filter((x) => x.status === 'aprobada').length, aprobado: fi.filter((x) => x.status === 'aprobada').reduce((s, x) => s + imp(x), 0) }))((x) => Number(x.fin?.importe) || Number(x.precio) || 0),
       valorStock: cars.filter((c) => !c.sold).reduce((s, c) => s + (c.price || 0), 0),
       porDueno: ['Cristina', 'Juan', ''].map((o) => { const l = cars.filter((c) => !c.sold && (c.owner || '') === o); return { o: o || 'Sin asignar', n: l.length, v: l.reduce((s, c) => s + (c.price || 0), 0) }; }).filter((x) => x.n),
     });
