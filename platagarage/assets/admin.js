@@ -1117,8 +1117,8 @@ const VERL = { cita: 'reservas', tasacion: 'valoraciones', envio: 'envios', fina
 const LTIPO = { cita: 'cita o reserva', tasacion: 'tasación', envio: 'envío', financiacion: 'financiación', mensaje: 'mensaje', busqueda: 'te lo buscamos', alerta: 'avisos', portal: 'portal' };
 V.leads = async (m) => {
   const [all, cars, sum] = await Promise.all([api('/admin/clientes'), api('/admin/cars'), api('/admin/summary').catch(() => ({}))]); m = shell('leads');
-  // Nuevo también si, después de moverlo a mano, ha mandado otra solicitud por la web (financiación, cita, tasación…)
-  const otraVez = (c) => ![...POST_PG, 'perdido'].includes(c.etapa) && c.leads.some((l) => l.tipo !== 'portal' && ['pendiente', 'incompleta'].includes(l.status) && (l.created || '') > (c.manualAt || ''));
+  // Nuevo también si, después de moverlo a mano, ha vuelto a escribir (web, financiación, Meta/Google Ads, portales…)
+  const otraVez = (c) => c.etapa !== 'perdido' && c.leads.some((l) => ['pendiente', 'incompleta', 'activa'].includes(l.status) && !/· A mano/.test(l.resumen || '') && (l.created || '') > (c.manualAt || ''));
   const nuevos = all.filter((c) => c.etapa === 'nuevo' || (c.manualAt && otraVez(c)));
   const pend = all.filter((c) => !nuevos.includes(c) && c.etapa !== 'nuevo' && ![...POST_PG, 'perdido'].includes(c.etapa) && c.leads.some((l) => ['pendiente', 'incompleta'].includes(l.status) && l.tipo !== 'portal'));
   const hoyAv = (c) => (c.etapa === 'perdido' ? [] : avisos(c, 'garage', etq));
@@ -1291,18 +1291,18 @@ V.nleads = async (m) => {
   const [d] = await Promise.all([nApi(), cartPM()]); m = shell('leads');
   const primeras = d.tableros.map((t) => t.e[0]); const finales = d.tableros.map((t) => t.e[t.e.length - 1]);
   const ord = (a, b) => (b.updated || b.created || '').localeCompare(a.updated || a.created || '');
-  const nuevos = d.leads.filter((c) => primeras.includes(c.etapa)).sort(ord);
-  const hoy = d.leads.filter((c) => !primeras.includes(c.etapa) && avN(c).length).sort((a, b) => diasDesde(b.desde) - diasDesde(a.desde));
-  const marcha = d.leads.filter((c) => !primeras.includes(c.etapa) && !hoy.includes(c) && c.etapa !== 'Perdido' && !finales.includes(c.etapa)).sort(ord).slice(0, 30);
+  const nuevos = d.leads.filter((c) => primeras.includes(c.etapa) || c.otraVez).sort(ord); // c.otraVez: ya lo teníamos y ha vuelto a escribir
+  const hoy = d.leads.filter((c) => !nuevos.includes(c) && avN(c).length).sort((a, b) => diasDesde(b.desde) - diasDesde(a.desde));
+  const marcha = d.leads.filter((c) => !nuevos.includes(c) && !hoy.includes(c) && c.etapa !== 'Perdido' && !finales.includes(c.etapa)).sort(ord).slice(0, 30);
   const card = (c) => `<div class="card sec ld"><div class="hd"><div><b>${esc(c.nombre)}</b>${c.telefono ? ` <a href="tel:${esc(c.telefono)}" style="color:var(--mu);font-weight:500;margin-left:6px;text-decoration:none">${esc(c.telefono)}</a>` : ''}<span>${fdt(c.updated || c.created)}${c.origen ? ' · ' + esc(c.origen) : ''}</span></div>${badge(String(c.etapa).toLowerCase())}</div>
-    ${avN(c).length ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Hoy te toca:</b> ${esc(avN(c).join(' · '))}</p>` : ''}${c.interes ? `<p>${esc(c.interes)}</p>` : ''}${c.email ? `<p class="mu sm">${esc(c.email)}</p>` : ''}
+    ${avN(c).length ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Hoy te toca:</b> ${esc(avN(c).join(' · '))}</p>` : ''}${c.otraVez ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Ha vuelto a escribir:</b> ${esc(((c.historial || [])[0] || {}).t || '')}</p>` : ''}${c.interes ? `<p>${esc(c.interes)}</p>` : ''}${c.email ? `<p class="mu sm">${esc(c.email)}</p>` : ''}
     <div class="row">${c.telefono ? `<a class="btn s" target="_blank" rel="noopener" data-wa="${c.id}" href="${waLink(c.telefono, msgPM(d, c))}">${IC.wa}WhatsApp</a>` : ''}<a class="btn s g" href="#ncliente/${c.id}">Ver ficha</a><select data-mv="${c.id}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsN(d, '')}</select><button class="btn r s" data-del="${c.id}">Eliminar</button></div></div>`;
   const sec = (t, l, vacio) => `<h3 class="lh">${t} <span>${l.length}</span></h3>${l.length ? l.map(card).join('') : `<p class="mu">${vacio}</p>`}`;
   m.innerHTML = top(`Leads · ${NEGS[NEG].n}`, 'Los nuevos arriba. Al pulsar WhatsApp, un comprador nuevo pasa a contactado.', `<button class="btn" id="nl">+ Nuevo lead</button><a class="btn g" href="#clientes">Embudo completo</a>`) +
     sec('Nuevos sin contestar', nuevos, 'No hay leads nuevos.') + sec('Hoy te toca seguimiento', hoy, 'Nada pendiente de seguimiento hoy.') + sec('En marcha', marcha, 'Nada en marcha.');
   $('#nl').onclick = () => { const dm = modal(`<h3 style="margin-bottom:12px">Nuevo lead</h3><form id="nf" class="fg" style="grid-template-columns:1fr">${NEG === 'marine' ? '<label>Tipo<select name="tipo"><option>Comprador</option><option>Vendedor</option></select></label>' : ''}<label>Nombre<input name="nombre" required autocomplete="off"></label><label>Teléfono<input name="telefono" inputmode="tel" autocomplete="off"></label><label>Email<input name="email" type="email" autocomplete="off"></label><label>Origen<input name="origen" placeholder="WhatsApp, Meta, llamada…"></label><label>Interés<input name="interes" placeholder="${NEG === 'marine' ? 'Qué busca o qué vende' : 'Qué web necesita'}"></label><div class="row" style="justify-content:flex-end"><button type="button" class="btn g" id="nc">Cancelar</button><button class="btn">Añadir</button></div></form>`);
     $('#nc', dm).onclick = () => dm.remove(); $('#nf', dm).onsubmit = guard(async (e) => { e.preventDefault(); const b = Object.fromEntries(new FormData(e.target)); if (!b.telefono.trim() && !b.email.trim()) { toast('Pon al menos el teléfono o el email', true); return; } await nApi('', { method: 'POST', body: b }); dm.remove(); toast(`${b.nombre}: añadido`); route(); }); };
-  m.querySelectorAll('[data-wa]').forEach((a) => (a.onclick = () => { const c = d.leads.find((x) => x.id === a.dataset.wa); if (c && c.etapa === 'Nuevo' && d.etapas.includes('Contactado')) nApi('/' + c.id, { method: 'PUT', body: { etapa: 'Contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
+  m.querySelectorAll('[data-wa]').forEach((a) => (a.onclick = () => { const c = d.leads.find((x) => x.id === a.dataset.wa); if (c && c.etapa === 'Nuevo' && d.etapas.includes('Contactado')) nApi('/' + c.id, { method: 'PUT', body: { etapa: 'Contactado', visto: true } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); else if (c && c.otraVez) nApi('/' + c.id, { method: 'PUT', body: { visto: true } }).then(() => toast(`${c.nombre}: atendido`)).catch(() => {}); }));
   m.querySelectorAll('[data-mv]').forEach((el) => (el.onchange = guard(async () => { const c = d.leads.find((x) => x.id === el.dataset.mv); if (!c || !el.value) return; await moverN(d, c, el.value); route(); })));
   m.querySelectorAll('[data-del]').forEach((b) => (b.onclick = guard(async () => { const c = d.leads.find((x) => x.id === b.dataset.del); if (!c || !confirm(`¿Eliminar a ${c.nombre}? Se borra del embudo.`)) return; await nApi('/' + c.id, { method: 'DELETE' }); toast(`${c.nombre}: eliminado`); route(); })));
 };
@@ -1424,10 +1424,13 @@ V.ntrimestre = async (m, arg) => {
 // Al volver a la app (móvil), recarga la pantalla de listas para ver lo último
 let lastVis = Date.now();
 document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') { lastVis = Date.now(); return; } const k = (location.hash.slice(1) || '').split('/')[0]; if (Date.now() - lastVis > 5000 && $('#mn') && ['', 'leads', 'resumen', 'clientes', 'reservas'].includes(k)) route(); });
+// Al volver a pintar la misma página (borrar, mover, guardar…) se queda a la misma altura; solo sube arriba al cambiar de página
+let lastHash = null;
 async function route() {
   const [k, arg] = (location.hash.slice(1) || home().slice(1)).split('/');
+  const misma = location.hash === lastHash, y = window.scrollY || document.documentElement.scrollTop || 0;
   const fn = NEG === 'garage' ? (V[k] || V.leads) : ({ leads: V.nleads, cartera: V.cartera, barco: V.barco, astilleros: NEG === 'marine' ? V.astilleros : null, astillero: NEG === 'marine' ? V.astillero : null, demandas: NEG === 'marine' ? V.demandas : null, demanda: NEG === 'marine' ? V.demanda : null, visitas: analiticasWeb, trimestre: V.ntrimestre, resumen: V.nresumen, analiticas: V.nanalisis, clientes: V.nclientes, ncliente: V.ncliente, conexion: V.conexion }[k] || V.nresumen);
-  try { await fn($('#mn'), arg); window.scrollTo(0, 0); } catch (e) { if (e.message !== 'Sesión caducada') { shell(k).innerHTML = `<div class="card">No se ha podido cargar: ${esc(e.message)}</div>`; } }
+  try { await fn($('#mn'), arg); window.scrollTo(0, misma ? y : 0); lastHash = location.hash; } catch (e) { if (e.message !== 'Sesión caducada') { shell(k).innerHTML = `<div class="card">No se ha podido cargar: ${esc(e.message)}</div>`; } }
 }
 let polling = null;
 async function boot() {
