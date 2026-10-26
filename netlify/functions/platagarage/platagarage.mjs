@@ -279,7 +279,9 @@ async function buildClientes() {
     const fechas = st.fechas || {};
     const venta = bought.find((x) => x.sold);
     const desde = fechas[etapa] || (etapa === st.etapa ? st.at : '') || (etapa === 'vendido' && venta?.soldAt) || c.last || '';
-    return { ...c, etapa, auto, manual: st.etapa || '', manualAt: st.at || '', notas: st.notas || '', motivo, motivoTxt: st.motivoTxt || '', llego, desde, fechas, origen: ORIGEN_PG(c.leads), primero: c.leads[c.leads.length - 1]?.created || '',
+    // Datos corregidos a mano en la ficha: mandan sobre lo que llegó del portal o la web
+    if (st.ed) { if (st.nombre) c.nombre = st.nombre; if (st.telefono) c.telefono = st.telefono; if ('email' in st) c.email = st.email || c.email; }
+    return { ...c, cocheInteres: st.cocheInteres || '', cocheTxt: st.cocheTxt || '', entrega: st.entrega || '', editado: st.ed || '', etapa, auto, manual: st.etapa || '', manualAt: st.at || '', notas: st.notas || '', motivo, motivoTxt: st.motivoTxt || '', llego, desde, fechas, origen: ORIGEN_PG(c.leads), primero: c.leads[c.leads.length - 1]?.created || '',
       banco: st.banco || '', finEstado: st.finEstado || '', certificado: st.certificado || '', vendidoEl: venta?.soldAt || fechas.vendido || '', importe: venta?.price || 0,
       compras: bought.map((x) => ({ id: x.id, slug: x.slug, nombre: `${x.brand} ${x.model}${x.year ? ` (${x.year})` : ''}`, sold: x.sold, soldAt: x.soldAt })), alerta: al.some((a) => a.email && a.email === c.email && a.status === 'activa') };
   });
@@ -1674,6 +1676,14 @@ async function adminApi(r, req, M, me, url) {
       if ('finEstado' in body) it.finEstado = ['', 'en estudio', 'aprobada', 'denegada'].includes(body.finEstado) ? body.finEstado : '';
       if ('certificado' in body) it.certificado = clip(body.certificado, 40);
       if ('notas' in body) it.notas = clip(body.notas, 4000);
+      if (body.datos) { // Editar datos del cliente (lo editado a mano manda sobre lo del portal)
+        const nombre = clip(body.nombre, 80); if (!nombre) return json({ error: 'Pon el nombre del cliente.' }, 400);
+        const tel = normPhone(body.telefono) || clip(body.telefono, 20), email = clip(body.email, 200).toLowerCase();
+        if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: 'El email no es válido.' }, 400);
+        let coche = '';
+        if (body.cocheInteres) { const cars = await load('cars'); const car = cars.find((c) => c.slug === body.cocheInteres); if (car) coche = car.slug; }
+        Object.assign(it, { nombre, telefono: tel, email, cocheInteres: coche, cocheTxt: coche ? '' : clip(body.cocheTxt, 160), entrega: clip(body.entrega, 160), ed: new Date().toISOString(), edBy: me.name });
+      }
       await save('clientes', cl); return json({ ok: true });
     }
     if (M === 'DELETE' && seg[1]) {
