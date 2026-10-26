@@ -534,7 +534,8 @@ const inner = async (req, context) => {
     const [cars, holdersPub, tarifasPub] = await Promise.all([load('cars'), load('holders'), load('tarifas')]);
     cars.forEach((c) => { c.reserve = V.senalDe(c); }); // señal automática según precio, o la puesta a mano en el panel
     V.setCtx({ holders: holdersPub }); V.setTarifa(tarifasPub);
-    if (sub === '/robots.txt') return text(`User-agent: *\n${INDEX() ? `Allow: /\nDisallow: ${BASE}/admin\nDisallow: ${BASE}/api/\nDisallow: ${BASE}/gracias\nDisallow: /ca/gracias\nDisallow: /en/gracias\nDisallow: /reservar\nDisallow: /ca/reservar\nDisallow: /en/reservar\nDisallow: /financiar\nDisallow: /ca/financiar\nDisallow: /en/financiar\nDisallow: /favoritos\nDisallow: /ca/favoritos\nDisallow: /en/favoritos\nDisallow: /*/cartel\n` : 'Disallow: /\n'}\nSitemap: ${site}${BASE}/sitemap.xml\n`, 'text/plain');
+    // reservar, financiar, favoritos, gracias y cartel NO se bloquean aquí: llevan noindex y Google tiene que poder leerlo (si se bloquean, avisa de 'bloqueada por robots' o las indexa sin contenido)
+    if (sub === '/robots.txt') return text(`User-agent: *\n${INDEX() ? `Allow: /\nDisallow: ${BASE}/admin\nDisallow: ${BASE}/api/\n` : 'Disallow: /\n'}\nSitemap: ${site}${BASE}/sitemap.xml\n`, 'text/plain');
     if (sub === `/${INDEXNOW_KEY}.txt`) return text(INDEXNOW_KEY, 'text/plain');
     if (sub === '/sitemap.xml') return text(sitemap(site, pubCars(cars), (await load('posts')).filter((x) => x.published)), 'application/xml');
     if (sub === '/llms.txt') return text(llms(site, pubCars(cars)), 'text/plain');
