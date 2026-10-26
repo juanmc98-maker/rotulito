@@ -1086,6 +1086,7 @@ const WEB = 'https://www.platagarage.com';
 const nrm = (x) => ' ' + String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim() + ' ';
 // Coche del lead: por la ficha si viene de la web; si viene de un portal, por marca/modelo/año del texto del aviso
 function cocheDe(c, cars) {
+  if (c.cocheInteres) { const x = cars.find((y) => y.slug === c.cocheInteres); if (x) return x; }
   for (const l of c.leads) { const x = l.coche && cars.find((y) => y.slug === l.coche); if (x) return x; }
   for (const l of c.leads) {
     const n = nrm(l.cocheNombre); if (n.trim() === '') continue; let best = null, bs = 0;
@@ -1128,8 +1129,8 @@ V.leads = async (m) => {
   const card = (c) => { const car = cocheDe(c, cars); const own = car?.owner || ''; const l = c.leads[0] || {};
     const bt = (q) => `<a class="btn s${own && own !== q ? ' g' : (!own && q !== 'Cristina' ? ' g' : '')}" target="_blank" rel="noopener" data-k="${c.key}" data-q="${q}" href="${waLink(c.telefono, msgWa(q, car, c.nombre))}">${IC.wa}Soy ${q}</a>`;
     return `<div class="card sec ld"><div class="hd"><div><b>${esc(c.nombre)}</b>${c.telefono ? ` <a href="tel:${esc(c.telefono)}" style="color:var(--mu);font-weight:500;margin-left:6px;text-decoration:none">${esc(c.telefono)}</a>` : ''}<span>${fdt(c.last)}</span></div>${badge(etq(c.etapa).toLowerCase())}</div>
-      ${hoyAv(c).length ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Hoy te toca:</b> ${esc(hoyAv(c).join(' · '))}</p>` : ''}<p>${esc(l.resumen || '')}${VERL[l.tipo] ? ` <a href="#${VERL[l.tipo]}" style="color:var(--or);white-space:nowrap">Ver solicitud</a>` : ''}</p>${c.leads.length > 1 ? `<p class="mu sm" style="margin:-4px 0 6px">También: ${esc([...new Set(c.leads.slice(1).map((x) => LTIPO[x.tipo] || x.tipo))].join(' · '))}</p>` : ''}${car ? `<p class="mu sm">Coche: <a href="${WEB}/vehiculos/${car.slug}" target="_blank" rel="noopener" style="color:var(--or)">${esc(car.brand)} ${esc(car.model)}</a> · ${car.year || '—'} · <b style="color:var(--tx)">${car.price ? eur(car.price) : '—'}</b>${own ? ' · de ' + esc(own) : ''}</p>` : ''}
-      <div class="row">${!c.telefono ? (() => { const pt = /coches/i.test(l.fuente || '') ? ['Coches.net', 'https://pro.coches.net/'] : /wallapop/i.test(l.fuente || '') ? ['Wallapop', 'https://es.wallapop.com/app/chat'] : null; return pt ? `<a class="btn s" target="_blank" rel="noopener" data-rp="${c.key}" href="${pt[1]}">Responder en ${pt[0]}</a>` : ''; })() : own === 'Cristina' || own === 'Juan' ? bt(own) : bt('Cristina') + bt('Juan')}<a class="btn s g" href="#cliente/${c.key}">Ver ficha</a><select class="s" data-mv="${c.key}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsPG('')}</select><button class="btn r s" data-del="${c.key}">Eliminar</button></div></div>`; };
+      ${hoyAv(c).length ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Hoy te toca:</b> ${esc(hoyAv(c).join(' · '))}</p>` : ''}<p>${esc(l.resumen || '')}${VERL[l.tipo] ? ` <a href="#${VERL[l.tipo]}" style="color:var(--or);white-space:nowrap">Ver solicitud</a>` : ''}</p>${c.leads.length > 1 ? `<p class="mu sm" style="margin:-4px 0 6px">También: ${esc([...new Set(c.leads.slice(1).map((x) => LTIPO[x.tipo] || x.tipo))].join(' · '))}</p>` : ''}${car ? `<p class="mu sm">Coche: <a href="${WEB}/vehiculos/${car.slug}" target="_blank" rel="noopener" style="color:var(--or)">${esc(car.brand)} ${esc(car.model)}</a> · ${car.year || '—'} · <b style="color:var(--tx)">${car.price ? eur(car.price) : '—'}</b>${own ? ' · de ' + esc(own) : ''}</p>` : ''}${!car && c.cocheTxt ? `<p class="mu sm">Busca: <b style="color:var(--tx)">${esc(c.cocheTxt)}</b></p>` : ''}${c.entrega ? `<p class="mu sm">Entrega a cambio: <b style="color:var(--tx)">${esc(c.entrega)}</b></p>` : ''}
+      <div class="row">${!c.telefono ? (() => { const pt = /coches/i.test(l.fuente || '') ? ['Coches.net', 'https://pro.coches.net/'] : /wallapop/i.test(l.fuente || '') ? ['Wallapop', 'https://es.wallapop.com/app/chat'] : null; return pt ? `<a class="btn s" target="_blank" rel="noopener" data-rp="${c.key}" href="${pt[1]}">Responder en ${pt[0]}</a>` : ''; })() : own === 'Cristina' || own === 'Juan' ? bt(own) : bt('Cristina') + bt('Juan')}<a class="btn s g" href="#cliente/${c.key}">Ver ficha</a><button class="btn s g" data-ed="${c.key}">Editar</button><select class="s" data-mv="${c.key}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsPG('')}</select><button class="btn r s" data-del="${c.key}">Eliminar</button></div></div>`; };
   const sec = (t, l, vacio) => `<h3 class="lh">${t} <span>${l.length}</span></h3>${l.length ? l.map(card).join('') : `<p class="mu">${vacio}</p>`}`;
   m.innerHTML = top('Leads', 'Los nuevos arriba. Al pulsar "Soy Cristina" o "Soy Juan" se abre WhatsApp con el mensaje escrito y el lead pasa a contactado.', `<button class="btn" id="nl">+ Nuevo lead</button><a class="btn g" href="#clientes">Embudo completo</a>`) +
     (sum.finImporte?.abiertas ? `<a class="card sec" href="#financiaciones" style="display:block;text-decoration:none;border-color:var(--or);margin-bottom:16px"><span class="mu sm">Financiación solicitada (abiertas: a medias, nuevas y enviadas a la financiera)</span><b style="display:block;font-size:22px;color:var(--or)">${eur(sum.finImporte.importe)}</b><span class="mu sm">${sum.finImporte.abiertas} solicitud${sum.finImporte.abiertas === 1 ? '' : 'es'}${sum.finImporte.aprobadas ? ` · aprobado: ${eur(sum.finImporte.aprobado)} (${sum.finImporte.aprobadas})` : ''}</span></a>` : '') +
@@ -1137,6 +1138,7 @@ V.leads = async (m) => {
   m.querySelectorAll('[data-mv]').forEach((el) => (el.onchange = guard(async () => { const c = all.find((x) => x.key === el.dataset.mv); if (!c || !el.value) return; if (!(await moverPG(c, el.value))) { el.value = ''; return; } route(); })));
   m.querySelectorAll('[data-del]').forEach((b) => (b.onclick = guard(async () => { const c = all.find((x) => x.key === b.dataset.del); if (!c || !confirm(`¿Quitar a ${c.nombre} de la lista? Si vuelve a escribir, aparecerá otra vez.`)) return; await api('/admin/clientes/' + c.key, { method: 'DELETE' }); toast(`${c.nombre}: eliminado`); route(); })));
   $('#nl').onclick = () => nuevoLeadPG(cars);
+  m.querySelectorAll('[data-ed]').forEach((b) => (b.onclick = () => { const c = all.find((x) => x.key === b.dataset.ed); if (c) editarDatosPG(c, cars); }));
   m.querySelectorAll('a[data-rp]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.rp); if (c && nuevos.includes(c)) api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: c.etapa === 'nuevo' ? 'contactado' : c.etapa } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
   m.querySelectorAll('a[data-k]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.k); if (c) a.href = waLink(c.telefono, msgWa(a.dataset.q, cocheDe(c, cars), c.nombre)); if (c && nuevos.includes(c)) api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: c.etapa === 'nuevo' ? 'contactado' : c.etapa } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
 };
@@ -1160,12 +1162,32 @@ function nuevoLeadPG(cars) {
     if (!b.telefono.trim() && !b.email.trim()) { toast('Pon al menos el teléfono o el email', true); return; }
     await api('/admin/clientes', { method: 'POST', body: b }); dm.remove(); toast(`${b.nombre}: añadido`); route(); });
 }
+// Editar los datos del cliente (desde la tarjeta de Leads o desde su ficha)
+function editarDatosPG(c, cars) {
+  const sel = (cocheDe(c, cars) || {}).slug || '';
+  const stock = cars.filter((x) => !x.sold || x.slug === sel).sort((a, b) => `${a.brand} ${a.model}`.localeCompare(`${b.brand} ${b.model}`));
+  const dm = modal(`<h3 style="margin-bottom:12px">Editar datos</h3><form id="edf" class="fg" style="grid-template-columns:1fr">
+    <label>Nombre<input name="nombre" required autocomplete="off" value="${esc(c.nombre || '')}"></label>
+    <label>Teléfono<input name="telefono" inputmode="tel" autocomplete="off" value="${esc(c.telefono || '')}"></label>
+    <label>Email<input name="email" type="email" autocomplete="off" value="${esc(c.email || '')}"></label>
+    <label>Coche que le interesa<select name="cocheInteres" id="edc"><option value="">— No está en stock / no lo sé —</option>${stock.map((x) => `<option value="${esc(x.slug)}"${x.slug === sel ? ' selected' : ''}>${esc(x.brand)} ${esc(x.model)}${x.year ? ' · ' + x.year : ''}${x.price ? ' · ' + eur(x.price) : ''}</option>`).join('')}</select></label>
+    <label id="edt"${sel ? ' style="display:none"' : ''}>Qué busca<input name="cocheTxt" value="${esc(c.cocheTxt || '')}" placeholder="Ej.: SUV automático hasta 15.000 €"></label>
+    <label>Coche que entrega a cambio<input name="entrega" value="${esc(c.entrega || '')}" placeholder="Ej.: Mercedes ML 2003, 210.000 km"></label>
+    <p class="mu sm" style="margin:0">Lo que guardes aquí manda sobre lo que llegó del portal o de la web.</p>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn g" id="edx">Cancelar</button><button class="btn">Guardar</button></div></form>`);
+  $('#edc', dm).onchange = (e) => ($('#edt', dm).style.display = e.target.value ? 'none' : '');
+  $('#edx', dm).onclick = () => dm.remove();
+  $('#edf', dm).onsubmit = guard(async (e) => { e.preventDefault(); const b = Object.fromEntries(new FormData(e.target)); b.datos = true;
+    if (!b.telefono.trim() && !b.email.trim()) { toast('Pon al menos el teléfono o el email', true); return; }
+    await api('/admin/clientes/' + c.key, { method: 'PUT', body: b }); dm.remove(); toast(`${b.nombre}: datos guardados`); route(); });
+}
 let CARS_C = [];
 V.cliente = async (m, key) => {
   const [cl, cs] = await Promise.all([api('/admin/clientes'), api('/admin/cars').catch(() => [])]); CARS_C = cs; const c = cl.find((x) => x.key === key); m = shell('clientes');
   if (!c) { m.innerHTML = top('Cliente') + '<div class="card mu">No encontrado.</div>'; return; }
   const av = c.etapa === 'perdido' ? [] : avisos(c, 'garage', etq); const f = c.fechas || {};
-  m.innerHTML = top(esc(c.nombre), `${esc(c.telefono)}${c.email ? ' · ' + esc(c.email) : ''} · ${esc(c.origen)} · última actividad ${fdt(c.last)}`, `<a class="btn g" href="#clientes/${POST_PG.includes(c.etapa) ? 'cierre' : 'venta'}">Volver</a>`) +
+  m.innerHTML = top(esc(c.nombre), `${esc(c.telefono)}${c.email ? ' · ' + esc(c.email) : ''} · ${esc(c.origen)} · última actividad ${fdt(c.last)}`, `<button class="btn g" id="edd">Editar datos</button><a class="btn g" href="#clientes/${POST_PG.includes(c.etapa) ? 'cierre' : 'venta'}">Volver</a>`) +
+    (() => { const car = cocheDe(c, CARS_C); const t = [car ? `Le interesa: <a href="${WEB}/vehiculos/${car.slug}" target="_blank" rel="noopener" style="color:var(--or)">${esc(car.brand)} ${esc(car.model)}${car.year ? ' · ' + car.year : ''}</a>` : c.cocheTxt ? `Busca: <b>${esc(c.cocheTxt)}</b>` : '', c.entrega ? `Entrega a cambio: <b>${esc(c.entrega)}</b>` : ''].filter(Boolean); return t.length ? `<div class="card sec"><p class="sm" style="margin:0">${t.join(' · ')}</p></div>` : ''; })() +
     (av.length ? `<div class="card sec hl">${av.map((a) => `<p style="margin:2px 0"><b>${esc(a)}</b></p>`).join('')}</div>` : '') +
     `<div class="two"><div class="card"><h3 style="margin-bottom:12px">Estado</h3><label>Etapa del embudo<select id="et"><option value="">Automático (ahora: ${etq(c.auto)})</option>${optsPG(c.manual)}</select></label>
     <p class="mu sm">En automático avanza solo con sus citas, su reserva o la venta. Sin movimiento en 45 días pasa a "Perdido" (salvo si ya está vendido).</p>
@@ -1176,6 +1198,7 @@ V.cliente = async (m, key) => {
     ${Object.keys(f).length ? `<h3 style="margin:18px 0 8px">Fechas de cada paso</h3>${ETAPAS.filter(([k]) => f[k]).map(([k, t]) => `<div class="li"><div><b>${t}</b></div><div class="r">${fdt(f[k])}</div></div>`).join('')}` : ''}</div>
     <div class="card"><h3 style="margin-bottom:12px">Historial (${c.leads.length})</h3>${c.leads.map((l) => `<a class="li" href="#${RUTA[l.tipo]}" style="text-decoration:none"><div><b>${TIPO[l.tipo]}</b><span>${esc(l.resumen)}</span></div><div class="r">${fdate(l.created)}<br>${l.status ? badge(l.status) : ''}</div></a>`).join('')}
     ${c.compras.length ? `<h3 style="margin:18px 0 8px">Compras</h3>${c.compras.map((x) => `<div class="li"><div><b>${esc(x.nombre)}</b><span>${x.sold ? 'Vendido el ' + fdate(x.soldAt) : 'Reservado'}</span></div></div>`).join('')}` : ''}</div></div>`;
+  $('#edd').onclick = () => editarDatosPG(c, CARS_C);
   const datos = () => ({ notas: $('#nt').value, banco: $('#bk').value, finEstado: $('#fe').value, certificado: $('#ce').value });
   $('#sv').onclick = guard(async () => { await api('/admin/clientes/' + key, { method: 'PUT', body: datos() }); toast('Guardado'); route(); });
   // La etapa se guarda sola al elegirla (en el móvil no hay que pulsar Guardar)
