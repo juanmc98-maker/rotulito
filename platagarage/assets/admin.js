@@ -1094,13 +1094,22 @@ function analisisPG(el, all) {
 const WEB = 'https://www.platagarage.com';
 const nrm = (x) => ' ' + String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim() + ' ';
 // Coche del lead: por la ficha si viene de la web; si viene de un portal, por marca/modelo/año del texto del aviso
+// Marca en el texto del aviso: vale el nombre entero o la primera palabra ("Mercedes" = "Mercedes-Benz"), y pegada al modelo ("MAZDA Mazda3")
+const marcaEn = (n, brand) => { const b = nrm(brand); const w = ' ' + b.trim().split(' ')[0]; return n.includes(b) || n.includes(w + ' ') || n.includes(w); };
+const slugB = (b) => { const s = String(b || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); return s === 'mercedes' ? 'mercedes-benz' : s; };
+// Si no se sabe el coche exacto (dos iguales, llamada de Wallapop sin anuncio…): página de la marca si solo sale una, y si no, el stock entero
+function enlaceLead(c, cars) {
+  const txt = nrm([...c.leads.map((l) => l.cocheNombre), c.cocheTxt].join(' '));
+  const mk = [...new Map(cars.filter((y) => !y.sold && y.brand && marcaEn(txt, y.brand)).map((y) => [slugB(y.brand), y.brand])).entries()];
+  return mk.length === 1 ? { url: `${WEB}/coches/${mk[0][0]}`, marca: mk[0][1] } : { url: `${WEB}/vehiculos/`, marca: '' };
+}
 function cocheDe(c, cars) {
   if (c.cocheInteres) { const x = cars.find((y) => y.slug === c.cocheInteres); if (x) return x; }
   for (const l of c.leads) { const x = l.coche && cars.find((y) => y.slug === l.coche); if (x) return x; }
   for (const l of c.leads) {
-    const n = nrm(l.cocheNombre); if (n.trim() === '') continue; let best = null, bs = 0;
-    cars.filter((y) => !y.sold).forEach((y) => { let p = 0; if (n.includes(nrm(y.brand))) p += 2; if (n.includes(nrm(y.model))) p += 3; if (y.year && n.includes(` ${y.year} `)) p += 1; if (y.version && n.includes(nrm(y.version))) p += 1; if (p > bs) { bs = p; best = y; } });
-    if (bs >= 3) return best;
+    const n = nrm(l.cocheNombre); if (n.trim() === '') continue; let best = null, bs = 0, tie = false;
+    cars.filter((y) => !y.sold).forEach((y) => { let p = 0; if (marcaEn(n, y.brand)) p += 2; if (n.includes(nrm(y.model)) || n.includes(nrm(y.brand.split(/[\s-]/)[0] + y.model).replace(/ /g, '') + ' ')) p += 3; if (y.year && n.includes(` ${y.year} `)) p += 1; if (y.version && n.includes(nrm(y.version))) p += 1; if (p > bs) { bs = p; best = y; tie = false; } else if (p === bs && p) tie = true; });
+    if (bs >= 3 && !tie) return best; // dos coches iguales (p. ej. los dos Mazda 3): no se adivina, va a la página de la marca
   }
   return null;
 }
@@ -1121,7 +1130,7 @@ const msgPM = (d, c) => { if (NEG !== 'marine') return ''; const n = nom1(c.nomb
   const f = [!anyo && 'de qué año es', !motor ? 'qué motor y horas tiene' : !horas && 'cuántas horas tiene el motor', !donde && 'dónde está'].filter(Boolean);
   const q = f.length ? `Para orientarte bien, ¿me cuentas ${f.length > 1 ? f.slice(0, -1).join(', ') + ' y ' + f[f.length - 1] : f[0]}?` : 'Con lo que me cuentas ya puedo empezar a mirarlo.';
   return `${h} Me ha llegado tu solicitud para vender ${b ? 'tu ' + b : 'tu barco'}. ${q} Puedes ver cómo trabajo en www.platamarine.com`; };
-const msgWa = (quien, car, nombre) => `${saludo()}${nom1(nombre) ? ' ' + nom1(nombre) : ''}, soy ${quien} de Plata Garage. He recibido un mensaje interesado en este vehículo${car ? `\n${WEB}/vehiculos/${car.slug}` : ''}`;
+const msgWa = (quien, car, nombre, otro) => `${saludo()}${nom1(nombre) ? ' ' + nom1(nombre) : ''}, soy ${quien} de Plata Garage. ${car ? `He recibido un mensaje interesado en este vehículo\n${WEB}/vehiculos/${car.slug}` : otro?.marca ? `He recibido tu mensaje. Aquí tienes los ${otro.marca} que tenemos ahora mismo:\n${otro.url}` : `He recibido tu mensaje. Aquí tienes todos los coches que tenemos ahora mismo:\n${otro?.url || WEB + '/vehiculos/'}`}`;
 // En Leads sale todo lo que entra por la web y los portales; desde cada tarjeta se abre la solicitud completa
 const VERL = { cita: 'reservas', tasacion: 'valoraciones', envio: 'envios', financiacion: 'financiaciones', mensaje: 'mensajes', busqueda: 'busquedas', alerta: 'alertas' };
 const LTIPO = { cita: 'cita o reserva', tasacion: 'tasación', envio: 'envío', financiacion: 'financiación', mensaje: 'mensaje', busqueda: 'te lo buscamos', alerta: 'avisos', portal: 'portal' };
@@ -1136,7 +1145,7 @@ V.leads = async (m) => {
   const resto = all.filter((c) => !nuevos.includes(c) && !pend.includes(c) && !hoy.includes(c) && ![...POST_PG, 'perdido'].includes(c.etapa)).slice(0, 20);
   badges.leads = nuevos.length || ''; 
   const card = (c) => { const car = cocheDe(c, cars); const own = car?.owner || ''; const l = c.leads[0] || {};
-    const bt = (q) => `<a class="btn s${own && own !== q ? ' g' : (!own && q !== 'Cristina' ? ' g' : '')}" target="_blank" rel="noopener" data-k="${c.key}" data-q="${q}" href="${waLink(c.telefono, msgWa(q, car, c.nombre))}">${IC.wa}Soy ${q}</a>`;
+    const bt = (q) => `<a class="btn s${own && own !== q ? ' g' : (!own && q !== 'Cristina' ? ' g' : '')}" target="_blank" rel="noopener" data-k="${c.key}" data-q="${q}" href="${waLink(c.telefono, msgWa(q, car, c.nombre, car ? null : enlaceLead(c, cars)))}">${IC.wa}Soy ${q}</a>`;
     return `<div class="card sec ld"><div class="hd"><div><b>${esc(c.nombre)}</b>${c.telefono ? ` <a href="tel:${esc(c.telefono)}" style="color:var(--mu);font-weight:500;margin-left:6px;text-decoration:none">${esc(c.telefono)}</a>` : ''}<span>${fdt(c.last)}</span></div>${badge(etq(c.etapa).toLowerCase())}</div>
       ${hoyAv(c).length ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Hoy te toca:</b> ${esc(hoyAv(c).join(' · '))}</p>` : ''}<p>${esc(l.resumen || '')}${VERL[l.tipo] ? ` <a href="#${VERL[l.tipo]}" style="color:var(--or);white-space:nowrap">Ver solicitud</a>` : ''}</p>${c.leads.length > 1 ? `<p class="mu sm" style="margin:-4px 0 6px">También: ${esc([...new Set(c.leads.slice(1).map((x) => LTIPO[x.tipo] || x.tipo))].join(' · '))}</p>` : ''}${car ? `<p class="mu sm">Coche: <a href="${WEB}/vehiculos/${car.slug}" target="_blank" rel="noopener" style="color:var(--or)">${esc(car.brand)} ${esc(car.model)}</a> · ${car.year || '—'} · <b style="color:var(--tx)">${car.price ? eur(car.price) : '—'}</b>${own ? ' · de ' + esc(own) : ''}</p>` : ''}${!car && c.cocheTxt ? `<p class="mu sm">Busca: <b style="color:var(--tx)">${esc(c.cocheTxt)}</b></p>` : ''}${c.entrega ? `<p class="mu sm">Entrega a cambio: <b style="color:var(--tx)">${esc(c.entrega)}</b></p>` : ''}
       <div class="row">${!c.telefono ? (() => { const pt = /coches/i.test(l.fuente || '') ? ['Coches.net', 'https://pro.coches.net/'] : /wallapop/i.test(l.fuente || '') ? ['Wallapop', 'https://es.wallapop.com/app/chat'] : null; return pt ? `<a class="btn s" target="_blank" rel="noopener" data-rp="${c.key}" href="${pt[1]}">Responder en ${pt[0]}</a>` : ''; })() : own === 'Cristina' || own === 'Juan' ? bt(own) : bt('Cristina') + bt('Juan')}<a class="btn s g" href="#cliente/${c.key}">Ver ficha</a><button class="btn s g" data-ed="${c.key}">Editar</button><select class="s" data-mv="${c.key}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsPG('')}</select><button class="btn r s" data-del="${c.key}">Eliminar</button></div></div>`; };
@@ -1149,7 +1158,7 @@ V.leads = async (m) => {
   $('#nl').onclick = () => nuevoLeadPG(cars);
   m.querySelectorAll('[data-ed]').forEach((b) => (b.onclick = () => { const c = all.find((x) => x.key === b.dataset.ed); if (c) editarDatosPG(c, cars); }));
   m.querySelectorAll('a[data-rp]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.rp); if (c && nuevos.includes(c)) api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: c.etapa === 'nuevo' ? 'contactado' : c.etapa } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
-  m.querySelectorAll('a[data-k]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.k); if (c) a.href = waLink(c.telefono, msgWa(a.dataset.q, cocheDe(c, cars), c.nombre)); if (c && nuevos.includes(c)) api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: c.etapa === 'nuevo' ? 'contactado' : c.etapa } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
+  m.querySelectorAll('a[data-k]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.k); if (c) { const cr = cocheDe(c, cars); a.href = waLink(c.telefono, msgWa(a.dataset.q, cr, c.nombre, cr ? null : enlaceLead(c, cars))); } if (c && nuevos.includes(c)) api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: c.etapa === 'nuevo' ? 'contactado' : c.etapa } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
 };
 // Añadir un lead a mano (llamada, WhatsApp, visita, portal…)
 const ORIG_PG = ['WhatsApp', 'Llamada', 'Wallapop', 'Coches.net', 'Presencial', 'Instagram', 'Referido', 'Otro'];
