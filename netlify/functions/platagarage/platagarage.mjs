@@ -1253,6 +1253,19 @@ export async function diario() {
   if (vend.length) await pushAll('garage', `Vendedores: ${vend.length} sin mover`, vend.slice(0, 3).map((t) => `${String(t.nombre || '').split(' ')[0]} (${t.marca || ''} ${t.modelo || ''})`.trim()).join(', ') + (vend.length > 3 ? '…' : ''), 'vendedores').catch((e) => console.error('push', e.message));
   return Object.fromEntries([...Object.entries(res).map(([k, v]) => [k, v.length]), ['parados', parados.length], ['vendedores', vend.length]]);
 }
+// Cada hora en horario de tienda: leads nuevos que llevan más de 2 horas sin contestar (y menos de 2 días). Cada lead avisa una sola vez
+export async function sinRespuesta() {
+  const ahora = Date.now(), dos = 2 * 36e5, max = 48 * 36e5;
+  const ya = (await db().get('avisos-2h', { type: 'json' })) || {};
+  const L = (await buildClientes()).filter((c) => c.etapa === 'nuevo' && c.last && ahora - Date.parse(c.last) > dos && ahora - Date.parse(c.last) < max && ya[c.key] !== c.last);
+  for (const k of Object.keys(ya)) if (!ya[k] || ahora - Date.parse(ya[k]) > 7 * 864e5) delete ya[k];
+  if (L.length) {
+    await pushAll('garage', `${L.length} lead${L.length > 1 ? 's' : ''} sin contestar (+2 h) · Plata Garage`, L.slice(0, 4).map((c) => `${String(c.nombre || 'Sin nombre').split(' ')[0]} (${c.origen})`).join(', ') + (L.length > 4 ? '…' : '') + ' · si ya le has escrito, pásalo a Contactado', 'sin-respuesta').catch((e) => console.error('push', e.message));
+    L.forEach((c) => (ya[c.key] = c.last));
+  }
+  await db().setJSON('avisos-2h', ya);
+  return { avisados: L.length };
+}
 // Medición propia sin cookies ni datos personales: contadores por día
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|headless|lighthouse|pingdom/i;
 async function bump(group, key, n = 1) {
@@ -1265,7 +1278,9 @@ async function hit(req, context) {
   const k = `stats/${today()}`; const st = (await db().get(k, { type: 'json' })) || {};
   const inc = (g, key) => { if (!key) return; st[g] = st[g] || {}; st[g][key] = (st[g][key] || 0) + 1; };
   if (b.e === 'view') {
-    inc('pv', clip(b.p, 120)); inc('src', clip(b.s, 60) || 'directo'); if (b.c) inc('car', clip(b.c, 120)); inc('tot', 'visitas');
+    inc('pv', clip(b.p, 120)); if (b.c) inc('car', clip(b.c, 120)); inc('tot', 'visitas');
+    // Canales: solo cuentan las entradas a la web (antes del 30 oct 2026 contaban todas las páginas vistas)
+    if (b.n) { inc('src', clip(b.s, 60) || 'directo'); if (b.c) inc('carent', clip(b.c, 120)); }
     const ua = req.headers.get('user-agent') || ''; inc('dev', /iPad|Tablet/i.test(ua) ? 'tablet' : /Mobi|Android|iPhone/i.test(ua) ? 'móvil' : 'ordenador');
     const g = context?.geo; if (g?.city) inc('city', clip(g.city, 60)); if (g?.country?.code) inc('pais', clip(g.country.code, 4));
     if (b.n) inc('tot', 'nuevas');
