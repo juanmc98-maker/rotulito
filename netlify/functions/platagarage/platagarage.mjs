@@ -26,8 +26,8 @@ const media = () => store('platagarage-media');
 
 // ---------- datos ----------
 // Cars4Fun (cars4forfun.com): coches del catálogo al arrancar (los datos de propietario, tarifas y acuerdos se completan en la app)
-const C4F_SEED = [['Chevrolet Corvette C1 1958', 'chevrolet-corvette-c1-1958'], ['Austin-Healey 3000', 'austin-healey-3000', 'Clásico en gestión de venta (también a la venta)'], ['Jaguar XK150', 'jaguar-xk150', 'Clásico en gestión de venta (también a la venta)'], ['Mercedes-Benz 450 SL', 'mercedes-benz-450-sl', 'Clásico en gestión de venta (también a la venta)'], ['Cadillac Coupé 1966', 'cadillac-coupe-1966', 'Confirmar modelo exacto con Sam'], ['Pontiac Firebird 1979', 'pontiac-firebird-1979'], ['Chevrolet Corvette C4', 'chevrolet-corvette-c4'], ['Dodge Ramcharger', 'dodge-ramcharger', 'Confirmar año real con Sam (el modelo empezó en 1974)'], ['Citroën 1927 (camioneta)', 'citroen-1927', 'Coche de Sam']]
-  .map(([coche, slug, notas], i) => ({ id: 'k' + (i + 1), coche, estado: 'Disponible', web: `https://cars4forfun.com/coches/${slug}/`, slug, notas: notas || '', created: '2026-11-03T12:00:00.000Z' }));
+const C4F_SEED = [['Chevrolet Corvette C1 (1958)', 'chevrolet-corvette-c1-1958', 'c1', 1958], ['Austin-Healey 3000 (1965)', 'austin-healey-3000', 'ah', 1965, 'Clásico en gestión de venta (también a la venta)'], ['Jaguar XK150 (1960)', 'jaguar-xk150', 'jag', 1960, 'Clásico en gestión de venta (también a la venta)'], ['Mercedes-Benz 450 SL (1974)', 'mercedes-benz-450-sl', 'mb', 1974, 'Clásico en gestión de venta (también a la venta)'], ['Cadillac Coupé (1966)', 'cadillac-coupe-1966', 'cad', 1966, 'Confirmar modelo exacto con Sam'], ['Pontiac Firebird (1979)', 'pontiac-firebird-1979', 'fire', 1979], ['Chevrolet Corvette C4 (1990)', 'chevrolet-corvette-c4', 'vette', 1990], ['Dodge Ramcharger', 'dodge-ramcharger', 'ram', '', 'Confirmar año real con Sam (el modelo empezó en 1974; la tarjeta de la web dice 1973)'], ['Citroën camioneta (1927)', 'citroen-1927', 'citroen', 1927, 'Coche de Sam']]
+  .map(([coche, slug, img, anio, notas], i) => ({ id: 'k' + (i + 1), coche, anio, estado: 'Disponible', web: `https://cars4forfun.com/coches/${slug}/`, foto: `https://cars4forfun.com/img/${img}.webp`, notas: notas || '', created: '2026-11-03T12:00:00.000Z' }));
 const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], financiaciones: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'leads-c4f': [], 'gastos-c4f': {}, 'forms-c4f': [], 'cartera-c4f': C4F_SEED, 'gastos-marine': {}, 'gastos-rotulito': {}, pushsubs: [], vapid: {}, docs: {}, 'cartera-marine': [], 'astilleros-marine': astSeed, 'demandas-marine': [], 'holded-neg': {}, tarifas: {} };
 async function load(key) {
   const v = await db().get(key, { type: 'json' });
@@ -735,7 +735,7 @@ const EMPRESA = /\b(s\.?\s?l\.?\s?u?\.?|s\.?\s?a\.?\s?u?\.?|sociedad|s\.?\s?coop
 
 // Aviso "Outgoing webhook" de Netlify Forms (web de Cars4Fun): se pasa al formato de lead de la app con el formulario completo
 const FORM_C4F = { productoras: 'Producción', busqueda: 'Busca un coche', propietarios: 'Propietario', transporte: 'Transporte' };
-const NO_CAMPO = /^(form-name|bot-field|ip|user_agent|referrer|website|url|empresa_web|honeypot|t0|ts)$/i;
+const NO_CAMPO = /^(form-name|bot-field|ip|user_agent|referrer|website|url|web_url|privacidad|empresa_web|honeypot|t0|ts)$/i;
 function desdeNetlify(x) {
   const d = x.data || {}; const v = (...k) => { for (const a of k) { const f = Object.keys(d).find((y) => y.toLowerCase() === a); if (f && String(d[f]).trim()) return String(d[f]).trim(); } return ''; };
   const campos = (Array.isArray(x.ordered_human_fields) && x.ordered_human_fields.length ? x.ordered_human_fields.map((f) => [f.title || f.name, f.value]) : Object.entries(d)).filter(([k, val]) => !NO_CAMPO.test(String(k)) && String(val ?? '').trim()).map(([k, val]) => [String(k), Array.isArray(val) ? val.join(', ') : String(val)]);
@@ -1575,7 +1575,7 @@ async function adminApi(r, req, M, me, url) {
     const list = await load('cartera-c4f'); const id = seg[2];
     const ESTC = ['Disponible', 'Reservado para rodaje', 'En rodaje', 'No disponible', 'Pendiente de acuerdo', 'Retirado'];
     const numC = (v) => { const n = Number(String(v ?? '').replace(/\./g, '').replace(',', '.')); return isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0; };
-    const campos = (o, b) => { ['coche', 'propietario', 'telefono', 'email', 'zona', 'web', 'matricula', 'color', 'seguro', 'condiciones', 'notas'].forEach((f) => { if (f in b) o[f] = clip(b[f], ['notas', 'condiciones'].includes(f) ? 3000 : 200); });
+    const campos = (o, b) => { ['coche', 'propietario', 'telefono', 'email', 'zona', 'web', 'foto', 'matricula', 'color', 'seguro', 'condiciones', 'notas'].forEach((f) => { if (f in b) o[f] = clip(b[f], ['notas', 'condiciones'].includes(f) ? 3000 : 200); });
       if ('matricula' in b) o.matricula = o.matricula.toUpperCase(); ['tarifa', 'tarifaProp', 'comision'].forEach((f) => { if (f in b) o[f] = numC(b[f]); }); ['firma', 'fin', 'itv'].forEach((f) => { if (f in b) o[f] = /^\d{4}-\d{2}-\d{2}$/.test(b[f] || '') ? b[f] : ''; });
       if ('anio' in b) { const n = Number(b.anio); o.anio = n >= 1880 && n <= 2100 ? n : ''; } if ('estado' in b) o.estado = ESTC.includes(b.estado) ? b.estado : 'Disponible'; if ('transporte' in b) o.transporte = ['', 'Rueda', 'Grúa'].includes(b.transporte) ? b.transporte : ''; return o; };
     if (M === 'GET' && !id) return json(list);
