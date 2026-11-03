@@ -25,7 +25,10 @@ const db = () => store('platagarage');
 const media = () => store('platagarage-media');
 
 // ---------- datos ----------
-const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], financiaciones: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'gastos-marine': {}, 'gastos-rotulito': {}, pushsubs: [], vapid: {}, docs: {}, 'cartera-marine': [], 'astilleros-marine': astSeed, 'demandas-marine': [], 'holded-neg': {}, tarifas: {} };
+// Cars4Fun (cars4forfun.com): coches del catálogo al arrancar (los datos de propietario, tarifas y acuerdos se completan en la app)
+const C4F_SEED = [['Chevrolet Corvette C1 (1958)', 'chevrolet-corvette-c1-1958', 'c1', 1958], ['Austin-Healey 3000 (1965)', 'austin-healey-3000', 'ah', 1965, 'Clásico en gestión de venta (también a la venta)'], ['Jaguar XK150 (1960)', 'jaguar-xk150', 'jag', 1960, 'Clásico en gestión de venta (también a la venta)'], ['Mercedes-Benz 450 SL (1974)', 'mercedes-benz-450-sl', 'mb', 1974, 'Clásico en gestión de venta (también a la venta)'], ['Cadillac Coupé (1966)', 'cadillac-coupe-1966', 'cad', 1966, 'Confirmar modelo exacto con Sam'], ['Pontiac Firebird (1979)', 'pontiac-firebird-1979', 'fire', 1979], ['Chevrolet Corvette C4 (1990)', 'chevrolet-corvette-c4', 'vette', 1990], ['Dodge Ramcharger', 'dodge-ramcharger', 'ram', '', 'Confirmar año real con Sam (el modelo empezó en 1974; la tarjeta de la web dice 1973)'], ['Citroën camioneta (1927)', 'citroen-1927', 'citroen', 1927, 'Coche de Sam']]
+  .map(([coche, slug, img, anio, notas], i) => ({ id: 'k' + (i + 1), coche, anio, estado: 'Disponible', web: `https://cars4forfun.com/coches/${slug}/`, foto: `https://cars4forfun.com/img/${img}.webp`, notas: notas || '', created: '2026-11-03T12:00:00.000Z' }));
+const DEFAULTS = { cars: seed.cars, holders: seed.holders, schedule: seed.schedule, bookings: [], tasaciones: [], envios: [], financiaciones: [], mensajes: [], posts: [], alertas: [], busquedas: [], users: [], authver: { admin: 0 }, clientes: [], portales: [], 'leads-marine': [], 'leads-rotulito': [], 'leads-c4f': [], 'gastos-c4f': {}, 'forms-c4f': [], 'cartera-c4f': C4F_SEED, 'gastos-marine': {}, 'gastos-rotulito': {}, pushsubs: [], vapid: {}, docs: {}, 'cartera-marine': [], 'astilleros-marine': astSeed, 'demandas-marine': [], 'holded-neg': {}, tarifas: {} };
 async function load(key) {
   const v = await db().get(key, { type: 'json' });
   if (v == null) { const d = structuredClone(DEFAULTS[key]); await db().setJSON(key, d); return d; }
@@ -87,11 +90,11 @@ async function sessionUser(req) {
   const good = sign(`u.${id}.${ver}.${exp}`);
   if (good.length !== sig.length || !crypto.timingSafeEqual(Buffer.from(good), Buffer.from(sig))) return null;
   const ses = { exp: Number(exp), ver };
-  if (id === 'admin') { const av = (await load('authver')).admin || 0; if (String(av) !== ver) return null; return { id: 'admin', name: 'Administrador', role: 'admin', negs: ['garage', 'marine', 'rotulito'], ses }; }
+  if (id === 'admin') { const av = (await load('authver')).admin || 0; if (String(av) !== ver) return null; return { id: 'admin', name: 'Administrador', role: 'admin', negs: ALLNEG, ses }; }
   const u = (await load('users')).find((x) => x.id === id);
   if (!u || String(u.ver || 0) !== ver || u.disabled) return null;
   // Negocios a los que puede entrar: el administrador a todos; el resto, a los que tenga marcados (por defecto solo Plata Garage)
-  const negs = u.role === 'admin' ? ['garage', 'marine', 'rotulito'] : (u.negs && u.negs.length ? u.negs : ['garage']);
+  const negs = u.role === 'admin' ? ALLNEG : (u.negs && u.negs.length ? u.negs : ['garage']);
   return { id: u.id, name: u.name, role: u.role || 'editor', negs, ses };
 }
 const cookie = (v, maxAge) => `pg_s=${v}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;
@@ -296,7 +299,7 @@ const ingestToken = () => sign('portales-v1').slice(0, 32);
 // Se cifra con la clave pública que Juan crea en el panel; la clave privada solo la tiene él (archivo + contraseña).
 // Sin esa clave, lo que sale de aquí no se puede leer, ni aquí ni en Drive.
 const backupToken = () => sign('copia-cifrada-v1').slice(0, 32);
-const BACKUP_KEYS = ['cars', 'holders', 'schedule', 'bookings', 'tasaciones', 'envios', 'financiaciones', 'mensajes', 'posts', 'alertas', 'busquedas', 'clientes', 'portales', 'docs', 'tarifas'];
+const BACKUP_KEYS = ['cars', 'holders', 'schedule', 'bookings', 'tasaciones', 'envios', 'financiaciones', 'mensajes', 'posts', 'alertas', 'busquedas', 'clientes', 'portales', 'docs', 'tarifas', 'leads-marine', 'leads-rotulito', 'cartera-marine', 'leads-c4f', 'forms-c4f', 'cartera-c4f'];
 async function seal(buf) {
   const pk = await db().get('backupkey', { type: 'json' }); if (!pk?.jwk) return null;
   const pub = crypto.createPublicKey({ key: pk.jwk, format: 'jwk' }); const k = crypto.randomBytes(32), iv = crypto.randomBytes(12);
@@ -316,10 +319,18 @@ const NEGS = {
     { id: 'venta', n: 'Venta', e: ['Nuevo', 'Contactado', 'Presupuesto enviado', 'Aceptado y señal'] },
     { id: 'proyecto', n: 'Proyecto', e: ['Contenido recibido', 'En desarrollo', 'Revisión del cliente', 'Publicada', 'Cobrada'] }],
     motivos: ['Precio', 'Sin presupuesto', 'Contrató a otro', 'No contesta', 'Otro'] },
+  // Cars4Fun: productoras que alquilan coches, propietarios que dejan su coche y servicio de transporte en grúa
+  c4f: { nombre: 'Cars4Fun', tableros: [
+    { id: 'producciones', n: 'Producciones', e: ['Nuevo', 'Contactado', 'Coches propuestos', 'Presupuesto enviado', 'Confirmado', 'Rodaje hecho', 'Cobrado'] },
+    { id: 'propietarios', n: 'Propietarios', e: ['Coche ofrecido', 'Datos y fotos', 'Acuerdo firmado', 'En catálogo'] },
+    { id: 'transporte', n: 'Transporte', e: ['Solicitud de transporte', 'Presupuesto de transporte', 'Transporte confirmado', 'Transporte hecho', 'Transporte cobrado'] }],
+    motivos: ['Precio', 'Coche no disponible', 'Fechas', 'Contrató a otro', 'No contesta', 'Retira el coche', 'Otro'] },
 };
+const ALLNEG = ['garage', ...Object.keys(NEGS)];
 Object.values(NEGS).forEach((n) => { n.etapas = [...n.tableros.flatMap((t) => t.e), 'Perdido']; });
 const esVendedor = (x) => /vend|captac|hoja|encargo|propietari/i.test(`${x.tipo || ''} ${x.interes || ''} ${x.origen || ''}`) && !/compr|busc/i.test(`${x.tipo || ''}`);
-const etapaInicial = (neg, x) => (neg === 'marine' && esVendedor(x) ? 'Primer contacto' : 'Nuevo');
+const tipoC4f = (x) => { const t = `${x.tipo || ''} ${x.origen || ''}`; return /transport|gr[uú]a/i.test(t) ? 'transporte' : /propietari|owner|propri/i.test(t) ? 'propietario' : 'produccion'; };
+const etapaInicial = (neg, x) => (neg === 'marine' && esVendedor(x) ? 'Primer contacto' : neg === 'c4f' ? { transporte: 'Solicitud de transporte', propietario: 'Coche ofrecido' }[tipoC4f(x)] || 'Nuevo' : 'Nuevo');
 // Las etapas antiguas se pasan una vez a las nuevas (queda anotado en el historial)
 const VIEJAS = {
   marine: (x) => { const v = esVendedor(x); return { 'Sin respuesta': v ? 'Primer contacto' : 'Nuevo', 'Conversación': v ? 'Primer contacto' : 'Contactado', 'Cualificado': v ? 'Primer contacto' : 'Contactado', 'Valoración enviada': 'Primer contacto', 'Hoja enviada': 'Hoja y guía enviadas', 'Encargo firmado': 'Hoja firmada', 'Cerrado': v ? 'Vendido' : 'Comisión cobrada', 'Descartado': 'Perdido' }[x.etapa]; },
@@ -345,6 +356,8 @@ async function addNegLead(neg, x) {
   else { it = { id: uid('l'), key: k, nombre: clip(x.nombre, 80) || 'Sin nombre', telefono: tel, email, origen: clip(x.origen, 40), tipo: clip(x.tipo, 30), interes: clip(x.interes, 160), etapa: etapaInicial(neg, x), desde: d, notas: '', created: d, updated: d, historial: [{ d, t: nota || 'Primer contacto' }], refs: ref ? [ref] : [] }; list.unshift(it); }
   await save(key, list.slice(0, 5000));
   if (neg === 'marine' && /alerta|que-barco|busco/i.test(`${x.origen || ''} ${x.tipo || ''}`)) await addDemanda(x, it.id).catch((e) => console.error('demanda', e.message));
+  if (neg === 'c4f' && Array.isArray(x.campos)) { // Cars4Fun: se guarda el formulario completo tal cual lo rellenaron
+    const fl = await load('forms-c4f'); fl.unshift({ id: uid('f'), lead: it.id, form: clip(x.tipo, 40), nombre: it.nombre, d, pagina: clip(x.pagina, 200), campos: x.campos.slice(0, 40).map((c) => [clip(c[0], 60), clip(c[1], 2000)]) }); await save('forms-c4f', fl.slice(0, 3000)); }
   return true;
 }
 function ical(bookings) {
@@ -720,6 +733,19 @@ const negFactura = (f) => { const t = [f.description, ...(f.tags || []), ...(f.l
   if (/\bweb\b|p[aá]gina|dominio|hosting|mantenimiento|dise[nñ]o|landing|seo|rotulito/.test(t)) return 'rotulito'; return ''; };
 const EMPRESA = /\b(s\.?\s?l\.?\s?u?\.?|s\.?\s?a\.?\s?u?\.?|sociedad|s\.?\s?coop|s\.?\s?l\.?\s?p\.?|ltd|gmbh|sarl|sas|c\.?\s?b\.?)\s*$/i;
 
+// Aviso "Outgoing webhook" de Netlify Forms (web de Cars4Fun): se pasa al formato de lead de la app con el formulario completo
+const FORM_C4F = { productoras: 'Producción', busqueda: 'Busca un coche', propietarios: 'Propietario', transporte: 'Transporte' };
+const NO_CAMPO = /^(form-name|bot-field|ip|user_agent|referrer|website|url|web_url|privacidad|empresa_web|honeypot|t0|ts)$/i;
+function desdeNetlify(x) {
+  const d = x.data || {}; const v = (...k) => { for (const a of k) { const f = Object.keys(d).find((y) => y.toLowerCase() === a); if (f && String(d[f]).trim()) return String(d[f]).trim(); } return ''; };
+  const campos = (Array.isArray(x.ordered_human_fields) && x.ordered_human_fields.length ? x.ordered_human_fields.map((f) => [f.title || f.name, f.value]) : Object.entries(d)).filter(([k, val]) => !NO_CAMPO.test(String(k)) && String(val ?? '').trim()).map(([k, val]) => [String(k), Array.isArray(val) ? val.join(', ') : String(val)]);
+  const form = String(x.form_name || ''); const tipo = FORM_C4F[form] || form;
+  const coche = v('coche', 'coches', 'seleccion', 'vehiculo', 'vehículo', 'modelo');
+  const interes = [tipo, coche, v('fecha', 'fechas', 'uso', 'uso del coche'), v('origen') && v('destino') ? `${v('origen')} → ${v('destino')}` : ''].filter(Boolean).join(' · ');
+  const quien = v('nombre', 'name', 'contacto', 'persona') || x.name || '', emp = v('empresa', 'productora', 'company');
+  return { nombre: clip([quien, emp].filter(Boolean).join(' · '), 80), telefono: v('telefono', 'teléfono', 'phone', 'tel', 'movil', 'móvil'), email: v('email', 'correo', 'e-mail') || x.email || '', empresa: emp,
+    origen: 'Web · ' + tipo, tipo, interes: clip(interes, 160), mensaje: campos.map(([k, val]) => `${k}: ${val}`).join(' | '), campos, pagina: d.referrer || '', ref: 'nf:' + (x.id || ''), fecha: x.created_at };
+}
 // ---------- API ----------
 async function api(r, req, M, ip, url, context) {
   // Públicas
@@ -748,7 +774,7 @@ async function api(r, req, M, ip, url, context) {
   if (r.startsWith('/lead/') && M === 'POST') {
     const [, , neg, tok] = r.split('/'); if (!NEGS[neg] || !env('PG_ADMIN_PASSWORD') || (tok || '').length !== 32 || !eqHash(tok, negToken(neg))) return json({ error: 'No autorizado' }, 401);
     const b = await req.json().catch(() => ({})); let n = 0;
-    const arr = (Array.isArray(b) ? b : [b]).slice(0, 50); for (const x of arr) if (await addNegLead(neg, x)) n++;
+    const arr = (Array.isArray(b) ? b : [b]).slice(0, 50).map((x) => (x && x.form_name && x.data ? desdeNetlify(x) : x)); for (const x of arr) if (await addNegLead(neg, x)) n++;
     if (n) await pushAll(neg, `${n > 1 ? n + ' leads nuevos' : 'Nuevo lead'} · ${NEGS[neg].nombre || neg}`, n > 1 ? '' : [clip(arr[0].nombre, 60), clip(arr[0].interes || arr[0].origen, 60)].filter(Boolean).join(' · '), 'lead-' + neg).catch((e) => console.error('push', e.message));
     return json({ ok: true, nuevos: n });
   }
@@ -1193,11 +1219,11 @@ async function sendMail({ to, subject, html: body, text: txt, replyTo }) {
 const hesc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 // Avisos push al móvil (también con la app cerrada): solo a quien tenga acceso a ese negocio
 async function webpushLib() { const { default: wp } = await import('web-push'); let v = await load('vapid'); if (!v || !v.pub) { const k = wp.generateVAPIDKeys(); v = { pub: k.publicKey, priv: k.privateKey }; await save('vapid', v); } wp.setVapidDetails('mailto:info@platagarage.com', v.pub, v.priv); return { wp, v }; }
-const NEG_URL = { garage: '#leads', marine: '#leads', rotulito: '#leads' };
+const NEG_URL = { garage: '#leads', marine: '#leads', rotulito: '#leads', c4f: '#leads' };
 async function pushAll(neg, title, body, tag, only) {
   const subs = await load('pushsubs'); if (!subs.length) return;
   const users = await load('users');
-  const can = (s) => { if (only) return s.sub.endpoint === only; if (s.uid === 'admin') return true; const u = users.find((x) => x.id === s.uid); if (!u || u.disabled) return false; const negs = u.role === 'admin' ? ['garage', 'marine', 'rotulito'] : (u.negs && u.negs.length ? u.negs : ['garage']); return negs.includes(neg); };
+  const can = (s) => { if (only) return s.sub.endpoint === only; if (s.uid === 'admin') return true; const u = users.find((x) => x.id === s.uid); if (!u || u.disabled) return false; const negs = u.role === 'admin' ? ALLNEG : (u.negs && u.negs.length ? u.negs : ['garage']); return negs.includes(neg); };
   const list = subs.filter(can); if (!list.length) return;
   const { wp } = await webpushLib(); const dead = [];
   const payload = JSON.stringify({ title: clip(title, 80), body: clip(body, 160), tag: tag || undefined, url: `${BASE}/admin?neg=${neg}${NEG_URL[neg] || ''}` });
@@ -1232,17 +1258,20 @@ ${notas ? `<p style="margin:0 0 14px;color:#a1a1a1">Notas: ${hesc(notas)}</p>` :
   const body = new URLSearchParams({ 'form-name': 'avisos', asunto: subject, tipo, nombre: d.nombre || d.email || '', telefono: d.telefono || '', detalle: lines, panel: `${origin}${BASE}/admin` });
   await fetch(`${origin}${ST}/assets/avisos.html`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body });
 }
+// Cars4Fun: las productoras piden respuesta en 24 h (lo promete la web)
+const C4F_MAXD = { 'Nuevo': 1, 'Contactado': 3, 'Coches propuestos': 3, 'Presupuesto enviado': 4, 'Confirmado': 15, 'Rodaje hecho': 10, 'Coche ofrecido': 2, 'Datos y fotos': 5, 'Acuerdo firmado': 5, 'Solicitud de transporte': 1, 'Presupuesto de transporte': 3, 'Transporte confirmado': 15, 'Transporte hecho': 10 };
 // Aviso diario al móvil: los seguimientos que tocan hoy en cada negocio (los que llevan más días de la cuenta en su paso)
 const MAXD_S = {
   garage: { nuevo: 1, contactado: 7, visitado: 3, financiera: 7, reserva: 7, vendido: 3, transferencia: 3, entregado: 15, permiso: 3, enviado: 10 },
   marine: { 'Nuevo': 1, 'Contactado': 5, 'Visita': 7, 'Oferta': 5, 'Señal': 10, 'Prueba de mar / peritaje': 15, 'Aceptación': 7, 'Pago y contrato': 10, 'Titularidad': 30, 'Entrega': 10, 'Documentación enviada': 15, 'Primer contacto': 2, 'Hoja y guía enviadas': 3, 'Hoja firmada': 7, 'Fotos recibidas': 3, 'Publicado': 30, 'Con interesados': 30 },
   rotulito: { 'Nuevo': 1, 'Contactado': 3, 'Presupuesto enviado': 5, 'Aceptado y señal': 7, 'Contenido recibido': 5, 'En desarrollo': 10, 'Revisión del cliente': 7, 'Publicada': 15 },
+  c4f: C4F_MAXD,
 };
 const diasD = (iso) => (iso ? Math.floor((Date.now() - Date.parse(iso)) / 864e5) : 0);
 export async function diario() {
   const toca = (neg, L) => L.filter((c) => c.etapa !== 'Perdido' && c.etapa !== 'perdido' && MAXD_S[neg][c.etapa] && diasD(c.desde || c.updated || c.created) > MAXD_S[neg][c.etapa]).sort((a, b) => diasD(b.desde || b.updated) - diasD(a.desde || a.updated));
-  const res = { garage: toca('garage', await buildClientes()), marine: toca('marine', await load('leads-marine')), rotulito: toca('rotulito', await load('leads-rotulito')) };
-  const nom = { garage: 'Plata Garage', marine: 'Plata Marine', rotulito: 'Rotulito' };
+  const res = { garage: toca('garage', await buildClientes()), marine: toca('marine', await load('leads-marine')), rotulito: toca('rotulito', await load('leads-rotulito')), c4f: toca('c4f', await load('leads-c4f')) };
+  const nom = { garage: 'Plata Garage', marine: 'Plata Marine', rotulito: 'Rotulito', c4f: 'Cars4Fun' };
   for (const [neg, L] of Object.entries(res)) if (L.length) await pushAll(neg, `Hoy te toca: ${L.length} seguimiento${L.length > 1 ? 's' : ''} · ${nom[neg]}`, L.slice(0, 4).map((c) => String(c.nombre || '').split(' ')[0]).join(', ') + (L.length > 4 ? '…' : ''), 'hoy-' + neg).catch((e) => console.error('push', e.message));
   // Coches parados: más de 45 días en stock y 3 semanas sin tocar el precio
   const parados = (await load('cars')).filter((c) => !c.sold && !c.hidden && diasD(c.llegada || c.created) >= 45 && diasD((c.priceHistory || []).length > 1 ? c.priceHistory[c.priceHistory.length - 1].d : c.llegada || c.created) >= 21).sort((a, b) => diasD(b.llegada || b.created) - diasD(a.llegada || a.created));
@@ -1301,7 +1330,7 @@ async function hit(req, context) {
 
 // Contador de las webs de Plata Marine y Rotulito (lo envían sus analytics.js / track.js solo con consentimiento de analítica):
 // contadores por día, sin datos personales; lo escrito en buscadores se guarda sin números largos (teléfonos)
-const WNEG = ['marine', 'rotulito'];
+const WNEG = ['marine', 'rotulito', 'c4f'];
 const sinNum = (v, n) => clip(String(v ?? '').replace(/\d(?:[ .]?\d){6,}/g, ' ').replace(/[^\p{L}0-9 .,€+|:\/-]/gu, ' ').replace(/\s+/g, ' '), n);
 async function hitW(neg, req, context) {
   if (!WNEG.includes(neg) || BOT.test(req.headers.get('user-agent') || '')) return;
@@ -1320,6 +1349,7 @@ async function hitW(neg, req, context) {
   else if (t === 'filtro') { const f = clip(String(b.m ?? '').replace(/[^\p{L}0-9 €|\/-]/gu, ' ').replace(/\s+/g, ' '), 120); if (f) { inc('filtro', f); if (!Number(b.e)) inc('filtro0', f); } }
   else if (t === 'falta') { const f = sinNum(b.m, 40); if (f) { inc('falta', f); if (b.b) inc('faltaboat', `${clip(b.b, 80)}|${f}`); } }
   else if (t === 'embudo') { const f = sinNum(b.m, 40); if (f) inc('embudo', f); }
+  else if (t === 'sel') { inc('embudo', 'seleccion'); if (b.b) inc('sel', clip(b.b, 80)); } // Cars4Fun: coche añadido a "Mi selección"
   else return;
   await db().setJSON(k, st);
 }
@@ -1421,7 +1451,7 @@ async function adminApi(r, req, M, me, url) {
   // ---- Documentos privados (facturas, contratos, fotos, documentación) de coches y barcos ----
   // Se guardan cifrados (AES-256-GCM) y solo se pueden ver con sesión iniciada; coches = Plata Garage, barcos = Plata Marine
   if (seg[0] === 'docs') {
-    const negDe = (sc) => (sc === 'car' ? 'garage' : sc === 'boat' ? 'marine' : '');
+    const negDe = (sc) => (sc === 'car' ? 'garage' : sc === 'boat' ? 'marine' : sc === 'c4f' ? 'c4f' : '');
     if (seg[1] === 'file' && M === 'GET') {
       const all = await load('docs'); let meta = null, sc = '';
       for (const [k, v] of Object.entries(all)) { const f = (v.files || []).find((x) => x.id === seg[2]); if (f) { meta = f; sc = k.split(':')[0]; break; } }
@@ -1535,6 +1565,25 @@ async function adminApi(r, req, M, me, url) {
       const auto = negFactura(f), n = f.id in map ? map[f.id] : auto;
       return { id: f.id, num: f.document_number, fecha: f.date || '', cliente: f.contact_name || '', base: n2(base), iva, ret, total, neg: n, auto: !(f.id in map), empresa: EMPRESA.test(String(f.contact_name || '').trim()), concepto: clip((f.lines || []).map((p) => p.name).filter(Boolean).join(' · ') || f.description, 160) }; });
     return json({ y, q, rows: rows.filter((x) => x.neg === neg), otras: rows.filter((x) => x.neg === ''), total: rows.length });
+  }
+  // Cars4Fun: cartera de coches (los del catálogo y los que ofrecen los propietarios) y formularios recibidos
+  if (seg[0] === 'c4f') {
+    if (!(me.negs || []).includes('c4f')) return json({ error: 'No tienes acceso.' }, 403);
+    if (seg[1] === 'forms' && M === 'GET') return json(await load('forms-c4f'));
+    if (seg[1] === 'forms' && seg[2] && M === 'DELETE') { const fl = await load('forms-c4f'); await save('forms-c4f', fl.filter((x) => x.id !== seg[2])); return json({ ok: true }); }
+    if (seg[1] !== 'cartera') return json({ error: 'No válido' }, 400);
+    const list = await load('cartera-c4f'); const id = seg[2];
+    const ESTC = ['Disponible', 'Reservado para rodaje', 'En rodaje', 'No disponible', 'Pendiente de acuerdo', 'Retirado'];
+    const numC = (v) => { const n = Number(String(v ?? '').replace(/\./g, '').replace(',', '.')); return isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0; };
+    const campos = (o, b) => { ['coche', 'propietario', 'telefono', 'email', 'zona', 'web', 'foto', 'matricula', 'color', 'seguro', 'condiciones', 'notas'].forEach((f) => { if (f in b) o[f] = clip(b[f], ['notas', 'condiciones'].includes(f) ? 3000 : 200); });
+      if ('matricula' in b) o.matricula = o.matricula.toUpperCase(); ['tarifa', 'tarifaProp', 'comision'].forEach((f) => { if (f in b) o[f] = numC(b[f]); }); ['firma', 'fin', 'itv'].forEach((f) => { if (f in b) o[f] = /^\d{4}-\d{2}-\d{2}$/.test(b[f] || '') ? b[f] : ''; });
+      if ('anio' in b) { const n = Number(b.anio); o.anio = n >= 1880 && n <= 2100 ? n : ''; } if ('estado' in b) o.estado = ESTC.includes(b.estado) ? b.estado : 'Disponible'; if ('transporte' in b) o.transporte = ['', 'Rueda', 'Grúa'].includes(b.transporte) ? b.transporte : ''; return o; };
+    if (M === 'GET' && !id) return json(list);
+    if (M === 'POST' && !id) { if (!clip(body.coche, 200)) return json({ error: 'Pon el coche (marca, modelo y año)' }, 400); const o = campos({ id: uid('k'), estado: 'Pendiente de acuerdo', created: new Date().toISOString() }, body); list.unshift(o); await save('cartera-c4f', list); return json(o); }
+    const i = list.findIndex((x) => x.id === id); if (i < 0) return json({ error: 'No existe' }, 404);
+    if (M === 'GET') return json(list[i]);
+    if (M === 'PUT') { const antes = list[i].estado; campos(list[i], body); const d = new Date().toISOString(); list[i].updated = d; if (antes !== list[i].estado) list[i].log = [{ d, t: `${antes || '—'} → ${list[i].estado} (${me.name})` }, ...(list[i].log || [])].slice(0, 50); await save('cartera-c4f', list); return json(list[i]); }
+    if (M === 'DELETE') { list.splice(i, 1); await save('cartera-c4f', list); return json({ ok: true }); }
   }
   // Cartera de barcos de Plata Marine (barcos con hoja de encargo firmada)
   if (seg[0] === 'cartera') {
@@ -1722,7 +1771,7 @@ async function adminApi(r, req, M, me, url) {
   if (seg[0] === 'users') {
     if (me.role !== 'admin') return json({ error: 'Solo un administrador puede gestionar usuarios.' }, 403);
     const users = await load('users');
-    const NG = ['garage', 'marine', 'rotulito']; const negsDe = (b) => (Array.isArray(b.negs) ? b.negs.filter((x) => NG.includes(x)) : ['garage']);
+    const NG = ALLNEG; const negsDe = (b) => (Array.isArray(b.negs) ? b.negs.filter((x) => NG.includes(x)) : ['garage']);
     const pub = (u) => ({ id: u.id, name: u.name, user: u.user, role: u.role, negs: u.role === 'admin' ? NG : (u.negs || ['garage']), disabled: !!u.disabled, created: u.created });
     if (M === 'GET') return json(users.map(pub));
     if (M === 'POST' && !seg[1]) {
