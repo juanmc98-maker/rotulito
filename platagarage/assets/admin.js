@@ -385,14 +385,14 @@ V.barco = async (m, id) => {
 // ---------- Cars4Fun: cartera de coches para rodajes y formularios de cars4forfun.com ----------
 const EST_C4F = { 'Disponible': 'ok', 'Reservado para rodaje': 'o', 'En rodaje': 'b', 'No disponible': 'x', 'Pendiente de acuerdo': 'w', 'Retirado': 'r' };
 const badgeC = (e) => `<span class="bg ${EST_C4F[e] || 'x'}">${esc(e || '—')}</span>`;
-const fotoC4f = (k) => (k.slug ? `https://cars4forfun.com/img/${k.slug}.webp` : '');
+const fotoC4f = (k) => k.foto || '';
 const camposC4f = (k = {}) => `<div class="fg"><label>Coche *<input name="coche" required value="${esc(k.coche || '')}" placeholder="Marca, modelo y año"></label><label>Estado<select name="estado">${Object.keys(EST_C4F).map((x) => `<option${x === (k.estado || 'Pendiente de acuerdo') ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
   <label>Año<input name="anio" inputmode="numeric" value="${esc(k.anio || '')}"></label><label>Color<input name="color" value="${esc(k.color || '')}"></label><label>Matrícula<input name="matricula" value="${esc(k.matricula || '')}" style="text-transform:uppercase"></label><label>ITV hasta<input type="date" name="itv" value="${esc(k.itv || '')}"></label>
   <label>Propietario<input name="propietario" value="${esc(k.propietario || '')}"></label><label>Teléfono<input name="telefono" inputmode="tel" value="${esc(k.telefono || '')}"></label><label>Email<input name="email" type="email" value="${esc(k.email || '')}"></label><label>Dónde está<input name="zona" value="${esc(k.zona || '')}" placeholder="p. ej. Sabadell"></label>
   <label>Tarifa a la productora (€/día, interna)<input name="tarifa" inputmode="decimal" value="${k.tarifa || ''}"></label><label>Para el propietario (€/día)<input name="tarifaProp" inputmode="decimal" value="${k.tarifaProp || ''}"></label><label>Comisión (%)<input name="comision" inputmode="decimal" value="${k.comision || ''}"></label><label>Cómo se mueve<select name="transporte">${['', 'Rueda', 'Grúa'].map((x) => `<option value="${x}"${x === (k.transporte || '') ? ' selected' : ''}>${x || '—'}</option>`).join('')}</select></label>
   <label>Acuerdo firmado el<input type="date" name="firma" value="${esc(k.firma || '')}"></label><label>Acuerdo hasta<input type="date" name="fin" value="${esc(k.fin || '')}"></label>
   <label style="grid-column:1/-1">Seguro (quién lo asegura en el rodaje)<input name="seguro" value="${esc(k.seguro || '')}"></label>
-  <label style="grid-column:1/-1">Ficha en la web<input name="web" value="${esc(k.web || '')}" placeholder="https://cars4forfun.com/coches/…"></label>
+  <label style="grid-column:1/-1">Ficha en la web<input name="web" value="${esc(k.web || '')}" placeholder="https://cars4forfun.com/coches/…"></label><label style="grid-column:1/-1">Foto (enlace)<input name="foto" value="${esc(k.foto || '')}" placeholder="https://cars4forfun.com/img/…"></label>
   <label style="grid-column:1/-1">Condiciones con el propietario<textarea name="condiciones" rows="2" placeholder="Quién conduce, km máximos, fechas que no puede…">${esc(k.condiciones || '')}</textarea></label><label style="grid-column:1/-1">Notas<textarea name="notas" rows="3">${esc(k.notas || '')}</textarea></label></div>`;
 V.ccartera = async (m) => {
   const list = await api('/admin/c4f/cartera'); m = shell('ccartera');
