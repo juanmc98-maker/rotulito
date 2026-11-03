@@ -1,6 +1,18 @@
 // Plata Garage · diccionario de traducciones: castellano → [catalán, inglés]
 // Claves tal y como salen en la web (números como {0}, {1}…). Lo que no está aquí se queda en castellano.
 export default {
+  "¿Para cuándo lo necesitas?": ["Per a quan el necessites?", "When do you need it?"],
+  "¿Cómo piensas pagarlo?": ["Com penses pagar-lo?", "How do you plan to pay?"],
+  "¿Cómo piensas pagarlo? (opcional)": ["Com penses pagar-lo? (opcional)", "How do you plan to pay? (optional)"],
+  "Lo antes posible": ["Com més aviat millor", "As soon as possible"],
+  "En el próximo mes": ["El mes que ve", "Within the next month"],
+  "En los próximos 3 meses": ["En els propers 3 mesos", "In the next 3 months"],
+  "Sin prisa, me estoy informando": ["Sense pressa, m'estic informant", "No rush, just looking"],
+  "Al contado": ["Al comptat", "Cash"],
+  "Con financiación": ["Amb finançament", "With financing"],
+  "Entregando mi coche como parte del pago": ["Entregant el meu cotxe com a part del pagament", "Trading in my car as part of the payment"],
+  "Todo para cambiar de coche,": ["Tot per canviar de cotxe,", "Everything to change your car,"],
+  "en un solo sitio": ["en un sol lloc", "in one place"],
   "<a>Ver coches</a><a>Pedir cita</a><a>Vender mi coche</a><a>Te lo buscamos</a><a>Contacto</a><a>Blog</a>": ["<a>Veure cotxes</a><a>Demanar cita</a><a>Vendre el meu cotxe</a><a>Te'l busquem</a><a>Contacte</a><a>Blog</a>","<a>See cars</a><a>Book a visit</a><a>Sell my car</a><a>We'll find it for you</a><a>Contact</a><a>Blog</a>"],
   "<i></i>{0} coches disponibles · {1} próximamente": ["<i></i>{0} cotxes disponibles · {1} properament","<i></i>{0} cars available · {1} coming soon"],
   "Coches que estamos preparando. Si te interesa alguno, <a>pídenos por WhatsApp que te avisemos</a>.": ["Cotxes que estem preparant. Si t'interessa algun, <a>demana'ns per WhatsApp que t'avisem</a>.","Cars we are getting ready. If you're interested in one, <a>ask us on WhatsApp to let you know</a>."],

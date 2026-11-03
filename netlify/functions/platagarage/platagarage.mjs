@@ -255,7 +255,7 @@ async function buildClientes() {
   al.forEach((x) => add(x, 'alerta', `Quiere avisos: ${x.busca || 'coches nuevos'}`));
   m.forEach((x) => add(x, 'mensaje', `Mensaje: ${(x.asunto || x.mensaje || '').slice(0, 80)}`));
   po.forEach((x) => { const t = msgPortal(x.mensaje); add(x, 'portal', `${x.fuente || 'Portal'}${x.tipoContacto && x.tipoContacto !== 'Mensaje' ? ' · ' + x.tipoContacto : ''}${t ? ': ' + t : ''}`); });
-  bu.forEach((x) => add(x, 'busqueda', `Busca: ${[x.marca, x.modelo].filter(Boolean).join(' ') || 'cualquiera'} hasta ${x.presupuesto || '?'} €`));
+  bu.forEach((x) => add(x, 'busqueda', `Busca: ${[x.marca, x.modelo].filter(Boolean).join(' ') || 'cualquiera'} hasta ${x.presupuesto || '?'} €${x.cuando ? ' · ' + x.cuando : ''}${x.pago ? ' · ' + x.pago : ''}`));
   const td = today(); const r = (s) => ETAPAS.indexOf(s);
   const out = [...map.values()].map((c) => {
     c.leads.sort((a, z) => z.created.localeCompare(a.created));
@@ -1143,7 +1143,7 @@ async function api(r, req, M, ip, url, context) {
         propuesta = true; }
       const motivo = clip(f.motivo, 60) || 'Ver un coche en concreto';
       const list = await load('bookings');
-      list.unshift({ ...base, tipo: motivo === 'Reservar este coche' ? 'reserva' : 'cita', fecha, hora, motivo, ...(propuesta ? { propuesta: true } : {}), mensaje: clip(f.mensaje, 1000), ...carRef(f.coche) });
+      list.unshift({ ...base, tipo: motivo === 'Reservar este coche' ? 'reserva' : 'cita', fecha, hora, motivo, ...(propuesta ? { propuesta: true } : {}), mensaje: clip(f.mensaje, 1000), pago: clip(f.pago, 60), ...carRef(f.coche) });
       await save('bookings', list);
       out.ref = base.id; out.k = sign('ref|' + base.id).slice(0, 16);
       if (list[0].tipo === 'cita' && base.email) { // confirmación al cliente con el resumen de su cita
@@ -1160,7 +1160,7 @@ async function api(r, req, M, ip, url, context) {
       await save('envios', list);
     } else if (r === '/busqueda') {
       const list = await load('busquedas');
-      list.unshift({ ...base, marca: clip(f.marca, 40), modelo: clip(f.modelo, 60), anioDesde: num(f.anio), kmMax: num(f.km), presupuesto: num(f.presupuesto), combustible: clip(f.combustible, 20), cambio: clip(f.cambio, 20), comentario: clip(f.mensaje, 1500) });
+      list.unshift({ ...base, marca: clip(f.marca, 40), modelo: clip(f.modelo, 60), anioDesde: num(f.anio), kmMax: num(f.km), presupuesto: num(f.presupuesto), combustible: clip(f.combustible, 20), cambio: clip(f.cambio, 20), comentario: clip(f.mensaje, 1500), cuando: clip(f.cuando, 60), pago: clip(f.pago, 60) });
       await save('busquedas', list);
       if (f.avisar === 'si' && base.email) { // consentimiento aparte para los avisos por email
         const al = await load('alertas'); const busca = [clip(f.marca, 40), clip(f.modelo, 60), clip(f.combustible, 20), clip(f.cambio, 20)].filter(Boolean).join(' ') || 'Cualquier coche';
@@ -1235,7 +1235,7 @@ async function notify(tipo, d, origin) {
   { const T = { cita: (d.tipo === 'reserva' || d.motivo === 'Reservar este coche' ? 'Nueva reserva' : 'Nueva cita') + (d.flex === '1' ? ' (hora propuesta, confirmar)' : ''), tasacion: 'Nueva tasación', envio: 'Nuevo envío', mensaje: 'Nuevo mensaje', busqueda: 'Te lo buscamos', alerta: 'Nueva alerta', financiacion: 'Pide financiación' }; await pushAll('garage', `${T[tipo] || 'Nuevo aviso'} · Plata Garage`, [d.nombre || d.email, d.cocheNombre].filter(Boolean).join(' · ') || 'Ábrelo en la app', tipo).catch((e) => console.error('push', e.message)); }
   // Mismo formato que el aviso del panel anterior: tarjeta oscura con logo, tabla de datos, notas y botón al backoffice
   const diaL = d.fecha ? new Date(d.fecha + 'T12:00:00Z').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
-  const F = [['Cliente', d.nombre], ['Email', d.email], ['Teléfono', d.telefono], ['Día', diaL], ['Hora', d.hora ? d.hora + (d.flex === '1' ? ' (propuesta por el cliente: confirmar disponibilidad)' : '') : ''], ['Motivo', d.motivo], ['Coche de interés', d.cocheNombre], ['Código postal', d.cp], ['Asunto', d.asunto], ['Su coche', [d.marca, d.modelo, d.anio].filter(Boolean).join(' ')], ['Kilómetros', d.km], ['Combustible', d.combustible], ['Cambio', d.cambio], ['Estado', d.estado], ['ITV', d.itv], ['Presupuesto', d.presupuesto ? d.presupuesto + ' €' : ''], ['Busca', d.busca], ['Máximo', d.max ? d.max + ' €' : '']].filter(([, v]) => v != null && v !== '');
+  const F = [['Cliente', d.nombre], ['Email', d.email], ['Teléfono', d.telefono], ['Día', diaL], ['Hora', d.hora ? d.hora + (d.flex === '1' ? ' (propuesta por el cliente: confirmar disponibilidad)' : '') : ''], ['Motivo', d.motivo], ['Coche de interés', d.cocheNombre], ['Código postal', d.cp], ['Asunto', d.asunto], ['Su coche', [d.marca, d.modelo, d.anio].filter(Boolean).join(' ')], ['Kilómetros', d.km], ['Combustible', d.combustible], ['Cambio', d.cambio], ['Estado', d.estado], ['ITV', d.itv], ['Presupuesto', d.presupuesto ? d.presupuesto + ' €' : ''], ['Busca', d.busca], ['Máximo', d.max ? d.max + ' €' : ''], ['Para cuándo', d.cuando], ['Forma de pago', d.pago]].filter(([, v]) => v != null && v !== '');
   const notas = d.mensaje || d.notas || '';
   const panel = `${origin}${BASE}/admin${tipo === 'financiacion' ? '#financiaciones' : ''}`;
   const H1 = { cita: d.tipo === 'reserva' || d.motivo === 'Reservar este coche' ? 'Nueva solicitud de reserva' : 'Nueva cita reservada', tasacion: 'Nueva solicitud de tasación', envio: 'Nueva solicitud de envío', mensaje: 'Nuevo mensaje', busqueda: 'Nueva petición "Te lo buscamos"', alerta: 'Nueva alerta de stock', financiacion: 'Nueva solicitud de financiación' }[tipo] || 'Nuevo aviso';
