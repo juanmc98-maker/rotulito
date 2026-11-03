@@ -195,8 +195,8 @@ function sitemap(site, cars, posts) {
   const newest = cars.map((c) => c.updated || c.created || '').sort().pop() || today();
   const rows = [u('/', newest), u('/vehiculos/', newest), u('/cita'), u('/te-lo-buscamos'), u('/cuanto-vale-mi-coche'), u('/preguntas-frecuentes'), u('/como-comprar'), u('/contacto'), u('/blog/'), u('/aviso-legal'), u('/privacidad'), u('/cookies'), u('/condiciones-de-contratacion')];
   cars.forEach((c) => rows.push(u(`/vehiculos/${c.slug}`, c.updated || c.created, c.images || [])));
-  SEO.tiposConStock(cars).forEach((t) => rows.push(u(`/coches/${t.slug}`, newest)));
-  SEO.marcas(cars).forEach((m) => rows.push(u(`/coches/${m.slug}`, newest)));
+  SEO.tiposConStock(cars).filter((t) => SEO.idxLanding(SEO.landing(t.slug, cars))).forEach((t) => rows.push(u(`/coches/${t.slug}`, newest)));
+  SEO.marcas(cars).filter((m) => SEO.idxLanding(SEO.landing(m.slug, cars))).forEach((m) => rows.push(u(`/coches/${m.slug}`, newest)));
   SEO.ZONAS.filter((z) => SEO.ZONAS_IDX.includes(z.slug)).forEach((z) => rows.push(u(`/coches-segunda-mano-${z.slug}`, newest)));
   SEO.ZONAS_VENTA.forEach((z) => rows.push(u(`/vender-mi-coche-${z.slug}`)));
   posts.forEach((p) => rows.push(u(`/blog/${p.slug}`, p.updated || p.publishedAt)));
@@ -555,7 +555,7 @@ const inner = async (req, context) => {
       if (SEO.BRAND_ALIAS[sub.slice(8)]) return redirect(`${BASE}/coches/${SEO.BRAND_ALIAS[sub.slice(8)]}`); // /coches/mercedes → /coches/mercedes-benz
       const l = SEO.landing(sub.slice(8), pubCars(cars));
       if (!l) return redirect(`${BASE}/vehiculos/`);
-      return html(V.landingPage({ l, cars: pubCars(cars) }), 200, l.cars.length ? {} : { 'x-robots-tag': 'noindex, follow' });
+      return html(V.landingPage({ l, cars: pubCars(cars), noindex: !SEO.idxLanding(l) }), 200, SEO.idxLanding(l) ? {} : { 'x-robots-tag': 'noindex, follow' });
     }
     if (/^\/vehiculos\/[^/]+\/cartel$/.test(sub)) { // cartel A4 para imprimir (no se indexa)
       const car = cars.find((c) => c.slug === sub.split('/')[2]);

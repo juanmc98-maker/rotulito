@@ -7,11 +7,11 @@ const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toL
 
 // Distancias en línea recta desde el centro de Sabadell, redondeadas (orientativas)
 // Solo estas zonas tienen página propia «coches de segunda mano cerca de…» (las demás redirigen: evitan páginas casi iguales)
-export const ZONAS_IDX = ['sabadell', 'terrassa', 'sant-cugat', 'barbera-del-valles', 'cerdanyola'];
+export const ZONAS_IDX = ['sabadell', 'terrassa']; // solo Sabadell (donde estamos) y Terrassa: el resto eran casi iguales (riesgo de doorway pages) → 301 a Sabadell
 // Páginas de zona retiradas → página más cercana que se mantiene (o el stock). Redirección 301 en los 3 idiomas
 export const ZONA_REDIR = {
-  ripollet: 'cerdanyola', 'montcada-i-reixac': 'cerdanyola',
-  'badia-del-valles': 'barbera-del-valles', 'santa-perpetua-de-mogoda': 'barbera-del-valles', 'mollet-del-valles': 'barbera-del-valles',
+  ripollet: 'sabadell', 'montcada-i-reixac': 'sabadell', 'sant-cugat': 'sabadell', 'barbera-del-valles': 'sabadell', cerdanyola: 'sabadell',
+  'badia-del-valles': 'sabadell', 'santa-perpetua-de-mogoda': 'sabadell', 'mollet-del-valles': 'sabadell',
   'sant-quirze-del-valles': 'sabadell', 'castellar-del-valles': 'sabadell', polinya: 'sabadell',
   rubi: 'terrassa',
 };
@@ -64,7 +64,7 @@ export const ZONAS = [
 ];
 
 // Páginas "vender mi coche" por zona: solo las poblaciones más cercanas, para no hacer páginas de relleno
-export const ZONAS_VENTA = ['terrassa', 'sant-cugat', 'barbera-del-valles', 'cerdanyola', 'sant-quirze-del-valles', 'castellar-del-valles'].map((s) => ZONAS.find((z) => z.slug === s)).filter(Boolean);
+export const ZONAS_VENTA = ['terrassa'].map((s) => ZONAS.find((z) => z.slug === s)).filter(Boolean);
 
 const hasFuel = (c, ...f) => f.some((x) => norm(c.fuel).includes(x));
 // Cada tipo: filtro sobre el stock y textos propios
@@ -150,6 +150,8 @@ export function landing(slug, cars) {
   if (mk) return { kind: 'marca', slug, h: `${mk.name}`, txt: `${mk.name} de segunda mano en stock en Sabadell, revisados y con garantía de 12 meses.`, cars: cars.filter((c) => slugBrand(c.brand) === slug), brand: mk.name };
   return null;
 }
+// Una landing /coches/<slug> solo se indexa (y va al sitemap) si tiene 2 coches o más y no es de cuota al mes (cuotas sin TIN/TAE)
+export const idxLanding = (l) => !!l && l.cars.length >= 2 && !l.cuota;
 export const tiposConStock = (cars) => { const cs = soloCoches(cars); return TIPOS.map((t) => ({ ...t, n: cs.filter(t.f).length })).filter((t) => t.n > 0); };
 
 // <title> de un artículo del blog (máx. 60 caracteres): si no cabe con la marca, se queda la parte antes de «:» y, si aún no cabe, se corta en una palabra

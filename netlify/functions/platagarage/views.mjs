@@ -660,7 +660,7 @@ ${car ? `<div class="box" style="max-width:720px;display:flex;gap:14px;align-ite
 <li><b style="color:#fff">Entregarlo como parte del pago</b> de uno de <a href="${B}/vehiculos/" style="color:var(--or)">nuestros coches</a>.</li>
 <li><b style="color:#fff">Que lo vendamos por ti:</b> nos encargamos de anunciarlo, de atender a los interesados y de todo el papeleo de la venta. Te explicamos las condiciones por escrito antes de firmar nada.</li></ul></div>
 <div style="margin-top:56px">${faqHtml(faqs)}</div>
-<p class="note" style="margin-top:24px">${z ? `También valoramos coches de ${ZONAS_VENTA.filter((x) => x.slug !== z.slug).map((x) => `<a href="${B}/vender-mi-coche-${x.slug}">${esc(x.name)}</a>`).join(', ')} y del resto del Vallès. <a href="${B}/cuanto-vale-mi-coche">Tasación en Sabadell</a>.` : `También valoramos coches de ${ZONAS_VENTA.map((x) => `<a href="${B}/vender-mi-coche-${x.slug}">${esc(x.name)}</a>`).join(', ')} y del resto del Vallès.`}</p>
+<p class="note" style="margin-top:24px">${z && ZONAS_VENTA.length < 2 ? `<a href="${B}/cuanto-vale-mi-coche">Tasación en Sabadell</a>.` : z ? `También valoramos coches de ${ZONAS_VENTA.filter((x) => x.slug !== z.slug).map((x) => `<a href="${B}/vender-mi-coche-${x.slug}">${esc(x.name)}</a>`).join(', ')} y del resto del Vallès. <a href="${B}/cuanto-vale-mi-coche">Tasación en Sabadell</a>.` : `También valoramos coches de ${ZONAS_VENTA.map((x) => `<a href="${B}/vender-mi-coche-${x.slug}">${esc(x.name)}</a>`).join(', ')} y del resto del Vallès.`}</p>
 <p class="note" style="margin-top:10px">Información orientativa: puede contener errores y no es vinculante.</p></div></section>`;
   const script = `(()=>{const f=document.getElementById('wz'),fs=[...f.querySelectorAll('fieldset')],bar=[...document.querySelectorAll('.stp2 i')],b=document.getElementById('wzb'),n=document.getElementById('wzn'),sb=document.getElementById('wzs');let k=0;
 const go=i=>{k=i;fs.forEach((x,j)=>x.classList.toggle('on',j===k));bar.forEach((x,j)=>x.classList.toggle('on',j<=k));b.style.visibility=k?'visible':'hidden';n.style.display=k<fs.length-1?'':'none';sb.style.display=k===fs.length-1?'':'none'};
@@ -746,7 +746,7 @@ const buscaMini = ({ titulo, sub = '', pre = {}, id = '', oculto = false }) => `
 <label class="chk"><input type="checkbox" name="avisar" value="si"><span>Además, avisadme por email cuando entre un coche así (opcional; me puedo dar de baja cuando quiera).</span></label><div class="msg" role="alert"></div><button class="btn" type="submit">Que me lo busquen</button></form></div>`;
 const vacio = (txt, pre = {}) => buscaMini({ titulo: `Ahora mismo no tenemos ${txt} en stock`, sub: `El stock cambia cada semana. Déjanos tus datos y te lo buscamos nosotros, sin compromiso. O <a href="${B}/vehiculos/" style="color:var(--or)">mira todo el stock</a>.`, pre: { mensaje: `Buscaba ${txt}`, ...pre } });
 
-export function landingPage({ l, cars }) {
+export function landingPage({ l, cars, noindex = false }) {
   const qd = (c) => (cuotaDesde(c) || {}).c || 0;
   const list = [...l.cars].sort((a, b) => (l.cuota ? qd(a) - qd(b) : (hayPrecio(b) - hayPrecio(a)) || a.price - b.price));
   const desdeTxt = list.length ? (l.cuota ? `${f0c(qd(list[0]))} €/mes` : eur(list[0].price)) : '';
@@ -764,7 +764,7 @@ ${list.length ? `<div class="grid">${list.map(card).join('')}</div>` : vacio(l.k
 <div class="chipl" style="margin-top:34px">${rel.map(([s, t]) => `<a href="${B}/coches/${s}">${esc(t)}</a>`).join('')}</div>
 <div style="margin-top:56px">${faqHtml(faqs)}</div></div></section>`;
   const title = l.cuota ? `${l.h} en Sabadell | Plata Garage` : `${h1} | Plata Garage`.length <= 60 ? `${h1} | Plata Garage` : `${l.h} en Sabadell | Plata Garage`;
-  return page({ title, desc: cut(`${l.cuota ? `Coches de segunda mano por menos de ${l.cuota} € al mes en Sabadell` : `${l.h} de segunda mano en Sabadell`}: ${list.length} en stock${list.length ? ` desde ${desdeTxt}${l.cuota ? ' sin entrada' : ''}` : ''}, con garantía de 12 meses. Pide cita y ven a verlos.`), on: 'veh', body, alert: !!list.length, script: list.length ? '' : FORM_JS, path: `/coches/${l.slug}`, noindex: !list.length, image: list[0]?.images?.[0], head: ld(ldList(list)) + ld(ldFaq(faqs)) + ld(ldCrumb([['Inicio', '/'], ['Vehículos', '/vehiculos/'], [l.h]])) });
+  return page({ title, desc: cut(`${l.cuota ? `Coches de segunda mano por menos de ${l.cuota} € al mes en Sabadell` : `${l.h} de segunda mano en Sabadell`}: ${list.length} en stock${list.length ? ` desde ${desdeTxt}${l.cuota ? ' sin entrada' : ''}` : ''}, con garantía de 12 meses. Pide cita y ven a verlos.`), on: 'veh', body, alert: !!list.length, script: list.length ? '' : FORM_JS, path: `/coches/${l.slug}`, noindex: noindex || !list.length, image: list[0]?.images?.[0], head: ld(ldList(list)) + ld(ldFaq(faqs)) + ld(ldCrumb([['Inicio', '/'], ['Vehículos', '/vehiculos/'], [l.h]])) });
 }
 
 export function zona({ z, cars }) {
