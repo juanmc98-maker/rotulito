@@ -805,12 +805,14 @@ async function api(r, req, M, ip, url, context) {
     }
     if (kind === 'lista') { // solo identificadores, sin nombres ni datos
       const fin = (await db().get('financiaciones', { type: 'json' })) || [], docs = (await db().get('docs', { type: 'json' })) || {};
-      return json([...fin.flatMap((x) => (x.fin?.docs || []).map((d) => ({ c: 'nomina', id: d.id }))), ...Object.values(docs).flatMap((v) => (v.files || []).map((d) => ({ c: 'doc', id: d.id })))]);
+      const tas = (await db().get('tasaciones', { type: 'json' })) || [];
+      return json([...fin.flatMap((x) => (x.fin?.docs || []).map((d) => ({ c: 'nomina', id: d.id }))), ...Object.values(docs).flatMap((v) => (v.files || []).map((d) => ({ c: 'doc', id: d.id }))), ...tas.flatMap((x) => (x.docs || []).map((d) => ({ c: 'tasa', id: d.id })))]);
     }
-    if (kind === 'file' && /^(nomina|doc)$/.test(carpeta || '') && /^[a-z0-9]{6,40}$/.test(id || '')) { // documento cifrado con su nombre dentro
+    if (kind === 'file' && /^(nomina|doc|tasa)$/.test(carpeta || '') && /^[a-z0-9]{6,40}$/.test(id || '')) { // documento cifrado con su nombre dentro
       const raw = await media().get(carpeta + '/' + id, { type: 'arrayBuffer' }); if (!raw) return json({ error: 'No encontrado' }, 404);
       const buf = Buffer.from(raw); const dec = crypto.createDecipheriv('aes-256-gcm', docKey(), buf.subarray(0, 12)); dec.setAuthTag(buf.subarray(12, 28));
       let nombre = id; if (carpeta === 'nomina') { for (const x of (await db().get('financiaciones', { type: 'json' })) || []) { const d = (x.fin?.docs || []).find((y) => y.id === id); if (d) { nombre = `${x.nombre || 'cliente'} - ${d.tipo || 'nomina'} - ${d.nombre}`; break; } } }
+      else if (carpeta === 'tasa') { for (const x of (await db().get('tasaciones', { type: 'json' })) || []) { const d = (x.docs || []).find((y) => y.id === id); if (d) { nombre = `tasacion - ${x.nombre || 'cliente'} - ${d.tipo} - ${d.nombre}`; break; } } }
       else { for (const [k, v] of Object.entries((await db().get('docs', { type: 'json' })) || {})) { const d = (v.files || []).find((y) => y.id === id); if (d) { nombre = `${k.replace(':', ' ')} - ${d.nombre}`; break; } } }
       const nb = Buffer.from(nombre.replace(/[\\/:*?"<>|]/g, ' ').slice(0, 200)); const hd = Buffer.alloc(2); hd.writeUInt16BE(nb.length);
       return bin(await seal(Buffer.concat([hd, nb, dec.update(buf.subarray(28)), dec.final()])));
@@ -1150,8 +1152,25 @@ async function api(r, req, M, ip, url, context) {
         const car = list[0].coche ? cars.find((x) => x.slug === list[0].coche) : null; const em = V.emailCita({ bk: list[0], car, origin: (env('PG_SITE_URL') || url.origin).replace(/\/+$/, ''), k: out.k });
         await sendMail({ to: base.email, subject: em.subject, html: em.html, text: em.text }).catch((e) => console.error('smtp cliente', e.message)); }
     } else if (r === '/tasacion') {
+      // Fotos del coche (mínimo 4) y ficha técnica obligatorias; se guardan cifradas y solo se ven en el panel
+      if (num(f.km) > 250000) return json({ error: 'De momento no trabajamos coches de más de 250.000 km, por su antigüedad y kilometraje. Gracias por pensar en nosotros.' }, 400);
+      const precioCliente = num(String(f.precio || '').replace(/\D/g, '')); if (!precioCliente) return json({ error: 'Dinos cuánto esperas sacar por tu coche.' }, 400);
+      const fo = (f._files || []).filter((x) => x.campo === 'foto'), fi = (f._files || []).filter((x) => x.campo === 'ficha');
+      if (fo.length < 4) return json({ error: 'Sube al menos 4 fotos del coche: delante, lateral, interior y cuentakilómetros.' }, 400);
+      if (fo.length > 10) return json({ error: 'Puedes subir como máximo 10 fotos del coche.' }, 400);
+      if (!fi.length) return json({ error: 'Sube la ficha técnica (foto o PDF).' }, 400);
+      if (fi.length > 2) return json({ error: 'La ficha técnica: como máximo 2 archivos (las dos caras).' }, 400);
+      for (const x of fo) if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(x.file.type || '')) return json({ error: 'Las fotos del coche tienen que ser imágenes.' }, 400);
+      for (const x of fi) if (!/^(application\/pdf|image\/(jpeg|png|webp|heic|heif))$/.test(x.file.type || '')) return json({ error: 'La ficha técnica tiene que ser una foto o un PDF.' }, 400);
+      for (const x of [...fo, ...fi]) if (x.file.size > 4.2e6) return json({ error: 'Cada archivo puede pesar como máximo 4 MB.' }, 400);
+      const docs = [];
+      for (const [x, tipo] of [...fo.map((x) => [x, 'foto']), ...fi.map((x) => [x, 'ficha'])]) { const buf = Buffer.from(await x.file.arrayBuffer()); const id = 't' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'); const iv = crypto.randomBytes(12); const ci = crypto.createCipheriv('aes-256-gcm', docKey(), iv);
+        const enc = Buffer.concat([ci.update(buf), ci.final()]); await media().set('tasa/' + id, Buffer.concat([iv, ci.getAuthTag(), enc])); docs.push({ id, tipo, nombre: clip(x.file.name, 120) || tipo, mime: x.file.type, size: buf.length }); }
       const list = await load('tasaciones');
-      list.unshift({ ...base, ...(f.coche ? { parteDePago: true, ...carRef(f.coche) } : {}), marca: clip(f.marca, 40), modelo: clip(f.modelo, 60), anio: num(f.anio), km: num(f.km), combustible: clip(f.combustible, 20), cambio: clip(f.cambio, 20), estado: clip(f.estado, 40), itv: clip(f.itv, 20), notas_cliente: clip(f.notas, 1500) });
+      // Conservación: las fotos y la ficha se borran a los 12 meses (la solicitud se queda)
+      const lim = new Date(Date.now() - 365 * 864e5).toISOString();
+      for (const y of list) if ((y.created || '') <= lim && y.docs?.length) { for (const d of y.docs) await media().delete('tasa/' + d.id).catch(() => {}); y.docs = []; }
+      list.unshift({ ...base, ...(f.coche ? { parteDePago: true, ...carRef(f.coche) } : {}), marca: clip(f.marca, 40), modelo: clip(f.modelo, 60), anio: num(f.anio), km: num(f.km), combustible: clip(f.combustible, 20), cambio: clip(f.cambio, 20), estado: clip(f.estado, 40), itv: clip(f.itv, 20), notas_cliente: clip(f.notas, 1500), precioCliente, docs });
       await save('tasaciones', list);
     } else if (r === '/envio') {
       const cp = clip(f.cp, 5); if (!/^\d{5}$/.test(cp)) return json({ error: 'Escribe un código postal de 5 cifras.' }, 400);
@@ -1235,7 +1254,7 @@ async function notify(tipo, d, origin) {
   { const T = { cita: (d.tipo === 'reserva' || d.motivo === 'Reservar este coche' ? 'Nueva reserva' : 'Nueva cita') + (d.flex === '1' ? ' (hora propuesta, confirmar)' : ''), tasacion: 'Nueva tasación', envio: 'Nuevo envío', mensaje: 'Nuevo mensaje', busqueda: 'Te lo buscamos', alerta: 'Nueva alerta', financiacion: 'Pide financiación' }; await pushAll('garage', `${T[tipo] || 'Nuevo aviso'} · Plata Garage`, [d.nombre || d.email, d.cocheNombre].filter(Boolean).join(' · ') || 'Ábrelo en la app', tipo).catch((e) => console.error('push', e.message)); }
   // Mismo formato que el aviso del panel anterior: tarjeta oscura con logo, tabla de datos, notas y botón al backoffice
   const diaL = d.fecha ? new Date(d.fecha + 'T12:00:00Z').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
-  const F = [['Cliente', d.nombre], ['Email', d.email], ['Teléfono', d.telefono], ['Día', diaL], ['Hora', d.hora ? d.hora + (d.flex === '1' ? ' (propuesta por el cliente: confirmar disponibilidad)' : '') : ''], ['Motivo', d.motivo], ['Coche de interés', d.cocheNombre], ['Código postal', d.cp], ['Asunto', d.asunto], ['Su coche', [d.marca, d.modelo, d.anio].filter(Boolean).join(' ')], ['Kilómetros', d.km], ['Combustible', d.combustible], ['Cambio', d.cambio], ['Estado', d.estado], ['ITV', d.itv], ['Presupuesto', d.presupuesto ? d.presupuesto + ' €' : ''], ['Busca', d.busca], ['Máximo', d.max ? d.max + ' €' : ''], ['Para cuándo', d.cuando], ['Forma de pago', d.pago]].filter(([, v]) => v != null && v !== '');
+  const F = [['Cliente', d.nombre], ['Email', d.email], ['Teléfono', d.telefono], ['Día', diaL], ['Hora', d.hora ? d.hora + (d.flex === '1' ? ' (propuesta por el cliente: confirmar disponibilidad)' : '') : ''], ['Motivo', d.motivo], ['Coche de interés', d.cocheNombre], ['Código postal', d.cp], ['Asunto', d.asunto], ['Su coche', [d.marca, d.modelo, d.anio].filter(Boolean).join(' ')], ['Kilómetros', d.km], ['Combustible', d.combustible], ['Cambio', d.cambio], ['Estado', d.estado], ['ITV', d.itv], ['Presupuesto', d.presupuesto ? d.presupuesto + ' €' : ''], ['Precio que espera', tipo === 'tasacion' && d.precio ? String(d.precio).replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €' : ''], ['Busca', d.busca], ['Máximo', d.max ? d.max + ' €' : ''], ['Para cuándo', d.cuando], ['Forma de pago', d.pago]].filter(([, v]) => v != null && v !== '');
   const notas = d.mensaje || d.notas || '';
   const panel = `${origin}${BASE}/admin${tipo === 'financiacion' ? '#financiaciones' : ''}`;
   const H1 = { cita: d.tipo === 'reserva' || d.motivo === 'Reservar este coche' ? 'Nueva solicitud de reserva' : 'Nueva cita reservada', tasacion: 'Nueva solicitud de tasación', envio: 'Nueva solicitud de envío', mensaje: 'Nuevo mensaje', busqueda: 'Nueva petición "Te lo buscamos"', alerta: 'Nueva alerta de stock', financiacion: 'Nueva solicitud de financiación' }[tipo] || 'Nuevo aviso';
@@ -1833,6 +1852,12 @@ async function adminApi(r, req, M, me, url) {
       await save('tarifas', t); V.setTarifa(t); return json({ ok: true, actual: V.TARIFA });
     }
   }
+  if (seg[0] === 'tasaciones' && seg[2] === 'doc' && seg[3] && M === 'GET') { // foto o ficha técnica del vendedor (descifrada solo para el panel)
+    const x = (await load('tasaciones')).find((y) => y.id === seg[1]); const meta = (x?.docs || []).find((d) => d.id === seg[3]); if (!meta) return json({ error: 'No encontrado' }, 404);
+    const r = await media().get('tasa/' + meta.id, { type: 'arrayBuffer' }); if (!r) return json({ error: 'No encontrado' }, 404);
+    const buf = Buffer.from(r); const dec = crypto.createDecipheriv('aes-256-gcm', docKey(), buf.subarray(0, 12)); dec.setAuthTag(buf.subarray(12, 28));
+    return new Response(Buffer.concat([dec.update(buf.subarray(28)), dec.final()]), { headers: { 'content-type': meta.mime || 'application/octet-stream', 'content-disposition': `inline; filename*=UTF-8''${encodeURIComponent(meta.nombre)}`, 'cache-control': 'private, max-age=3600' } });
+  }
   if (seg[0] === 'financiaciones' && seg[2] === 'doc' && seg[3] && M === 'GET') { // nómina adjunta (descifrada solo para el panel)
     const x = (await load('financiaciones')).find((y) => y.id === seg[1]); const meta = (x?.fin?.docs || []).find((d) => d.id === seg[3]); if (!meta) return json({ error: 'No encontrado' }, 404);
     const r = await media().get('nomina/' + meta.id, { type: 'arrayBuffer' }); if (!r) return json({ error: 'No encontrado' }, 404);
@@ -1844,7 +1869,7 @@ async function adminApi(r, req, M, me, url) {
     const key = map[seg[0]]; const list = await load(key);
     if (M === 'GET') return json(list);
     const i = list.findIndex((x) => x.id === seg[1]); if (i < 0) return json({ error: 'No existe' }, 404);
-    if (M === 'DELETE') { for (const d of list[i].fin?.docs || []) await media().delete('nomina/' + d.id).catch(() => {}); list.splice(i, 1); await save(key, list); return json({ ok: true }); }
+    if (M === 'DELETE') { for (const d of list[i].fin?.docs || []) await media().delete('nomina/' + d.id).catch(() => {}); for (const d of list[i].docs || []) if (key === 'tasaciones') await media().delete('tasa/' + d.id).catch(() => {}); list.splice(i, 1); await save(key, list); return json({ ok: true }); }
     if (M === 'PUT') {
       const allowed = { bookings: ['pendiente', 'confirmada', 'cancelada', 'completada'], tasaciones: ['pendiente', 'contactado', 'ofertado', 'visto', 'comprado', 'gestion', 'vendido', 'descartado', 'cerrada'], envios: ['pendiente', 'presupuesto enviado', 'aceptado', 'rechazado'], financiaciones: ['pendiente', 'enviada', 'aprobada', 'denegada', 'cerrada'], mensajes: ['pendiente', 'respondido'], alertas: ['activa', 'avisado', 'baja'], busquedas: ['pendiente', 'buscando', 'propuesto', 'cerrada'], portales: ['pendiente', 'contactado', 'cita', 'descartado'] }[key];
       if ('status' in body && allowed.includes(body.status) && body.status !== list[i].status) { const d = new Date().toISOString(); list[i].historial = [{ d, t: `Paso: ${list[i].status || 'pendiente'} → ${body.status}` }, ...(list[i].historial || [])].slice(0, 50); list[i].status = body.status; list[i].desde = d; }
