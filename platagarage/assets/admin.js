@@ -49,6 +49,7 @@ async function api(path, opt = {}) {
   const j = await r.json().catch(() => ({}));
   if (r.status === 401 && j.error === 'auth') { showLogin(); throw new Error('Sesión caducada'); }
   if (!r.ok) throw new Error(j.error || 'Error ' + r.status);
+  if (path === '/admin/clientes' && !opt.method && Array.isArray(j)) aprendeAvisos(j);
   return j;
 }
 function toast(msg, err) { const t = document.createElement('div'); t.className = 'toast' + (err ? ' e' : ''); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
@@ -734,7 +735,9 @@ const paradoV = (x) => PASOS_V[x.status || 'pendiente'] && PASOS_V[x.status || '
 V.valoraciones = inbox({ key: 'valoraciones', path: 'tasaciones', title: 'Vendedores', labels: Object.fromEntries(Object.entries(PASOS_V).map(([k, v]) => [k, v[0]])),
   sub: (l) => { const ab = l.filter((x) => !['comprado', 'vendido', 'descartado', 'cerrada'].includes(x.status)); const pa = ab.filter(paradoV).length; return `${ab.length} vendedor${ab.length === 1 ? "" : "es"} en marcha de ${l.length} solicitudes de tasación${pa ? ` · <b style="color:var(--or)">${pa} parado${pa > 1 ? 's' : ''} más días de la cuenta</b>` : ''}.`; },
   states: ['pendiente', 'contactado', 'ofertado', 'visto', 'comprado', 'gestion', 'vendido', 'descartado'],
-  body: (x) => bx('Vehículo', `<b>${esc(x.marca)} ${esc(x.modelo)}</b>`) + bx('Año', x.anio || '—') + bx('Km', nf(x.km)) + bx('Combustible', esc(x.combustible || '—')) + (x.estado ? bx('Estado', esc(x.estado)) : '') + (x.parteDePago ? bx('Parte de pago de', esc(x.cocheNombre || '')) : '') + (x.notas_cliente ? bx('Observaciones', esc(x.notas_cliente)) : '')
+  body: (x) => bx('Vehículo', `<b>${esc(x.marca)} ${esc(x.modelo)}</b>`) + bx('Año', x.anio || '—') + bx('Km', nf(x.km)) + bx('Combustible', esc(x.combustible || '—')) + (x.estado ? bx('Estado', esc(x.estado)) : '') + (x.precioCliente ? bx('Espera sacar', `<b>${eur(x.precioCliente)}</b>`) : '') + (x.parteDePago ? bx('Parte de pago de', esc(x.cocheNombre || '')) : '') + (x.notas_cliente ? bx('Observaciones', esc(x.notas_cliente)) : '')
+    + (() => { const u = (d) => `${API}/admin/tasaciones/${x.id}/doc/${d.id}`, fo = (x.docs || []).filter((d) => d.tipo === 'foto'), fi = (x.docs || []).filter((d) => d.tipo === 'ficha');
+      return (x.docs || []).length ? bx('Fotos', `<span style="display:flex;flex-wrap:wrap;gap:6px">${fo.map((d) => `<a href="${u(d)}" target="_blank" rel="noopener"><img src="${u(d)}" alt="" loading="lazy" style="width:64px;height:64px;object-fit:cover;border-radius:8px;display:block"></a>`).join('')}</span>`) + bx('Ficha técnica', fi.map((d, i) => `<a href="${u(d)}" target="_blank" rel="noopener">${/pdf/.test(d.mime) ? 'PDF' : 'Foto'}${fi.length > 1 ? ' ' + (i + 1) : ''}</a>`).join(' · ') || '<span class="mu">No la subió</span>') : ''; })()
     + bx('En este paso', `<span style="${paradoV(x) ? 'color:var(--or);font-weight:700' : ''}">${diasV(x)} día${diasV(x) === 1 ? '' : 's'}${paradoV(x) ? ' · toca moverlo' : ''}</span>`)
     + `<label style="min-width:160px">Oferta (€)<input data-o inputmode="numeric" value="${x.oferta || ''}" placeholder="0"></label>` });
 V.envios = inbox({ key: 'envios', path: 'envios', title: 'Solicitudes de envío', sub: (l) => `${l.length} solicitudes de presupuesto de envío.`, states: ['pendiente', 'presupuesto enviado', 'aceptado', 'rechazado'],
@@ -1175,15 +1178,38 @@ function enlaceLead(c, cars) {
   const mk = [...new Map(cars.filter((y) => !y.sold && y.brand && marcaEn(txt, y.brand)).map((y) => [slugB(y.brand), y.brand])).entries()];
   return mk.length === 1 ? { url: `${WEB}/coches/${mk[0][0]}`, marca: mk[0][1] } : { url: `${WEB}/vehiculos/`, marca: '' };
 }
+// Pistas para desempatar coches iguales (p. ej. tres Mazda 3): combustible, color, precio y km que vengan en el texto del aviso
+const DIESEL = /\b(diesel|crtd|crdi|tdi|hdi|dci|cdti|tdci|jtd|multijet|bluehdi|d4d|cdi|tdv6)\b/;
+const GASOL = /\b(gasolina|tsi|tfsi|vvt|vvti|mpi|gti)\b/;
+// El combustible del aviso descarta: un aviso de diésel nunca es un coche de gasolina, ni al revés
+const choca = (n, y) => { const f = nrm(y.fuel); return (/diesel/.test(f) && GASOL.test(n) && !DIESEL.test(n)) || (/gasolina/.test(f) && DIESEL.test(n) && !GASOL.test(n)); };
+const pista = (n, y) => { let p = 0; const f = nrm(y.fuel);
+  if ((/diesel/.test(f) && DIESEL.test(n)) || (/gasolina/.test(f) && GASOL.test(n))) p += 2;
+  const col = nrm(y.color).trim(); if (col && n.includes(' ' + col.split(' ')[0])) p += 2;
+  const pr = Number(y.price); if (pr && (n.includes(' ' + pr + ' ') || n.includes(' ' + pr.toLocaleString('es-ES').replace(/\./g, ' ') + ' '))) p += 2;
+  const km = Number(y.km); if (km && n.includes(' ' + km + ' ')) p += 2; return p; };
+// Candidatos del texto de un portal: los que más puntúan; si quedan varios empatados, no se adivina
+function candPortal(n, cars) {
+  let bs = 0, best = [];
+  cars.filter((y) => !y.sold).forEach((y) => { let p = 0; if (marcaEn(n, y.brand)) p += 2; if (n.includes(nrm(y.model)) || n.includes(nrm(y.brand.split(/[\s-]/)[0] + y.model).replace(/ /g, '') + ' ')) p += 3; if (p < 3 || choca(n, y)) return; if (y.year && n.includes(` ${y.year} `)) p += 1; const vt = nrm(y.version).trim().split(' ').filter(Boolean); if (vt.length && vt.every((w) => n.includes(' ' + w + ' '))) p += 1; p += pista(n, y) / 10; if (p > bs) { bs = p; best = [y]; } else if (p === bs) best.push(y); });
+  return bs >= 3 ? best : [];
+}
+// Lo que ya se eligió a mano enseña: el mismo título de anuncio (Wallapop corta los títulos) vuelve a ser el mismo coche
+let AVISOS = new Map();
+function aprendeAvisos(all) { const m = new Map(), malo = new Set();
+  for (const c of all) { if (!c.cocheInteres) continue; for (const l of c.leads || []) { if (l.coche || l.tipo !== 'portal') continue; const k = nrm(l.cocheNombre).trim(); if (!k) continue; if (m.has(k) && m.get(k) !== c.cocheInteres) malo.add(k); m.set(k, c.cocheInteres); } }
+  malo.forEach((k) => m.delete(k)); AVISOS = m; }
 function cocheDe(c, cars) {
   if (c.cocheInteres) { const x = cars.find((y) => y.slug === c.cocheInteres); if (x) return x; }
   for (const l of c.leads) { const x = l.coche && cars.find((y) => y.slug === l.coche); if (x) return x; }
-  for (const l of c.leads) {
-    const n = nrm(l.cocheNombre); if (n.trim() === '') continue; let best = null, bs = 0, tie = false;
-    cars.filter((y) => !y.sold).forEach((y) => { let p = 0; if (marcaEn(n, y.brand)) p += 2; if (n.includes(nrm(y.model)) || n.includes(nrm(y.brand.split(/[\s-]/)[0] + y.model).replace(/ /g, '') + ' ')) p += 3; if (y.year && n.includes(` ${y.year} `)) p += 1; if (y.version && n.includes(nrm(y.version))) p += 1; if (p > bs) { bs = p; best = y; tie = false; } else if (p === bs && p) tie = true; });
-    if (bs >= 3 && !tie) return best; // dos coches iguales (p. ej. los dos Mazda 3): no se adivina, va a la página de la marca
-  }
+  for (const l of c.leads) { const n = nrm(l.cocheNombre); if (n.trim() === '') continue; const a = AVISOS.get(n.trim()); const x = a && cars.find((y) => y.slug === a && !y.sold); if (x) return x; const k = candPortal(n, cars); if (k.length === 1) return k[0]; }
   return null;
+}
+// Si el aviso encaja con varios coches iguales, los posibles (para que Cristina o Juan elijan antes de escribir)
+function dudososDe(c, cars) {
+  if (cocheDe(c, cars)) return [];
+  for (const l of c.leads) { const n = nrm(l.cocheNombre); if (n.trim() === '') continue; const k = candPortal(n, cars); if (k.length > 1) return k; }
+  return [];
 }
 // Respuesta rápida de WhatsApp de Cristina y Juan (la misma que tienen guardada en WhatsApp Business); el saludo va según la hora de Madrid (hasta las 12:30, buenos días)
 const saludo = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('es-ES', { hour: 'numeric', minute: 'numeric', hourCycle: 'h23', timeZone: 'Europe/Madrid' }).formatToParts(new Date()).map((x) => [x.type, Number(x.value)])); return p.hour * 60 + p.minute < 12 * 60 + 30 ? 'Buenos días' : 'Buenas tardes'; }; // corte a las 12:30
@@ -1217,10 +1243,10 @@ V.leads = async (m) => {
   const hoy = all.filter((c) => !nuevos.includes(c) && !pend.includes(c) && c.etapa !== 'nuevo' && hoyAv(c).length).sort((a, b) => diasDesde(b.desde) - diasDesde(a.desde));
   const resto = all.filter((c) => !nuevos.includes(c) && !pend.includes(c) && !hoy.includes(c) && ![...POST_PG, 'perdido'].includes(c.etapa)).slice(0, 20);
   badges.leads = nuevos.length || ''; 
-  const card = (c) => { const car = cocheDe(c, cars); const own = car?.owner || ''; const l = c.leads[0] || {};
+  const card = (c) => { const car = cocheDe(c, cars); const dud = car ? [] : dudososDe(c, cars); const own = car?.owner || (dud.length && dud.every((x) => x.owner === dud[0].owner) ? dud[0].owner : ''); const l = c.leads[0] || {};
     const bt = (q) => `<a class="btn s${own && own !== q ? ' g' : (!own && q !== 'Cristina' ? ' g' : '')}" target="_blank" rel="noopener" data-k="${c.key}" data-q="${q}" href="${waLink(c.telefono, msgWa(q, car, c.nombre, car ? null : enlaceLead(c, cars)))}">${IC.wa}Soy ${q}</a>`;
     return `<div class="card sec ld"><div class="hd"><div><b>${esc(c.nombre)}</b>${c.telefono ? ` <a data-tl="${c.key}" href="tel:${esc(c.telefono)}" style="color:var(--mu);font-weight:500;margin-left:6px;text-decoration:none">${esc(c.telefono)}</a>` : ''}<span>${fdt(c.last)}</span></div>${badge(etq(c.etapa).toLowerCase())}</div>
-      ${hoyAv(c).length ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Hoy te toca:</b> ${esc(hoyAv(c).join(' · '))}</p>` : ''}<p>${esc(l.resumen || '')}${VERL[l.tipo] ? ` <a href="#${VERL[l.tipo]}" style="color:var(--or);white-space:nowrap">Ver solicitud</a>` : ''}</p>${c.leads.length > 1 ? `<p class="mu sm" style="margin:-4px 0 6px">También: ${esc([...new Set(c.leads.slice(1).map((x) => LTIPO[x.tipo] || x.tipo))].join(' · '))}</p>` : ''}${car ? `<p class="mu sm">Coche: <a href="${WEB}/vehiculos/${car.slug}" target="_blank" rel="noopener" style="color:var(--or)">${esc(car.brand)} ${esc(car.model)}</a> · ${car.year || '—'} · <b style="color:var(--tx)">${car.price ? eur(car.price) : '—'}</b>${own ? ' · de ' + esc(own) : ''}</p>` : ''}${!car && c.cocheTxt ? `<p class="mu sm">Busca: <b style="color:var(--tx)">${esc(c.cocheTxt)}</b></p>` : ''}${c.entrega ? `<p class="mu sm">Entrega a cambio: <b style="color:var(--tx)">${esc(c.entrega)}</b></p>` : ''}
+      ${hoyAv(c).length ? `<p class="sm" style="color:var(--or);margin:4px 0"><b>Hoy te toca:</b> ${esc(hoyAv(c).join(' · '))}</p>` : ''}<p>${esc(l.resumen || '')}${VERL[l.tipo] ? ` <a href="#${VERL[l.tipo]}" style="color:var(--or);white-space:nowrap">Ver solicitud</a>` : ''}</p>${c.leads.length > 1 ? `<p class="mu sm" style="margin:-4px 0 6px">También: ${esc([...new Set(c.leads.slice(1).map((x) => LTIPO[x.tipo] || x.tipo))].join(' · '))}</p>` : ''}${car ? `<p class="mu sm">Coche: <a href="${WEB}/vehiculos/${car.slug}" target="_blank" rel="noopener" style="color:var(--or)">${esc(car.brand)} ${esc(car.model)}</a> · ${car.year || '—'} · <b style="color:var(--tx)">${car.price ? eur(car.price) : '—'}</b>${own ? ' · de ' + esc(own) : ''}</p>` : ''}${dud.length ? `<p class="sm" style="color:var(--or);margin:6px 0 4px"><b>¿Cuál de estos es?</b> El aviso encaja con varios: elige uno antes de escribirle.</p><div class="row" style="margin-bottom:6px">${dud.map((x) => `<button class="btn s g" data-pick="${c.key}" data-slug="${esc(x.slug)}">${esc(x.brand)} ${esc(x.model)} · ${[x.color, x.fuel, x.year, x.price ? eur(x.price) : ''].filter(Boolean).map(esc).join(' · ')}${x.status === 'reservado' ? ' · reservado' : ''}</button>`).join('')}</div>` : ''}${!car && c.cocheTxt ? `<p class="mu sm">Busca: <b style="color:var(--tx)">${esc(c.cocheTxt)}</b></p>` : ''}${c.entrega ? `<p class="mu sm">Entrega a cambio: <b style="color:var(--tx)">${esc(c.entrega)}</b></p>` : ''}
       <div class="row">${!c.telefono ? (() => { const pt = /coches/i.test(l.fuente || '') ? ['Coches.net', 'https://pro.coches.net/'] : /wallapop/i.test(l.fuente || '') ? ['Wallapop', 'https://es.wallapop.com/app/chat'] : null; return pt ? `<a class="btn s" target="_blank" rel="noopener" data-rp="${c.key}" href="${pt[1]}">Responder en ${pt[0]}</a>` : ''; })() : own === 'Cristina' || own === 'Juan' ? bt(own) : bt('Cristina') + bt('Juan')}<a class="btn s g" href="#cliente/${c.key}">Ver ficha</a><button class="btn s g" data-ed="${c.key}">Editar</button><select class="s" data-mv="${c.key}" style="width:auto;padding:6px 10px" title="Mover a otra etapa"><option value="">Mover a…</option>${optsPG('')}</select><button class="btn r s" data-del="${c.key}">Eliminar</button></div></div>`; };
   const sec = (t, l, vacio) => `<h3 class="lh">${t} <span>${l.length}</span></h3>${l.length ? l.map(card).join('') : `<p class="mu">${vacio}</p>`}`;
   m.innerHTML = top('Leads', 'Los nuevos arriba. Al pulsar "Soy Cristina" o "Soy Juan" se abre WhatsApp con el mensaje escrito y el lead pasa a contactado.', `<button class="btn" id="nl">+ Nuevo lead</button><a class="btn g" href="#clientes">Embudo completo</a>`) +
@@ -1232,7 +1258,8 @@ V.leads = async (m) => {
   m.querySelectorAll('[data-ed]').forEach((b) => (b.onclick = () => { const c = all.find((x) => x.key === b.dataset.ed); if (c) editarDatosPG(c, cars); }));
   m.querySelectorAll('a[data-rp]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.rp); if (c && nuevos.includes(c)) api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: c.etapa === 'nuevo' ? 'contactado' : c.etapa } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
   m.querySelectorAll('a[data-tl]').forEach((a) => a.addEventListener('click', () => { const c = all.find((x) => x.key === a.dataset.tl); if (c && c.etapa === 'nuevo') api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: 'contactado' } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
-  m.querySelectorAll('a[data-k]').forEach((a) => (a.onclick = () => { const c = all.find((x) => x.key === a.dataset.k); if (c) { const cr = cocheDe(c, cars); a.href = waLink(c.telefono, msgWa(a.dataset.q, cr, c.nombre, cr ? null : enlaceLead(c, cars))); } if (c && nuevos.includes(c)) api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: c.etapa === 'nuevo' ? 'contactado' : c.etapa } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
+  m.querySelectorAll('[data-pick]').forEach((b) => (b.onclick = guard(async () => { const c = all.find((x) => x.key === b.dataset.pick); if (!c) return; await api('/admin/clientes/' + c.key, { method: 'PUT', body: { datos: true, nombre: c.nombre || 'Sin nombre', telefono: c.telefono || '', email: c.email || '', cocheInteres: b.dataset.slug, cocheTxt: '', entrega: c.entrega || '' } }); toast(`${c.nombre}: coche asignado`); route(); })));
+  m.querySelectorAll('a[data-k]').forEach((a) => (a.onclick = (ev) => { const c = all.find((x) => x.key === a.dataset.k); if (c && dudososDe(c, cars).length) { ev.preventDefault(); toast('Primero elige cuál de los coches es', true); return; } if (c) { const cr = cocheDe(c, cars); a.href = waLink(c.telefono, msgWa(a.dataset.q, cr, c.nombre, cr ? null : enlaceLead(c, cars))); } if (c && nuevos.includes(c)) api('/admin/clientes/' + c.key, { method: 'PUT', body: { etapa: c.etapa === 'nuevo' ? 'contactado' : c.etapa } }).then(() => toast(`${c.nombre}: contactado`)).catch(() => {}); }));
 };
 // Añadir un lead a mano (llamada, WhatsApp, visita, portal…)
 const ORIG_PG = ['WhatsApp', 'Llamada', 'Wallapop', 'Coches.net', 'Presencial', 'Instagram', 'Referido', 'Otro'];
