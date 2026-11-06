@@ -116,3 +116,7 @@ footer .soc svg{display:block}
 footer .firma{border-top:1px solid rgba(255,255,255,.12);margin-top:18px;padding-top:18px;text-align:center}
 footer .firma a{display:inline-flex;align-items:center;gap:10px;color:#c9d1db;text-decoration:none;font-size:14px}
 footer .firma .rotlogo{height:30px;width:auto;display:block}
+.btn.b2,.cta .b2,.b2.dk2{background:#25d366!important;color:#fff!important;border-color:#25d366!important}
+.btn.b2:hover{background:#1ebe5b!important}
+.hero{min-height:800px}.hero .in{padding-bottom:150px}
+@media(max-width:700px){.hero{min-height:0;height:auto}.hero .in{padding-bottom:110px}}
