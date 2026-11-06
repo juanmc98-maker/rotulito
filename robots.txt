@@ -1,14 +1,22 @@
-User-agent: GPTBot
-User-agent: ClaudeBot
-User-agent: anthropic-ai
-User-agent: Google-Extended
-User-agent: CCBot
-User-agent: Applebot-Extended
-User-agent: Meta-ExternalAgent
-User-agent: Bytespider
-Disallow: /
-
 User-agent: *
 Allow: /
+
+# Buscadores y asistentes de IA: bienvenidos.
+# Resumen del sitio para asistentes: https://www.rotulito.com/llms.txt
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-User
+User-agent: Claude-SearchBot
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: Bytespider
+Disallow: /
 
 Sitemap: https://www.rotulito.com/sitemap.xml
