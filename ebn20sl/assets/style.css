@@ -108,3 +108,11 @@ footer{background:#01152b;color:#b9cbe0;padding:50px 56px 30px;margin-top:0}
 .caso figcaption{padding:14px 16px}.caso b{display:block;font-size:16px;line-height:1.3}
 .caso span{display:block;font-size:13px;color:#5b6573;margin:3px 0 6px}.caso p{font-size:14px;margin:0}
 @media(max-width:900px){.casos{grid-template-columns:1fr 1fr}}@media(max-width:560px){.casos{grid-template-columns:1fr}}
+.btn .ico{vertical-align:-3px;margin-right:7px}
+.soc{display:flex;gap:12px;margin-top:8px}.soc a{display:inline-flex;width:38px;height:38px;border-radius:50%;align-items:center;justify-content:center;background:rgba(255,255,255,.1);color:#fff}
+.soc a:hover{background:#25d366}.soc a+a:hover{background:#d62976}.soc .ico{width:20px;height:20px}
+footer .soc a{display:inline-flex!important;padding:0!important;margin:0!important;align-items:center;justify-content:center;text-decoration:none}
+footer .soc svg{display:block}
+footer .firma{border-top:1px solid rgba(255,255,255,.12);margin-top:18px;padding-top:18px;text-align:center}
+footer .firma a{display:inline-flex;align-items:center;gap:10px;color:#c9d1db;text-decoration:none;font-size:14px}
+footer .firma .rotlogo{height:30px;width:auto;display:block}
