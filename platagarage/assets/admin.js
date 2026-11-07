@@ -86,7 +86,7 @@ let badges = {};
 // Negocio activo: Plata Garage (panel completo), Plata Marine y Rotulito (embudo de clientes)
 const NEGS = { garage: { n: 'Plata Garage', logo: ST + '/assets/logo.png', dark: true }, marine: { n: 'Plata Marine', logo: '/img/plata-marine-logo.png' }, rotulito: { n: 'Rotulito', logo: '/assets/rotulito-logo.svg' }, c4f: { n: 'Cars4Fun', logo: '/img/cars4fun-logo.png' } };
 let MIS = ['garage']; let ROL = ''; const ME_ADMIN = () => ROL === 'admin';
-let QUIEN_YO = ''; // quién ha entrado (se muestra en el menú)
+let QUIEN_YO = ''; let ME_ID = '', ME_USER = ''; // quién ha entrado (se muestra en el menú)
 let PRIMERA = true; // primera carga de la app
 let NEG = 'garage'; try { NEG = localStorage.getItem('pg_neg') || 'garage'; if (!NEGS[NEG]) NEG = 'garage'; } catch (e) { /* sin almacenamiento */ }
 { const qn = new URLSearchParams(location.search).get('neg'); if (qn && NEGS[qn]) { NEG = qn; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } history.replaceState(null, '', location.pathname + location.hash); } }
@@ -107,7 +107,7 @@ function shell(active) {
   const ml = $('#mlg'); if (ml) ml.innerHTML = logoTag();
   $('#sb').innerHTML = `<div class="sbh"><a class="lg" href="#" id="slg">${logoTag()}</a><button class="rb mo" id="sx" aria-label="Cerrar menú">${IC.x}</button></div>
     <div class="negs"${MIS.length < 2 ? ' style="display:none"' : ''}>${MIS.map((k) => `<button data-neg="${k}" class="${k === NEG ? 'on' : ''}" title="${NEGS[k].n}">${NEGS[k].n}</button>`).join('')}</div><small class="sbl">Backoffice</small>` +
-    (NEG === 'garage' ? NAV : NEG === 'c4f' ? NAV_C4F : NEG === 'marine' ? [...NAV_OTRO.slice(0, 1), ['cartera', 'Cartera'], ['astilleros', 'Astilleros'], ['demandas', 'Demandas'], ...NAV_OTRO.slice(1), ['visitas', 'Visitas web'], ...(ME_ADMIN() ? [['trimestre', 'Trimestre']] : [])] : [...NAV_OTRO, ['visitas', 'Visitas web'], ...(ME_ADMIN() ? [['trimestre', 'Trimestre']] : [])]).map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') +
+    (NEG === 'garage' ? NAV : NEG === 'c4f' ? NAV_C4F : NEG === 'marine' ? [...NAV_OTRO.slice(0, 1), ['cartera', 'Cartera'], ['astilleros', 'Astilleros'], ['demandas', 'Demandas'], ...NAV_OTRO.slice(1), ['visitas', 'Visitas web'], ...(ME_ADMIN() ? [['trimestre', 'Trimestre']] : [])] : [...NAV_OTRO, ['visitas', 'Visitas web'], ...(ME_ADMIN() ? [['trimestre', 'Trimestre']] : [])]).map(([k, t]) => `<a href="#${k}" class="${active === k ? 'on' : ''}">${IC[k]}${t}${badges[k] ? `<span class="bd">${badges[k]}</span>` : ''}</a>`).join('') + (ES_JUAN() ? `<a href="#finanzas" class="${active === 'finanzas' ? 'on' : ''}" style="margin-top:10px;border-top:1px solid var(--line);border-radius:0;padding-top:14px">${IC.finanzas}Mis finanzas</a>` : '') +
     `<div class="sp"></div><a href="${NEG === 'c4f' ? 'https://cars4forfun.com/' : NEG === 'marine' ? 'https://www.platamarine.com/' : NEG === 'rotulito' ? 'https://www.rotulito.com/' : B + '/'}" target="_blank" rel="noopener">${IC.web}Ver web pública</a><small class="mu" style="display:block;font-size:12px;margin:10px 6px 2px">Has entrado como <b>${esc(QUIEN_YO)}</b></small><a href="#" id="pushon">${IC.alertas}<span id="pusht">Avisos en este móvil</span></a><a href="#" id="lo">${IC.out}Cambiar de persona</a>`;
   $('#sx').onclick = () => $('#sb').classList.remove('open');
   $('#sb').querySelectorAll('[data-neg]').forEach((b) => (b.onclick = () => { NEG = b.dataset.neg; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } $('#sb').classList.remove('open'); goHome(); }));
@@ -159,6 +159,107 @@ V.resumen = async (m) => {
     const rows = cars.filter((c) => !c.sold && !c.hidden).map((c) => ({ c, n: matches(c, als, bus).length })).filter((x) => x.n).sort((a, b) => b.n - a.n).slice(0, 6);
     if (rows.length && $('#int')) $('#int').innerHTML = `<div class="card sec hl"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h3>Coches con interesados esperando</h3><span class="mu sm">Ábrelos y pulsa "Avisar a interesados"</span></div>${rows.map(({ c, n }) => `<a class="li" href="#coche/${c.id}" style="text-decoration:none"><div><b>${esc(c.brand)} ${esc(c.model)} ${esc(c.version || '')}</b><span>${[c.price > 0 ? eur(c.price) : 'Sin precio', c.year].filter(Boolean).join(' · ')}</span></div><div class="r"><b class="o">${n} interesado${n === 1 ? '' : 's'}</b></div></a>`).join('')}</div>`;
   }).catch(() => {});
+};
+
+// ---------- Mis finanzas (solo Juan): mapa de patrimonio y evolución ----------
+IC.finanzas = svg('<path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>');
+const ES_JUAN = () => ME_ID === 'admin' || ME_USER === 'juan';
+// Valores de partida (se pueden cambiar en "Ajustes de cuentas")
+const FIN_DEF = { '6251': { nombre: 'Póliza CaixaBank (Cuenta trabajo)', tipo: 'poliza', limite: 15000 }, '7214': { nombre: 'Póliza BBVA', tipo: 'poliza', limite: 15000 }, '8047': { tipo: 'conjunta', parte: 50 } };
+const eur0 = (n) => new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0, useGrouping: 'always' }).format(Math.round(n || 0)) + ' €';
+const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const mesTxt = (ym) => { const [y, m] = ym.split('-'); return MES[+m - 1] + ' ' + y.slice(2); };
+function finCuentas(d) {
+  const cfg = (d.cfg && d.cfg.cuentas) || {};
+  return (d.cuentas || []).map((c) => { const def = FIN_DEF[c.fin] || {}; const k = { tipo: 'cuenta', parte: 100, limite: 0, nombre: '', ...def, ...(cfg[c.uid] || {}) };
+    const nombre = k.nombre || `${c.banco} ·${c.fin}`; const saldo = Number(c.saldo) || 0;
+    return { ...c, ...k, nombre, saldo, cuenta: k.tipo === 'poliza' ? saldo : saldo * (k.parte / 100) }; }).filter((c) => c.tipo !== 'oculta');
+}
+// Gráfico de línea simple en SVG (series: [{n, color, pts:[[etiqueta, valor]]}])
+function lineaSVG(series, h = 220) {
+  const all = series.flatMap((s) => s.pts.map((p) => p[1])); if (!all.length) return '<p class="mu">Aún no hay datos suficientes.</p>';
+  const labels = series[0].pts.map((p) => p[0]); const W = 640, P = { l: 70, r: 34, t: 14, b: 26 };
+  let mn = Math.min(0, ...all), mx = Math.max(0, ...all); if (mx === mn) mx = mn + 1; const pad = (mx - mn) * 0.08; mn -= pad; mx += pad;
+  const x = (i) => P.l + (labels.length < 2 ? (W - P.l - P.r) / 2 : (i * (W - P.l - P.r)) / (labels.length - 1)), y = (v) => P.t + ((mx - v) * (h - P.t - P.b)) / (mx - mn);
+  const ticks = [mn + pad, (mn + mx) / 2, mx - pad];
+  return `<svg viewBox="0 0 ${W} ${h}" style="width:100%;height:auto;display:block" role="img">${ticks.map((t) => `<line x1="${P.l}" x2="${W - P.r}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${P.l - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--mu)">${eur0(t)}</text>`).join('')}
+    ${mn < 0 && mx > 0 ? `<line x1="${P.l}" x2="${W - P.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--mu)" stroke-dasharray="3 3"/>` : ''}
+    ${labels.map((l, i) => `<text x="${x(i)}" y="${h - 6}" text-anchor="middle" font-size="11" fill="var(--mu)">${esc(l)}</text>`).join('')}
+    ${series.map((s) => `<polyline fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linejoin="round" points="${s.pts.map((p, i) => `${x(i)},${y(p[1])}`).join(' ')}"/>${s.pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(p[1])}" r="3.5" fill="${s.color}"><title>${esc(s.n)} · ${esc(p[0])}: ${eur0(p[1])}</title></circle>`).join('')}`).join('')}</svg>
+    <div class="row" style="gap:16px;margin-top:6px;flex-wrap:wrap">${series.map((s) => `<span class="sm"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${s.color};margin-right:6px"></i>${esc(s.n)}</span>`).join('')}</div>`;
+}
+function barrasSVG(rows, h = 200) {
+  if (!rows.length) return '<p class="mu">Aún no hay movimientos.</p>';
+  const W = 640, P = { l: 70, r: 10, t: 10, b: 26 }; const mx = Math.max(1, ...rows.flatMap((r) => [r.entra, r.sale])); const bw = (W - P.l - P.r) / rows.length;
+  const y = (v) => P.t + ((mx - v) * (h - P.t - P.b)) / mx;
+  return `<svg viewBox="0 0 ${W} ${h}" style="width:100%;height:auto;display:block" role="img">${[0, mx / 2, mx].map((t) => `<line x1="${P.l}" x2="${W - P.r}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${P.l - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="var(--mu)">${eur0(t)}</text>`).join('')}
+    ${rows.map((r, i) => { const x0 = P.l + i * bw + bw * 0.18, w = bw * 0.3; return `<rect x="${x0}" y="${y(r.entra)}" width="${w}" height="${y(0) - y(r.entra)}" rx="3" fill="var(--ok)"><title>Entra ${esc(r.mes)}: ${eur0(r.entra)}</title></rect><rect x="${x0 + w + 2}" y="${y(r.sale)}" width="${w}" height="${y(0) - y(r.sale)}" rx="3" fill="var(--bad)"><title>Sale ${esc(r.mes)}: ${eur0(r.sale)}</title></rect><text x="${P.l + i * bw + bw / 2}" y="${h - 6}" text-anchor="middle" font-size="11" fill="var(--mu)">${esc(r.mes)}</text>`; }).join('')}</svg>
+    <div class="row" style="gap:16px;margin-top:6px"><span class="sm"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--ok);margin-right:6px"></i>Entra</span><span class="sm"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--bad);margin-right:6px"></i>Sale</span><span class="mu sm">Sin traspasos entre tus cuentas</span></div>`;
+}
+// CSV de cartera de DeGiro (Cartera → Exportar → CSV): suma el valor en EUR de cada línea
+function leerDegiro(txt) {
+  const filas = txt.replace(/\r/g, '').split('\n').filter((l) => l.trim()).map((l) => { const out = []; let cur = '', q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === ',' && !q) { out.push(cur); cur = ''; } else cur += ch; } out.push(cur); return out.map((v) => v.trim()); });
+  if (filas.length < 2) throw new Error('El archivo está vacío');
+  const cab = filas[0].map((c) => c.toLowerCase()); let iv = cab.findIndex((c) => /valor.*eur|value.*eur/.test(c)); if (iv < 0) iv = cab.length - 1;
+  const ii = cab.findIndex((c) => /isin/.test(c)), ic = cab.findIndex((c) => /cantidad|quantity|amount/.test(c));
+  const num = (v) => { const t = String(v || '').replace(/[^\d.,-]/g, ''); const n = Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t); return Number.isFinite(n) ? n : 0; };
+  const pos = filas.slice(1).map((f) => ({ nombre: f[0], isin: ii >= 0 ? f[ii] : '', cantidad: ic >= 0 ? num(f[ic]) : 0, valor: num(f[iv]) })).filter((p) => p.nombre && p.valor);
+  if (!pos.length) throw new Error('No he encontrado posiciones con valor en EUR');
+  return { pos, total: Math.round(pos.reduce((a, p) => a + p.valor, 0) * 100) / 100 };
+}
+V.finanzas = async (m) => {
+  if (!ES_JUAN()) { shell('finanzas').innerHTML = '<div class="card">Este apartado es solo de Juan.</div>'; return; }
+  m = shell('finanzas'); m.innerHTML = top('Mis finanzas', 'Cargando tus bancos…');
+  let d; try { d = await api('/admin/finanzas'); } catch (e) { d = { error: e.message, cfg: {} }; }
+  const cfg = d.cfg || {}; const extra = cfg.extra || [], dg = cfg.degiro || [];
+  const cs = finCuentas(d); const ctas = cs.filter((c) => c.tipo !== 'poliza'), pols = cs.filter((c) => c.tipo === 'poliza');
+  const liquidez = ctas.reduce((a, c) => a + c.cuenta, 0), dispuesto = pols.reduce((a, c) => a + Math.min(0, c.saldo), 0), libre = pols.reduce((a, c) => a + Math.max(0, (c.limite || 0) + c.saldo), 0);
+  const inv = dg.length ? dg[dg.length - 1].valor : 0, invX = extra.filter((x) => x.tipo === 'inversion').reduce((a, x) => a + x.valor, 0);
+  const bienes = extra.filter((x) => x.tipo === 'bien').reduce((a, x) => a + x.valor, 0), deudas = extra.filter((x) => x.tipo === 'deuda').reduce((a, x) => a + x.valor, 0);
+  const neto = liquidez + dispuesto + inv + invX + bienes - deudas;
+  // Evolución: saldo a fin de cada mes reconstruido desde el saldo de hoy hacia atrás con los movimientos
+  const meses = [...new Set((d.meses || []).map((x) => x.mes))].sort(); const hoy = new Date().toISOString().slice(0, 7); if (meses.length && !meses.includes(hoy)) meses.push(hoy);
+  const netoMes = (uid, mes) => (d.meses || []).filter((x) => x.uid === uid && x.mes > mes).reduce((a, x) => a + Number(x.neto), 0);
+  const finMes = (lista, f) => meses.map((mm) => [mesTxt(mm), lista.reduce((a, c) => a + (c.saldo - netoMes(c.uid, mm)) * (f ? f(c) : 1), 0)]);
+  const sLiq = finMes(ctas, (c) => c.parte / 100), sPol = finMes(pols);
+  const sNeto = sLiq.map((p, i) => [p[0], p[1] + sPol[i][1] + bienes - deudas + invX + (() => { const mm = meses[i]; const v = dg.filter((x) => x.fecha.slice(0, 7) <= mm).pop(); return v ? v.valor : 0; })()]);
+  const ids = new Set(ctas.map((c) => c.uid));
+  const flujo = meses.map((mm) => { const l = (d.meses || []).filter((x) => x.mes === mm && ids.has(x.uid)); return { mes: mesTxt(mm), entra: l.reduce((a, x) => a + Number(x.entra), 0), sale: l.reduce((a, x) => a + Number(x.sale), 0) }; });
+  const nomDe = Object.fromEntries(cs.map((c) => [c.uid, c.nombre]));
+  const kc = (t, v, sub = '', col = '') => `<div class="card"><span>${t}</span><b style="font-size:24px${col ? ';color:' + col : ''}">${v}</b>${sub ? `<small class="mu" style="font-size:12px">${sub}</small>` : ''}</div>`;
+  const fila = (izq, sub, der, col = '') => `<div class="li"><div><b>${esc(izq)}</b>${sub ? `<span class="mu sm" style="display:block">${sub}</span>` : ''}</div><div class="r"><b${col ? ` style="color:${col}"` : ''}>${der}</b></div></div>`;
+  m.innerHTML = top('Mis finanzas', `Solo lo ves tú.${d.sync ? ' Bancos actualizados el ' + fdt(d.sync) + '.' : ''}`, `<button class="btn g" id="fa">Ajustes de cuentas</button>`) +
+    (d.falta ? '<div class="card sec" style="border-color:var(--or)"><b>Falta conectar los bancos con la app</b><p class="mu sm" style="margin:4px 0 0">Hay que poner la clave FIN_TOKEN en Netlify. Mientras tanto puedes apuntar bienes, deudas y DeGiro.</p></div>' : '') +
+    (d.error ? `<div class="card sec" style="border-color:var(--bad)">${esc(d.error)}</div>` : '') +
+    `<div class="kp">${kc('Patrimonio neto', eur0(neto), 'Cuentas + inversiones + bienes − pólizas y deudas', neto >= 0 ? 'var(--ok)' : 'var(--bad)')}${kc('Dinero en cuentas', eur0(liquidez), 'Las conjuntas, solo tu parte')}${kc('Libre en pólizas', eur0(libre), 'Dispuesto: ' + eur0(-dispuesto), 'var(--blue)')}${kc('Inversiones', eur0(inv + invX), dg.length ? 'DeGiro a ' + fdate(dg[dg.length - 1].fecha) : 'Sube el CSV de DeGiro')}</div>
+    <h2 style="margin:6px 0 12px">Mapa</h2>
+    <div class="two"><div class="card"><h3>Cuentas</h3>${ctas.map((c) => fila(c.nombre, [c.nombre !== `${c.banco} ·${c.fin}` ? `${esc(c.banco)} ·${esc(c.fin)}` : '', c.tipo === 'conjunta' ? `Conjunta (tu parte ${c.parte}%)` : ''].filter(Boolean).join(' · '), eur(Math.round(c.cuenta * 100) / 100))).join('') || '<p class="mu">Sin cuentas.</p>'}</div>
+    <div style="display:grid;gap:16px;align-content:start"><div class="card"><h3>Pólizas (solo negocio)</h3>${pols.map((c) => { const lib = Math.max(0, (c.limite || 0) + c.saldo), pct = c.limite ? Math.min(100, (-Math.min(0, c.saldo) / c.limite) * 100) : 0;
+      return `<div class="li" style="display:block"><div class="row" style="justify-content:space-between"><b>${esc(c.nombre)}</b><b style="color:var(--blue);font-size:18px">${eur0(lib)} libres</b></div><div style="height:8px;border-radius:6px;background:var(--c2,rgba(0,0,0,.08));margin:8px 0 4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${pct > 85 ? 'var(--bad)' : 'var(--or)'}"></div></div><span class="mu sm">Dispuesto ${eur0(-Math.min(0, c.saldo))} de ${eur0(c.limite)}</span></div>`; }).join('') || '<p class="mu">Marca tus pólizas en Ajustes.</p>'}</div>
+    <div class="card"><div class="row" style="justify-content:space-between"><h3>DeGiro</h3><label class="btn g s" style="cursor:pointer">Subir CSV<input type="file" id="dgf" accept=".csv,text/csv" hidden></label></div>
+      ${dg.length ? dg.slice(-6).reverse().map((x) => fila(fdate(x.fecha), x.aportado ? 'Aportado ' + eur0(x.aportado) + ' · ' + (x.valor - x.aportado >= 0 ? '+' : '') + eur0(x.valor - x.aportado) : (x.posiciones || []).length + ' posiciones', eur0(x.valor))).join('') : '<p class="mu sm">En DeGiro: Cartera → Exportar → CSV, y súbelo aquí una vez al mes.</p>'}</div>
+    <div class="card"><div class="row" style="justify-content:space-between"><h3>Bienes y deudas</h3><button class="btn g s" id="fx">Añadir</button></div>
+      ${extra.map((x) => `<div class="li"><div><b>${esc(x.nombre)}</b><span class="mu sm" style="display:block">${x.tipo === 'deuda' ? 'Deuda' : x.tipo === 'inversion' ? 'Inversión' : 'Bien'} · ${fdate(x.fecha)}</span></div><div class="r"><b style="color:${x.tipo === 'deuda' ? 'var(--bad)' : 'inherit'}">${x.tipo === 'deuda' ? '−' : ''}${eur0(x.valor)}</b> <button class="btn g s" data-xe="${x.id}">Editar</button></div></div>`).join('') || '<p class="mu sm">Apunta aquí el barco, la deuda con tus padres, etc.</p>'}</div></div>
+    <h2 style="margin:26px 0 12px">Evolución</h2>
+    <div class="card"><h3 style="margin-bottom:8px">Patrimonio y dinero en cuentas, a fin de mes</h3>${lineaSVG([{ n: 'Patrimonio neto', color: 'var(--ok)', pts: sNeto }, { n: 'Dinero en cuentas', color: 'var(--blue)', pts: sLiq }, { n: 'Pólizas (dispuesto)', color: 'var(--or)', pts: sPol }])}<p class="mu sm" style="margin-top:8px">Los bancos dan movimientos desde ${meses.length ? mesTxt(meses[0]) : '—'}; a partir de ahí la línea se va alargando sola cada mes.</p></div>
+    <div class="card" style="margin-top:16px"><h3 style="margin-bottom:8px">Entra y sale cada mes (cuentas, sin pólizas)</h3>${barrasSVG(flujo)}</div>
+    ${dg.length > 1 ? `<div class="card" style="margin-top:16px"><h3 style="margin-bottom:8px">DeGiro</h3>${lineaSVG([{ n: 'Valor', color: 'var(--ok)', pts: dg.map((x) => [fdate(x.fecha), x.valor]) }, ...(dg.some((x) => x.aportado) ? [{ n: 'Aportado', color: 'var(--mu)', pts: dg.map((x) => [fdate(x.fecha), x.aportado || 0]) }] : [])])}</div>` : ''}
+    <div class="card" style="margin-top:16px"><h3>Últimos movimientos</h3>${(d.ultimos || []).filter((u) => nomDe[u.uid]).slice(0, 25).map((u) => fila(u.concepto || '—', `${fdate(u.fecha)} · ${esc(nomDe[u.uid])}`, (u.importe > 0 ? '+' : '') + eur(u.importe), u.importe > 0 ? 'var(--ok)' : '')).join('') || '<p class="mu">Sin movimientos.</p>'}</div>`;
+  // Ajustes de cada cuenta: nombre, tipo (cuenta, conjunta, póliza u oculta), límite y tu parte
+  $('#fa').onclick = () => { const dm = modal(`<h3 style="margin-bottom:12px">Ajustes de cuentas</h3><div style="display:grid;gap:12px;max-height:70vh;overflow:auto;text-align:left">${(d.cuentas || []).length ? (d.cuentas || []).map((c) => { const k = { tipo: 'cuenta', parte: 100, limite: '', nombre: '', ...(FIN_DEF[c.fin] || {}), ...((cfg.cuentas || {})[c.uid] || {}) };
+      return `<form class="fg" data-u="${c.uid}" style="grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line);padding-bottom:12px"><b style="grid-column:1/-1">${esc(c.banco)} ·${esc(c.fin)} <span class="mu sm">${eur(Number(c.saldo) || 0)}</span></b><label>Nombre<input name="nombre" value="${esc(k.nombre)}" placeholder="${esc(c.banco)} ·${esc(c.fin)}"></label><label>Tipo<select name="tipo">${[['cuenta', 'Cuenta'], ['conjunta', 'Conjunta'], ['poliza', 'Póliza'], ['oculta', 'No contar']].map(([v, t]) => `<option value="${v}"${k.tipo === v ? ' selected' : ''}>${t}</option>`).join('')}</select></label><label>Límite (pólizas)<input name="limite" inputmode="decimal" value="${k.limite || ''}"></label><label>Tu parte %<input name="parte" inputmode="numeric" value="${k.parte}"></label><input type="hidden" name="uid" value="${c.uid}"><button class="btn s" style="grid-column:1/-1">Guardar</button></form>`; }).join('') : '<p class="mu">Sin cuentas.</p>'}</div>`);
+    dm.querySelectorAll('form').forEach((f) => (f.onsubmit = guard(async (e) => { e.preventDefault(); await api('/admin/finanzas/cuenta', { method: 'PUT', body: Object.fromEntries(new FormData(f)) }); toast('Guardado'); f.querySelector('button').textContent = 'Guardado ✓'; })));
+    const obs = new MutationObserver(() => { if (!document.body.contains(dm)) { obs.disconnect(); route(); } }); obs.observe(document.body, { childList: true }); };
+  // Bienes, deudas e inversiones a mano
+  const formX = (x = {}) => `<form class="fg" id="xf" style="grid-template-columns:1fr 1fr;text-align:left"><label>Tipo<select name="tipo"${x.id ? ' disabled' : ''}>${[['bien', 'Bien'], ['deuda', 'Deuda'], ['inversion', 'Inversión']].map(([v, t]) => `<option value="${v}"${x.tipo === v ? ' selected' : ''}>${t}</option>`).join('')}</select></label><label>Nombre<input name="nombre" required value="${esc(x.nombre || '')}" placeholder="Barco PLATA"></label><label>Valor (€)<input name="valor" inputmode="decimal" required value="${x.valor ?? ''}"></label><label>Fecha<input type="date" name="fecha" value="${x.fecha || new Date().toISOString().slice(0, 10)}"></label><label style="grid-column:1/-1">Notas<input name="notas" value="${esc(x.notas || '')}"></label><div class="row" style="grid-column:1/-1;justify-content:space-between">${x.id ? '<button type="button" class="btn g" id="xd">Borrar</button>' : '<span></span>'}<button class="btn">Guardar</button></div></form>`;
+  $('#fx').onclick = () => { const dm = modal(`<h3 style="margin-bottom:12px">Añadir bien, deuda o inversión</h3>${formX()}`); dm.querySelector('#xf').onsubmit = guard(async (e) => { e.preventDefault(); await api('/admin/finanzas/extra', { method: 'POST', body: Object.fromEntries(new FormData(e.target)) }); dm.remove(); route(); }); };
+  m.querySelectorAll('[data-xe]').forEach((b) => (b.onclick = () => { const x = extra.find((y) => y.id === b.dataset.xe); const dm = modal(`<h3 style="margin-bottom:12px">Editar</h3>${formX(x)}`);
+    dm.querySelector('#xf').onsubmit = guard(async (e) => { e.preventDefault(); await api('/admin/finanzas/extra/' + x.id, { method: 'PUT', body: Object.fromEntries(new FormData(e.target)) }); dm.remove(); route(); });
+    dm.querySelector('#xd').onclick = guard(async () => { if (!confirm('¿Borrar "' + x.nombre + '"?')) return; await api('/admin/finanzas/extra/' + x.id, { method: 'DELETE' }); dm.remove(); route(); }); }));
+  // DeGiro: se lee el CSV en el navegador y se guarda el total y las posiciones con la fecha
+  $('#dgf').onchange = guard(async (e) => { const f = e.target.files[0]; if (!f) return; let r; try { r = leerDegiro(await f.text()); } catch (er) { toast(er.message, true); return; }
+    const dm = modal(`<h3 style="margin-bottom:6px">Cartera de DeGiro</h3><p class="mu sm" style="margin:0 0 12px">${r.pos.length} posiciones · total <b>${eur(r.total)}</b></p><form class="fg" id="gf" style="grid-template-columns:1fr 1fr;text-align:left"><label>Fecha<input type="date" name="fecha" value="${new Date().toISOString().slice(0, 10)}"></label><label>Aportado total (€, opcional)<input name="aportado" inputmode="decimal" value="${dg.length ? dg[dg.length - 1].aportado || '' : ''}"></label><button class="btn" style="grid-column:1/-1">Guardar</button></form>`);
+    dm.querySelector('#gf').onsubmit = guard(async (ev) => { ev.preventDefault(); await api('/admin/finanzas/degiro', { method: 'POST', body: { ...Object.fromEntries(new FormData(ev.target)), valor: r.total, posiciones: r.pos } }); dm.remove(); toast('Cartera guardada'); route(); }); });
 };
 
 // ---------- avisos en el móvil/ordenador (con el panel abierto o instalado como app) ----------
@@ -1598,12 +1699,12 @@ let lastHash = null;
 async function route() {
   const [k, arg] = (location.hash.slice(1) || home().slice(1)).split('/');
   const misma = location.hash === lastHash, y = window.scrollY || document.documentElement.scrollTop || 0;
-  const fn = NEG === 'garage' ? (V[k] || V.leads) : ({ formularios: NEG === 'c4f' ? V.c4forms : null, ccartera: NEG === 'c4f' ? V.ccartera : null, ccoche: NEG === 'c4f' ? V.ccoche : null, leads: V.nleads, cartera: V.cartera, barco: V.barco, astilleros: NEG === 'marine' ? V.astilleros : null, astillero: NEG === 'marine' ? V.astillero : null, demandas: NEG === 'marine' ? V.demandas : null, demanda: NEG === 'marine' ? V.demanda : null, visitas: analiticasWeb, trimestre: V.ntrimestre, resumen: V.nresumen, analiticas: V.nanalisis, clientes: V.nclientes, ncliente: V.ncliente, conexion: V.conexion }[k] || V.nresumen);
+  const fn = k === 'finanzas' ? V.finanzas : NEG === 'garage' ? (V[k] || V.leads) : ({ formularios: NEG === 'c4f' ? V.c4forms : null, ccartera: NEG === 'c4f' ? V.ccartera : null, ccoche: NEG === 'c4f' ? V.ccoche : null, leads: V.nleads, cartera: V.cartera, barco: V.barco, astilleros: NEG === 'marine' ? V.astilleros : null, astillero: NEG === 'marine' ? V.astillero : null, demandas: NEG === 'marine' ? V.demandas : null, demanda: NEG === 'marine' ? V.demanda : null, visitas: analiticasWeb, trimestre: V.ntrimestre, resumen: V.nresumen, analiticas: V.nanalisis, clientes: V.nclientes, ncliente: V.ncliente, conexion: V.conexion }[k] || V.nresumen);
   try { await fn($('#mn'), arg); window.scrollTo(0, misma ? y : 0); lastHash = location.hash; } catch (e) { if (e.message !== 'Sesión caducada') { shell(k).innerHTML = `<div class="card">No se ha podido cargar: ${esc(e.message)}</div>`; } }
 }
 let polling = null;
 async function boot() {
-  try { const me = await api('/admin/me'); MIS = me.negs || ['garage']; ROL = me.role || ''; QUIEN_YO = me.id === 'admin' ? 'Juan' : (me.name || me.id); if (!MIS.includes(NEG)) { NEG = MIS[0]; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } } } catch (e) { return; }
+  try { const me = await api('/admin/me'); MIS = me.negs || ['garage']; ROL = me.role || ''; QUIEN_YO = me.id === 'admin' ? 'Juan' : (me.name || me.id); ME_ID = me.id || ''; ME_USER = me.user || ''; if (!MIS.includes(NEG)) { NEG = MIS[0]; try { localStorage.setItem('pg_neg', NEG); } catch (e) { /* */ } } } catch (e) { return; }
   // La app instalada antigua abría en #resumen: en Plata Garage, la primera vez se va a Leads
   if (PRIMERA) { PRIMERA = false; if (location.hash === '#resumen' || !location.hash) history.replaceState(null, '', location.pathname + '#leads'); }
   if (NEG !== 'garage') { route(); return; }
