@@ -95,7 +95,7 @@ async function sessionUser(req) {
   if (!u || String(u.ver || 0) !== ver || u.disabled) return null;
   // Negocios a los que puede entrar: el administrador a todos; el resto, a los que tenga marcados (por defecto solo Plata Garage)
   const negs = u.role === 'admin' ? ALLNEG : (u.negs && u.negs.length ? u.negs : ['garage']);
-  return { id: u.id, name: u.name, role: u.role || 'editor', negs, ses };
+  return { id: u.id, name: u.name, user: u.user, role: u.role || 'editor', negs, ses };
 }
 const cookie = (v, maxAge) => `pg_s=${v}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;
 const eqHash = (a, b) => { const x = crypto.createHash('sha256').update(String(a)).digest(), y = crypto.createHash('sha256').update(String(b)).digest(); return crypto.timingSafeEqual(x, y); };
@@ -1683,6 +1683,36 @@ async function adminApi(r, req, M, me, url) {
     }
   }
 
+  // Mis finanzas (personal de Juan): saldos y movimientos de sus bancos (Supabase, solo lectura con FIN_TOKEN) + ajustes, bienes, deudas y DeGiro
+  if (seg[0] === 'finanzas') {
+    if (!(me.id === 'admin' || me.user === 'juan')) return json({ error: 'Este apartado es solo de Juan.' }, 403);
+    const KEY = 'fin-config'; const cfg = (await db().get(KEY, { type: 'json' })) || { cuentas: {}, extra: [], degiro: [] };
+    const n2 = (v) => { const t = String(v ?? '').replace(/[^\d.,-]/g, ''); const n = Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t); return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0; };
+    const fecha = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v : today());
+    if (seg[1] === 'cuenta' && M === 'PUT') { const id = clip(body.uid, 80); if (!id) return json({ error: 'Falta la cuenta' }, 400);
+      cfg.cuentas = cfg.cuentas || {}; cfg.cuentas[id] = { nombre: clip(body.nombre, 60), tipo: ['cuenta', 'conjunta', 'poliza', 'oculta'].includes(body.tipo) ? body.tipo : 'cuenta', limite: Math.abs(n2(body.limite)), parte: Math.min(100, Math.max(0, n2(body.parte) || 100)) };
+      await save(KEY, cfg); return json({ ok: true }); }
+    if (seg[1] === 'extra') {
+      cfg.extra = cfg.extra || [];
+      if (M === 'POST') { cfg.extra.push({ id: uid('x'), tipo: ['bien', 'deuda', 'inversion'].includes(body.tipo) ? body.tipo : 'bien', nombre: clip(body.nombre, 80) || 'Sin nombre', valor: Math.abs(n2(body.valor)), fecha: fecha(body.fecha), notas: clip(body.notas, 300) }); await save(KEY, cfg); return json({ ok: true }); }
+      const i = cfg.extra.findIndex((x) => x.id === seg[2]); if (i < 0) return json({ error: 'No existe' }, 404);
+      if (M === 'PUT') { Object.assign(cfg.extra[i], { nombre: clip(body.nombre, 80) || cfg.extra[i].nombre, valor: Math.abs(n2(body.valor)), fecha: fecha(body.fecha), notas: clip(body.notas, 300) }); await save(KEY, cfg); return json({ ok: true }); }
+      if (M === 'DELETE') { cfg.extra.splice(i, 1); await save(KEY, cfg); return json({ ok: true }); }
+    }
+    if (seg[1] === 'degiro') {
+      cfg.degiro = cfg.degiro || [];
+      if (M === 'POST') { const f = fecha(body.fecha); cfg.degiro = cfg.degiro.filter((x) => x.fecha !== f); cfg.degiro.push({ fecha: f, valor: n2(body.valor), aportado: n2(body.aportado), posiciones: Array.isArray(body.posiciones) ? body.posiciones.slice(0, 80).map((p) => ({ nombre: clip(p.nombre, 80), isin: clip(p.isin, 20), cantidad: n2(p.cantidad), valor: n2(p.valor) })) : [] }); cfg.degiro.sort((a, b) => a.fecha.localeCompare(b.fecha)); await save(KEY, cfg); return json({ ok: true }); }
+      if (M === 'DELETE') { cfg.degiro = cfg.degiro.filter((x) => x.fecha !== seg[2]); await save(KEY, cfg); return json({ ok: true }); }
+    }
+    if (M !== 'GET' || seg[1]) return json({ error: 'No válido' }, 400);
+    const tok = env('FIN_TOKEN'); if (!tok) return json({ falta: true, cfg });
+    try {
+      const r = await fetch('https://wxxjifyslbwitfkhcmoa.supabase.co/rest/v1/rpc/fin_panel', { method: 'POST', headers: { apikey: env('FIN_SUPABASE_KEY') || 'sb_publishable_q5TulxFZsBtfPt6XmxMasQ_75Hm7Fwo', 'content-type': 'application/json' }, body: JSON.stringify({ t: tok }), signal: AbortSignal.timeout(12000) });
+      const d = await r.json().catch(() => null);
+      if (!r.ok || !d) return json({ error: 'No se han podido leer los bancos (' + r.status + ').', cfg }, 502);
+      return json({ ...d, cfg });
+    } catch (e) { return json({ error: 'Los bancos no responden ahora mismo.', cfg }, 502); }
+  }
   if (seg[0] === 'me') return json(me);
   if (seg[0] === 'neg' && NEGS[seg[1]] && !(me.negs || []).includes(seg[1])) return json({ error: 'No tienes acceso a este negocio.' }, 403);
   if (seg[0] !== 'neg' && seg[0] !== 'me' && !(me.negs || ['garage']).includes('garage')) return json({ error: 'No tienes acceso a Plata Garage.' }, 403);
